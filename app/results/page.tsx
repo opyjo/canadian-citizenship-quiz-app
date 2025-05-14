@@ -172,6 +172,11 @@ export default function ResultsPage() {
   return (
     <div className="container flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
       <div className="max-w-3xl w-full space-y-8">
+        <div className="w-full flex justify-start mb-4">
+          <Button onClick={() => router.push("/")} variant="outline">
+            Return to Home
+          </Button>
+        </div>
         <Card className="w-full">
           <CardHeader>
             <div className="flex justify-between items-center">

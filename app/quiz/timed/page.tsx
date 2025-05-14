@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import supabaseClient from "@/lib/supabase-client";
 import { Loader2 } from "lucide-react";
 import Timer from "@/components/timer";
+import ConfirmationModal from "@/components/confirmation-modal";
 
 interface Question {
   id: number;
@@ -42,8 +43,13 @@ export default function TimedQuizPage() {
   const [quizActive, setQuizActive] = useState(true);
   const [timeRemaining, setTimeRemaining] = useState(60 * 15); // 15 minutes in seconds
   const [quizFinished, setQuizFinished] = useState(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   const TIME_LIMIT = 60 * 15; // 15 minutes in seconds
+
+  const handleEndQuiz = useCallback(() => {
+    setIsConfirmModalOpen(true);
+  }, []);
 
   const finishQuiz = useCallback(async () => {
     if (quizFinished) return;
@@ -113,24 +119,21 @@ export default function TimedQuizPage() {
     const incorrectPercentage =
       ((questions.length - newScore) / questions.length) * 100;
     const correctPercentage = (newScore / questions.length) * 100;
-    const questionIds = questions.map((q) => q.id);
+    const questionIdsForResults = originalQuestions.map((q) => q.id);
+
+    // Manually construct the URL with query parameters
+    const queryParams = new URLSearchParams({
+      score: newScore.toString(),
+      totalQuestions: originalQuestions.length.toString(),
+      questionIds: JSON.stringify(questionIdsForResults),
+      userAnswers: JSON.stringify(selectedAnswers),
+      timeTaken: (TIME_LIMIT - timeRemaining).toString(),
+      quizType: "Timed",
+    });
+    const url = `/results?${queryParams.toString()}`;
 
     // Navigate to results
-    router.push({
-      pathname: "/results",
-      query: {
-        score: newScore,
-        totalQuestions: questions.length,
-        questions: JSON.stringify(
-          originalQuestions.map((q) => ({
-            ...q,
-            userAnswer: selectedAnswers[questions.indexOf(q)],
-          }))
-        ),
-        timeTaken: TIME_LIMIT - timeRemaining,
-        quizType: "Timed",
-      },
-    } as any);
+    router.push(url); // Pass the constructed URL string
   }, [
     questions,
     selectedAnswers,
@@ -140,6 +143,7 @@ export default function TimedQuizPage() {
     timeRemaining,
     originalQuestions,
     setQuizActive,
+    startTime,
   ]);
 
   useEffect(() => {
@@ -358,25 +362,47 @@ export default function TimedQuizPage() {
               </div>
             ))}
           </CardContent>
-          <CardFooter className="flex justify-between">
+          <CardFooter className="flex justify-between items-center">
             <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentQuestionIndex === 0}
+              variant="destructive"
+              onClick={handleEndQuiz}
+              className="mr-auto"
             >
-              Previous
+              End Quiz
             </Button>
-            <Button
-              onClick={handleNext}
-              disabled={!selectedAnswers[currentQuestionIndex]}
-            >
-              {currentQuestionIndex === questions.length - 1
-                ? "Finish Quiz"
-                : "Next Question"}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentQuestionIndex === 0}
+              >
+                Previous
+              </Button>
+              <Button
+                onClick={handleNext}
+                disabled={!selectedAnswers[currentQuestionIndex]}
+              >
+                {currentQuestionIndex === questions.length - 1
+                  ? "Finish Quiz"
+                  : "Next Question"}
+              </Button>
+            </div>
           </CardFooter>
         </Card>
       </div>
+
+      <ConfirmationModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={() => {
+          finishQuiz();
+          setIsConfirmModalOpen(false);
+        }}
+        title="End Quiz?"
+        message="Are you sure you want to end the quiz? Your current answers will be submitted, and you will be taken to the results page."
+        confirmText="End Quiz"
+        cancelText="Continue Quiz"
+      />
     </div>
   );
 }

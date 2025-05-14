@@ -1,84 +1,163 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { createClient } from "@/lib/supabase-client"
-import { Loader2 } from "lucide-react"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import supabaseClient from "@/lib/supabase-client";
+import { Loader2 } from "lucide-react";
 
 interface Question {
-  id: number
-  question_text: string
-  option_a: string
-  option_b: string
-  option_c: string
-  option_d: string
-  correct_option: string
+  id: number;
+  question_text: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_option: string;
 }
 
 export default function QuizPage() {
-  const router = useRouter()
-  const [questions, setQuestions] = useState<Question[]>([])
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedAnswers, setSelectedAnswers] = useState<
+    Record<number, string>
+  >({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchQuestions() {
       try {
-        const supabase = createClient()
+        // 1. Fetch all question IDs
+        const { data: idObjects, error: idError } = await supabaseClient
+          .from("questions")
+          .select("id");
 
-        // Fetch 20 random questions from Supabase
-        const { data, error } = await supabase.from("questions").select("*").order("id").limit(20)
+        if (idError) {
+          console.error("Supabase error fetching IDs:", idError);
+          throw new Error(idError.message);
+        }
+
+        if (!idObjects || idObjects.length === 0) {
+          throw new Error("No question IDs found.");
+        }
+
+        let questionIds = idObjects.map((item) => item.id);
+
+        // 2. Shuffle the IDs (Fisher-Yates shuffle algorithm)
+        for (let i = questionIds.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [questionIds[i], questionIds[j]] = [questionIds[j], questionIds[i]];
+        }
+
+        // 3. Take the first 20 IDs (or fewer if not enough questions)
+        const selectedIds = questionIds.slice(0, 20);
+
+        if (selectedIds.length === 0) {
+          // This case should ideally not be hit if idObjects.length > 0 initially
+          // but as a safeguard if slicing results in empty (e.g. questionIds.length < 20)
+          setQuestions([]); // Or handle as an error/empty state
+          setError("Not enough questions to start a quiz.");
+          setLoading(false);
+          return;
+        }
+
+        // 4. Fetch the full data for these 20 questions
+        const { data, error } = await supabaseClient
+          .from("questions")
+          .select("*")
+          .in("id", selectedIds);
 
         if (error) {
-          throw new Error(error.message)
+          console.error("Supabase error fetching questions by ID:", error);
+          throw new Error(error.message);
         }
 
         if (data) {
-          setQuestions(data)
+          // Ensure the questions are in the same order as selectedIds for consistency
+          const questionMap = new Map(data.map((q) => [q.id, q]));
+          const orderedQuestions = selectedIds
+            .map((id) => questionMap.get(id))
+            .filter(Boolean) as Question[];
+          setQuestions(orderedQuestions);
+        } else {
+          setQuestions([]); // Handle case where no data is returned for selected IDs
         }
       } catch (err) {
-        console.error("Error fetching questions:", err)
-        setError("Failed to load questions. Please try again later.")
-
-        // For demo purposes, load sample questions if Supabase is not set up
-        setQuestions(getSampleQuestions())
+        console.error("Error fetching questions:", err);
+        setError(
+          (err as Error).message ||
+            "Failed to load questions. Please try again later."
+        );
+        setQuestions(getSampleQuestions()); // Fallback to sample questions
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
-    fetchQuestions()
-  }, [])
+    fetchQuestions();
+  }, []);
 
-  const currentQuestion = questions[currentQuestionIndex]
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100
+  const currentQuestion = questions[currentQuestionIndex];
+  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
   const handleAnswerSelect = (option: string) => {
     setSelectedAnswers({
       ...selectedAnswers,
       [currentQuestionIndex]: option,
-    })
-  }
+    });
+  };
 
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1)
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
       // Quiz completed, navigate to results
-      router.push(`/results?answers=${encodeURIComponent(JSON.stringify(selectedAnswers))}`)
+      finishQuiz();
     }
-  }
+  };
 
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1)
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
-  }
+  };
+
+  const finishQuiz = () => {
+    const score = Object.values(selectedAnswers).filter(
+      (answer, index) =>
+        questions[index] &&
+        answer?.trim().toLowerCase() ===
+          questions[index].correct_option.trim().toLowerCase()
+    ).length;
+    const incorrectPercentage =
+      ((questions.length - score) / questions.length) * 100;
+    const correctPercentage = (score / questions.length) * 100;
+
+    // Pass question IDs along with other data
+    const questionIds = questions.map((q) => q.id);
+
+    router.push(
+      `/results?score=${score}&total=${
+        questions.length
+      }&incorrectPercentage=${incorrectPercentage.toFixed(
+        2
+      )}&correctPercentage=${correctPercentage.toFixed(
+        2
+      )}&userAnswers=${encodeURIComponent(
+        JSON.stringify(selectedAnswers)
+      )}&questionIds=${encodeURIComponent(JSON.stringify(questionIds))}`
+    );
+  };
 
   if (loading) {
     return (
@@ -88,7 +167,7 @@ export default function QuizPage() {
           <p className="text-lg">Loading questions...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -106,7 +185,7 @@ export default function QuizPage() {
           </CardFooter>
         </Card>
       </div>
-    )
+    );
   }
 
   if (!currentQuestion) {
@@ -117,14 +196,17 @@ export default function QuizPage() {
             <CardTitle>No Questions Available</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>There are no questions available at this time. Please try again later.</p>
+            <p>
+              There are no questions available at this time. Please try again
+              later.
+            </p>
           </CardContent>
           <CardFooter>
             <Button onClick={() => router.push("/")}>Return Home</Button>
           </CardFooter>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -136,7 +218,9 @@ export default function QuizPage() {
               Question {currentQuestionIndex + 1} of {questions.length}
             </h2>
             <span className="text-sm text-muted-foreground">
-              {selectedAnswers[currentQuestionIndex] ? "Answered" : "Not answered"}
+              {selectedAnswers[currentQuestionIndex]
+                ? "Answered"
+                : "Not answered"}
             </span>
           </div>
           <Progress value={progress} className="h-2" />
@@ -144,14 +228,18 @@ export default function QuizPage() {
 
         <Card className="w-full">
           <CardHeader>
-            <CardTitle className="text-xl">{currentQuestion.question_text}</CardTitle>
+            <CardTitle className="text-xl">
+              {currentQuestion.question_text}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {["a", "b", "c", "d"].map((option) => (
               <div
                 key={option}
                 className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                  selectedAnswers[currentQuestionIndex] === option ? "border-red-600 bg-red-50" : "hover:bg-gray-50"
+                  selectedAnswers[currentQuestionIndex] === option
+                    ? "border-red-600 bg-red-50"
+                    : "hover:bg-gray-50"
                 }`}
                 onClick={() => handleAnswerSelect(option)}
               >
@@ -165,23 +253,34 @@ export default function QuizPage() {
                   >
                     <span className="text-sm">{option.toUpperCase()}</span>
                   </div>
-                  <span>{currentQuestion[`option_${option}` as keyof Question]}</span>
+                  <span>
+                    {currentQuestion[`option_${option}` as keyof Question]}
+                  </span>
                 </div>
               </div>
             ))}
           </CardContent>
           <CardFooter className="flex justify-between">
-            <Button variant="outline" onClick={handlePrevious} disabled={currentQuestionIndex === 0}>
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentQuestionIndex === 0}
+            >
               Previous
             </Button>
-            <Button onClick={handleNext} disabled={!selectedAnswers[currentQuestionIndex]}>
-              {currentQuestionIndex === questions.length - 1 ? "Finish Quiz" : "Next Question"}
+            <Button
+              onClick={handleNext}
+              disabled={!selectedAnswers[currentQuestionIndex]}
+            >
+              {currentQuestionIndex === questions.length - 1
+                ? "Finish Quiz"
+                : "Next Question"}
             </Button>
           </CardFooter>
         </Card>
       </div>
     </div>
-  )
+  );
 }
 
 // Sample questions for demo purposes when Supabase is not set up
@@ -189,16 +288,19 @@ function getSampleQuestions(): Question[] {
   return [
     {
       id: 1,
-      question_text: "When must a federal election be held according to legislation passed by parliament?",
+      question_text:
+        "When must a federal election be held according to legislation passed by parliament?",
       option_a: "When the king wants to replace the prime minister",
       option_b: "Within four years of the most recent election",
       option_c: "Within 5 years of the last election",
-      option_d: "The prime minister can call the election any time at his own will",
+      option_d:
+        "The prime minister can call the election any time at his own will",
       correct_option: "b",
     },
     {
       id: 2,
-      question_text: "Which of the following is the federal government responsible for?",
+      question_text:
+        "Which of the following is the federal government responsible for?",
       option_a: "Highways",
       option_b: "Natural resources",
       option_c: "Education",
@@ -207,7 +309,8 @@ function getSampleQuestions(): Question[] {
     },
     {
       id: 3,
-      question_text: "What was the name of the new country formed at confederation?",
+      question_text:
+        "What was the name of the new country formed at confederation?",
       option_a: "Britain",
       option_b: "Canada",
       option_c: "Canadian Confederation",
@@ -248,25 +351,32 @@ function getSampleQuestions(): Question[] {
       question_text: "How can a party in power be defeated in parliament?",
       option_a: "If there is a revolution",
       option_b: "If the king orders the party to resign",
-      option_c: "If a majority of the MPs vote against a major government decision",
-      option_d: "If a minority of the MPs vote against a major government decision",
+      option_c:
+        "If a majority of the MPs vote against a major government decision",
+      option_d:
+        "If a minority of the MPs vote against a major government decision",
       correct_option: "c",
     },
     {
       id: 8,
-      question_text: "Which of the following are the responsibilities of provincial government?",
+      question_text:
+        "Which of the following are the responsibilities of provincial government?",
       option_a: "Education, healthcare, natural resources and policing",
       option_b: "National defense, healthcare, citizenship and firefighting",
       option_c: "Education, foreign policy, natural resources and policing",
-      option_d: "National defense, foreign policy, highways and Aboriginal affairs",
+      option_d:
+        "National defense, foreign policy, highways and Aboriginal affairs",
       correct_option: "a",
     },
     {
       id: 9,
       question_text: "What was the Underground Railroad?",
-      option_a: "An anti-slavery network that helped thousands of slaves escape the United States and settle in Canada",
-      option_b: "A railroad through the Rockies that was mainly through mountain tunnels",
-      option_c: "A network fur traders used to transport beaver pelts to the United States",
+      option_a:
+        "An anti-slavery network that helped thousands of slaves escape the United States and settle in Canada",
+      option_b:
+        "A railroad through the Rockies that was mainly through mountain tunnels",
+      option_c:
+        "A network fur traders used to transport beaver pelts to the United States",
       option_d: "The first underground subway tunnel in Toronto",
       correct_option: "a",
     },
@@ -294,7 +404,8 @@ function getSampleQuestions(): Question[] {
       option_a: "To resolve disputes and interpret law",
       option_b: "To keep people safe and to enforce the law",
       option_c: "To provide national security intelligence to the government",
-      option_d: "To conduct or support land warfare, peacekeeping or humanitarian missions",
+      option_d:
+        "To conduct or support land warfare, peacekeeping or humanitarian missions",
       correct_option: "b",
     },
     {
@@ -308,7 +419,8 @@ function getSampleQuestions(): Question[] {
     },
     {
       id: 14,
-      question_text: "Which province is one of the most productive agricultural regions in the world?",
+      question_text:
+        "Which province is one of the most productive agricultural regions in the world?",
       option_a: "Manitoba",
       option_b: "Saskatchewan",
       option_c: "British Columbia",
@@ -353,21 +465,26 @@ function getSampleQuestions(): Question[] {
     },
     {
       id: 19,
-      question_text: "Can you name the five great lakes between Canada and the US?",
-      option_a: "Lake Toronto, Lake Michigan, Lake Mexico, Lake Ontario, Lake St. Louis",
-      option_b: "Lake Superior, Lake Michigan, Lake Huron, Lake Erie, Lake Ontario",
-      option_c: "Lake Michigan, Lake Victoria, Lake Mexico, Lake Ontario, Lake St. Louis",
+      question_text:
+        "Can you name the five great lakes between Canada and the US?",
+      option_a:
+        "Lake Toronto, Lake Michigan, Lake Mexico, Lake Ontario, Lake St. Louis",
+      option_b:
+        "Lake Superior, Lake Michigan, Lake Huron, Lake Erie, Lake Ontario",
+      option_c:
+        "Lake Michigan, Lake Victoria, Lake Mexico, Lake Ontario, Lake St. Louis",
       option_d: "None of the above",
       correct_option: "b",
     },
     {
       id: 20,
-      question_text: "What do you call the king's representative in the provinces?",
+      question_text:
+        "What do you call the king's representative in the provinces?",
       option_a: "Governor lieutenant",
       option_b: "King's governor",
       option_c: "Lieutenant Governor",
       option_d: "Governor General",
       correct_option: "c",
     },
-  ]
+  ];
 }

@@ -1,87 +1,95 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase-client"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2 } from "lucide-react"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import supabaseClient from "@/lib/supabase-client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
 
 export default function SettingsPage() {
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [fullName, setFullName] = useState("")
-  const [email, setEmail] = useState("")
-  const [currentPassword, setCurrentPassword] = useState("")
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-  const [updating, setUpdating] = useState(false)
-  const router = useRouter()
-  const supabase = createClient()
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const router = useRouter();
+  const supabase = supabaseClient;
 
   useEffect(() => {
     async function getUser() {
-      const { data } = await supabase.auth.getUser()
+      const { data } = await supabase.auth.getUser();
 
       if (!data.user) {
-        router.push("/auth")
-        return
+        router.push("/auth");
+        return;
       }
 
-      setUser(data.user)
-      setEmail(data.user.email || "")
-      setFullName(data.user.user_metadata?.full_name || "")
-      setLoading(false)
+      setUser(data.user);
+      setEmail(data.user.email || "");
+      setFullName(data.user.user_metadata?.full_name || "");
+      setLoading(false);
     }
 
-    getUser()
-  }, [router])
+    getUser();
+  }, [router]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setUpdating(true)
-    setError(null)
-    setSuccess(null)
+    e.preventDefault();
+    setUpdating(true);
+    setError(null);
+    setSuccess(null);
 
     try {
       const { error } = await supabase.auth.updateUser({
         data: { full_name: fullName },
-      })
+      });
 
-      if (error) throw error
+      if (error) throw error;
 
-      setSuccess("Profile updated successfully!")
+      setSuccess("Profile updated successfully!");
     } catch (error: any) {
-      setError(error.message || "An error occurred while updating your profile")
+      setError(
+        error.message || "An error occurred while updating your profile"
+      );
     } finally {
-      setUpdating(false)
+      setUpdating(false);
     }
-  }
+  };
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setUpdating(true)
-    setError(null)
-    setSuccess(null)
+    e.preventDefault();
+    setUpdating(true);
+    setError(null);
+    setSuccess(null);
 
     if (newPassword !== confirmPassword) {
-      setError("New passwords do not match")
-      setUpdating(false)
-      return
+      setError("New passwords do not match");
+      setUpdating(false);
+      return;
     }
 
     if (newPassword.length < 6) {
-      setError("New password must be at least 6 characters")
-      setUpdating(false)
-      return
+      setError("New password must be at least 6 characters");
+      setUpdating(false);
+      return;
     }
 
     try {
@@ -89,27 +97,29 @@ export default function SettingsPage() {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password: currentPassword,
-      })
+      });
 
-      if (signInError) throw new Error("Current password is incorrect")
+      if (signInError) throw new Error("Current password is incorrect");
 
       // Then update to the new password
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
-      })
+      });
 
-      if (error) throw error
+      if (error) throw error;
 
-      setSuccess("Password updated successfully!")
-      setCurrentPassword("")
-      setNewPassword("")
-      setConfirmPassword("")
+      setSuccess("Password updated successfully!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
     } catch (error: any) {
-      setError(error.message || "An error occurred while updating your password")
+      setError(
+        error.message || "An error occurred while updating your password"
+      );
     } finally {
-      setUpdating(false)
+      setUpdating(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -119,7 +129,7 @@ export default function SettingsPage() {
           <p className="text-lg">Loading settings...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -127,7 +137,9 @@ export default function SettingsPage() {
       <div className="max-w-2xl mx-auto space-y-8">
         <div>
           <h1 className="text-3xl font-bold">Account Settings</h1>
-          <p className="text-muted-foreground">Manage your account preferences and security</p>
+          <p className="text-muted-foreground">
+            Manage your account preferences and security
+          </p>
         </div>
 
         <Tabs defaultValue="profile">
@@ -158,17 +170,31 @@ export default function SettingsPage() {
                 <form onSubmit={handleUpdateProfile} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="fullName">Full Name</Label>
-                    <Input id="fullName" type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                    <Input
+                      id="fullName"
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" value={email} disabled className="bg-gray-50" />
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      disabled
+                      className="bg-gray-50"
+                    />
                     <p className="text-sm text-muted-foreground">
-                      Email cannot be changed. Contact support if you need to update your email.
+                      Email cannot be changed. Contact support if you need to
+                      update your email.
                     </p>
                   </div>
                   <Button type="submit" disabled={updating}>
-                    {updating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {updating ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
                     Update Profile
                   </Button>
                 </form>
@@ -180,7 +206,9 @@ export default function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Change Password</CardTitle>
-                <CardDescription>Update your password to keep your account secure</CardDescription>
+                <CardDescription>
+                  Update your password to keep your account secure
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {error && (
@@ -217,7 +245,9 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                    <Label htmlFor="confirmPassword">
+                      Confirm New Password
+                    </Label>
                     <Input
                       id="confirmPassword"
                       type="password"
@@ -227,7 +257,9 @@ export default function SettingsPage() {
                     />
                   </div>
                   <Button type="submit" disabled={updating}>
-                    {updating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {updating ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
                     Update Password
                   </Button>
                 </form>
@@ -243,5 +275,5 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

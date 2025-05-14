@@ -1,152 +1,265 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { createClient } from "@/lib/supabase-client"
-import { Loader2 } from "lucide-react"
-import Timer from "@/components/timer"
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import supabaseClient from "@/lib/supabase-client";
+import { Loader2 } from "lucide-react";
+import Timer from "@/components/timer";
 
 interface Question {
-  id: number
-  question_text: string
-  option_a: string
-  option_b: string
-  option_c: string
-  option_d: string
-  correct_option: string
-  answer_explanation: string | null
-  category: string | null
+  id: number;
+  question_text: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_option: string;
+  answer_explanation: string | null;
+  category: string | null;
 }
 
 export default function TimedQuizPage() {
-  const router = useRouter()
-  const [questions, setQuestions] = useState<Question[]>([])
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [startTime, setStartTime] = useState<number>(0)
-  const [userId, setUserId] = useState<string | null>(null)
+  const router = useRouter();
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedAnswers, setSelectedAnswers] = useState<
+    Record<number, string>
+  >({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [startTime, setStartTime] = useState<number>(0);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [originalQuestions, setOriginalQuestions] = useState<Question[]>([]);
+  const [quizActive, setQuizActive] = useState(true);
+  const [timeRemaining, setTimeRemaining] = useState(60 * 15); // 15 minutes in seconds
+  const [quizFinished, setQuizFinished] = useState(false);
 
-  // 30 minutes in seconds
-  const TIME_LIMIT = 30 * 60
+  const TIME_LIMIT = 60 * 15; // 15 minutes in seconds
 
-  useEffect(() => {
-    async function fetchData() {
+  const finishQuiz = useCallback(async () => {
+    if (quizFinished) return;
+    setQuizFinished(true);
+    setQuizActive(false);
+    const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+
+    // Calculate score
+    let newScore = 0;
+    const incorrectQs: {
+      question_id: number;
+      user_answer: string;
+      correct_answer: string;
+      question_text: string;
+    }[] = [];
+
+    questions.forEach((question, index) => {
+      const userAnswer = selectedAnswers[index];
+      if (
+        userAnswer &&
+        question.correct_option.toLowerCase() === userAnswer.toLowerCase()
+      ) {
+        newScore++;
+      } else if (userAnswer) {
+        const qIdAsNumber = Number(question.id);
+        if (isNaN(qIdAsNumber)) {
+          console.error(
+            `Invalid question.id: ${question.id} cannot be converted to a number.`
+          );
+          return;
+        }
+        incorrectQs.push({
+          question_id: qIdAsNumber,
+          user_answer: userAnswer,
+          correct_answer: question.correct_option,
+          question_text: question.question_text,
+        });
+      }
+    });
+
+    // Save quiz attempt if user is logged in
+    if (userId) {
       try {
-        const supabase = createClient()
+        await supabaseClient.from("quiz_attempts").insert({
+          user_id: userId,
+          score: newScore,
+          total_questions: questions.length,
+          time_taken: TIME_LIMIT - timeRemaining,
+          attempt_date: new Date().toISOString(),
+        });
 
-        // Check if user is authenticated
-        const { data: userData } = await supabase.auth.getUser()
-        if (userData.user) {
-          setUserId(userData.user.id)
+        if (incorrectQs.length > 0) {
+          await supabaseClient.from("user_incorrect_questions").upsert(
+            incorrectQs.map((iq) => ({ ...iq })),
+            {
+              onConflict: "user_id, question_id", // Specify conflict resolution strategy
+              ignoreDuplicates: false, // Set to false to update existing records or handle as needed
+            }
+          );
         }
-
-        // Fetch 20 random questions from Supabase
-        const { data, error } = await supabase.from("questions").select("*").order("id").limit(20)
-
-        if (error) {
-          throw new Error(error.message)
-        }
-
-        if (data) {
-          setQuestions(data)
-        }
-      } catch (err) {
-        console.error("Error fetching questions:", err)
-        setError("Failed to load questions. Please try again later.")
-
-        // For demo purposes, load sample questions if Supabase is not set up
-        setQuestions(getSampleQuestions())
-      } finally {
-        setLoading(false)
-        setStartTime(Date.now())
+      } catch (dbError) {
+        console.error("Error saving quiz attempt:", dbError);
+        // Optionally, set an error state to inform the user
       }
     }
 
-    fetchData()
-  }, [])
+    const incorrectPercentage =
+      ((questions.length - newScore) / questions.length) * 100;
+    const correctPercentage = (newScore / questions.length) * 100;
+    const questionIds = questions.map((q) => q.id);
 
-  const currentQuestion = questions[currentQuestionIndex]
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100
+    // Navigate to results
+    router.push({
+      pathname: "/results",
+      query: {
+        score: newScore,
+        totalQuestions: questions.length,
+        questions: JSON.stringify(
+          originalQuestions.map((q) => ({
+            ...q,
+            userAnswer: selectedAnswers[questions.indexOf(q)],
+          }))
+        ),
+        timeTaken: TIME_LIMIT - timeRemaining,
+        quizType: "Timed",
+      },
+    } as any);
+  }, [
+    questions,
+    selectedAnswers,
+    quizFinished,
+    router,
+    userId,
+    timeRemaining,
+    originalQuestions,
+    setQuizActive,
+  ]);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (quizActive && timeRemaining > 0) {
+      timer = setInterval(() => {
+        setTimeRemaining((prevTime) => prevTime - 1);
+      }, 1000);
+    } else if (timeRemaining === 0 && quizActive) {
+      finishQuiz();
+    }
+    return () => clearInterval(timer);
+  }, [quizActive, timeRemaining, finishQuiz]);
+
+  const currentQuestion = questions[currentQuestionIndex];
+  const progress =
+    questions.length > 0
+      ? ((currentQuestionIndex + 1) / questions.length) * 100
+      : 0;
 
   const handleAnswerSelect = (option: string) => {
     setSelectedAnswers({
       ...selectedAnswers,
       [currentQuestionIndex]: option,
-    })
-  }
+    });
+  };
 
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1)
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
-      finishQuiz()
+      finishQuiz();
     }
-  }
+  };
 
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1)
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
-  }
+  };
 
-  const finishQuiz = async () => {
-    const timeTaken = Math.floor((Date.now() - startTime) / 1000)
+  const handleTimeUp = () => {
+    finishQuiz();
+  };
 
-    // Calculate score
-    const score = questions.filter((q, index) => selectedAnswers[index] === q.correct_option).length
-
-    // Save quiz attempt if user is logged in
-    if (userId) {
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
       try {
-        const supabase = createClient()
-        await supabase.from("quiz_attempts").insert({
-          user_id: userId,
-          score,
-          total_questions: questions.length,
-          time_taken: timeTaken,
-          is_timed: true,
-          quiz_type: "timed",
-        })
+        // 1. Fetch all question IDs
+        const { data: idObjects, error: idError } = await supabaseClient
+          .from("questions")
+          .select("id");
 
-        // Save incorrect questions
-        const incorrectQuestions = questions
-          .filter((q, index) => selectedAnswers[index] !== q.correct_option && selectedAnswers[index] !== undefined)
-          .map((q) => ({
-            user_id: userId,
-            question_id: q.id,
-          }))
-
-        if (incorrectQuestions.length > 0) {
-          await supabase.from("user_incorrect_questions").upsert(
-            incorrectQuestions.map((q) => ({
-              ...q,
-              times_incorrect: 1,
-            })),
-            {
-              onConflict: "user_id,question_id",
-              ignoreDuplicates: false,
-            },
-          )
+        if (idError) {
+          console.error("Supabase error fetching IDs (timed):", idError);
+          throw new Error(idError.message);
         }
-      } catch (error) {
-        console.error("Error saving quiz results:", error)
+
+        if (!idObjects || idObjects.length === 0) {
+          throw new Error("No question IDs found (timed).");
+        }
+
+        // Ensure questionIds are numbers, assuming item.id from DB is number
+        let questionIds = idObjects.map((item: { id: number }) => item.id);
+
+        // 2. Shuffle the IDs (Fisher-Yates shuffle algorithm)
+        for (let i = questionIds.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [questionIds[i], questionIds[j]] = [questionIds[j], questionIds[i]];
+        }
+
+        // 3. Take the first 20 IDs (or fewer if not enough questions)
+        const selectedIds = questionIds.slice(0, 20);
+
+        if (selectedIds.length === 0) {
+          setQuestions([]);
+          setError("Not enough questions to start a timed quiz.");
+          setLoading(false);
+          return;
+        }
+
+        // 4. Fetch the full data for these 20 questions
+        const { data, error } = await supabaseClient
+          .from("questions")
+          .select("*")
+          .in("id", selectedIds);
+
+        if (error) {
+          console.error(
+            "Supabase error fetching questions by ID (timed):",
+            error
+          );
+          throw new Error(error.message);
+        }
+
+        if (data) {
+          const questionMap = new Map(data.map((q: Question) => [q.id, q]));
+          const orderedQuestions = selectedIds
+            .map((id: number) => questionMap.get(id)) // id is now number
+            .filter(Boolean) as Question[];
+          setQuestions(orderedQuestions);
+          setOriginalQuestions(orderedQuestions);
+          setError(null);
+        } else {
+          setQuestions([]);
+          setError("No questions returned for the timed quiz.");
+        }
+      } catch (err: any) {
+        console.error("Error in fetchData (timed):", err);
+        setError(err.message || "Failed to load questions for timed quiz.");
+        setQuestions([]);
+      } finally {
+        setLoading(false);
+        setStartTime(Date.now());
       }
     }
 
-    // Navigate to results
-    router.push(
-      `/results?answers=${encodeURIComponent(JSON.stringify(selectedAnswers))}&timed=true&timeTaken=${timeTaken}`,
-    )
-  }
-
-  const handleTimeUp = () => {
-    finishQuiz()
-  }
+    fetchData();
+  }, []);
 
   if (loading) {
     return (
@@ -156,7 +269,7 @@ export default function TimedQuizPage() {
           <p className="text-lg">Loading questions...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -174,7 +287,7 @@ export default function TimedQuizPage() {
           </CardFooter>
         </Card>
       </div>
-    )
+    );
   }
 
   if (!currentQuestion) {
@@ -185,14 +298,17 @@ export default function TimedQuizPage() {
             <CardTitle>No Questions Available</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>There are no questions available at this time. Please try again later.</p>
+            <p>
+              There are no questions available at this time. Please try again
+              later.
+            </p>
           </CardContent>
           <CardFooter>
             <Button onClick={() => router.push("/")}>Return Home</Button>
           </CardFooter>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -210,14 +326,18 @@ export default function TimedQuizPage() {
 
         <Card className="w-full">
           <CardHeader>
-            <CardTitle className="text-xl">{currentQuestion.question_text}</CardTitle>
+            <CardTitle className="text-xl">
+              {currentQuestion.question_text}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {["a", "b", "c", "d"].map((option) => (
               <div
                 key={option}
                 className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                  selectedAnswers[currentQuestionIndex] === option ? "border-red-600 bg-red-50" : "hover:bg-gray-50"
+                  selectedAnswers[currentQuestionIndex] === option
+                    ? "border-red-600 bg-red-50"
+                    : "hover:bg-gray-50"
                 }`}
                 onClick={() => handleAnswerSelect(option)}
               >
@@ -231,23 +351,34 @@ export default function TimedQuizPage() {
                   >
                     <span className="text-sm">{option.toUpperCase()}</span>
                   </div>
-                  <span>{currentQuestion[`option_${option}` as keyof Question]}</span>
+                  <span>
+                    {currentQuestion[`option_${option}` as keyof Question]}
+                  </span>
                 </div>
               </div>
             ))}
           </CardContent>
           <CardFooter className="flex justify-between">
-            <Button variant="outline" onClick={handlePrevious} disabled={currentQuestionIndex === 0}>
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentQuestionIndex === 0}
+            >
               Previous
             </Button>
-            <Button onClick={handleNext} disabled={!selectedAnswers[currentQuestionIndex]}>
-              {currentQuestionIndex === questions.length - 1 ? "Finish Quiz" : "Next Question"}
+            <Button
+              onClick={handleNext}
+              disabled={!selectedAnswers[currentQuestionIndex]}
+            >
+              {currentQuestionIndex === questions.length - 1
+                ? "Finish Quiz"
+                : "Next Question"}
             </Button>
           </CardFooter>
         </Card>
       </div>
     </div>
-  )
+  );
 }
 
 // Sample questions for demo purposes when Supabase is not set up
@@ -255,11 +386,13 @@ function getSampleQuestions(): Question[] {
   return [
     {
       id: 1,
-      question_text: "When must a federal election be held according to legislation passed by parliament?",
+      question_text:
+        "When must a federal election be held according to legislation passed by parliament?",
       option_a: "When the king wants to replace the prime minister",
       option_b: "Within four years of the most recent election",
       option_c: "Within 5 years of the last election",
-      option_d: "The prime minister can call the election any time at his own will",
+      option_d:
+        "The prime minister can call the election any time at his own will",
       correct_option: "b",
       answer_explanation:
         "According to Canadian legislation, a federal election must be held within four years of the most recent election.",
@@ -267,7 +400,8 @@ function getSampleQuestions(): Question[] {
     },
     {
       id: 2,
-      question_text: "Which of the following is the federal government responsible for?",
+      question_text:
+        "Which of the following is the federal government responsible for?",
       option_a: "Highways",
       option_b: "Natural resources",
       option_c: "Education",
@@ -280,13 +414,15 @@ function getSampleQuestions(): Question[] {
     // Add more sample questions with explanations and categories
     {
       id: 3,
-      question_text: "What was the name of the new country formed at confederation?",
+      question_text:
+        "What was the name of the new country formed at confederation?",
       option_a: "Britain",
       option_b: "Canada",
       option_c: "Canadian Confederation",
       option_d: "Dominion of Canada",
       correct_option: "d",
-      answer_explanation: "At Confederation in 1867, the country was officially named the Dominion of Canada.",
+      answer_explanation:
+        "At Confederation in 1867, the country was officially named the Dominion of Canada.",
       category: "Canadian History",
     },
     {
@@ -332,8 +468,10 @@ function getSampleQuestions(): Question[] {
       question_text: "How can a party in power be defeated in parliament?",
       option_a: "If there is a revolution",
       option_b: "If the king orders the party to resign",
-      option_c: "If a majority of the MPs vote against a major government decision",
-      option_d: "If a minority of the MPs vote against a major government decision",
+      option_c:
+        "If a majority of the MPs vote against a major government decision",
+      option_d:
+        "If a minority of the MPs vote against a major government decision",
       correct_option: "c",
       answer_explanation:
         "A party in power can be defeated if a majority of the Members of Parliament (MPs) vote against a major government decision, which is known as losing a confidence vote.",
@@ -341,11 +479,13 @@ function getSampleQuestions(): Question[] {
     },
     {
       id: 8,
-      question_text: "Which of the following are the responsibilities of provincial government?",
+      question_text:
+        "Which of the following are the responsibilities of provincial government?",
       option_a: "Education, healthcare, natural resources and policing",
       option_b: "National defense, healthcare, citizenship and firefighting",
       option_c: "Education, foreign policy, natural resources and policing",
-      option_d: "National defense, foreign policy, highways and Aboriginal affairs",
+      option_d:
+        "National defense, foreign policy, highways and Aboriginal affairs",
       correct_option: "a",
       answer_explanation:
         "Provincial governments in Canada are responsible for education, healthcare, natural resources, and policing within their jurisdictions.",
@@ -354,9 +494,12 @@ function getSampleQuestions(): Question[] {
     {
       id: 9,
       question_text: "What was the Underground Railroad?",
-      option_a: "An anti-slavery network that helped thousands of slaves escape the United States and settle in Canada",
-      option_b: "A railroad through the Rockies that was mainly through mountain tunnels",
-      option_c: "A network fur traders used to transport beaver pelts to the United States",
+      option_a:
+        "An anti-slavery network that helped thousands of slaves escape the United States and settle in Canada",
+      option_b:
+        "A railroad through the Rockies that was mainly through mountain tunnels",
+      option_c:
+        "A network fur traders used to transport beaver pelts to the United States",
       option_d: "The first underground subway tunnel in Toronto",
       correct_option: "a",
       answer_explanation:
@@ -393,9 +536,11 @@ function getSampleQuestions(): Question[] {
       option_a: "To resolve disputes and interpret law",
       option_b: "To keep people safe and to enforce the law",
       option_c: "To provide national security intelligence to the government",
-      option_d: "To conduct or support land warfare, peacekeeping or humanitarian missions",
+      option_d:
+        "To conduct or support land warfare, peacekeeping or humanitarian missions",
       correct_option: "b",
-      answer_explanation: "The primary role of the police in Canada is to keep people safe and to enforce the law.",
+      answer_explanation:
+        "The primary role of the police in Canada is to keep people safe and to enforce the law.",
       category: "Rights and Responsibilities",
     },
     {
@@ -412,7 +557,8 @@ function getSampleQuestions(): Question[] {
     },
     {
       id: 14,
-      question_text: "Which province is one of the most productive agricultural regions in the world?",
+      question_text:
+        "Which province is one of the most productive agricultural regions in the world?",
       option_a: "Manitoba",
       option_b: "Saskatchewan",
       option_c: "British Columbia",
@@ -472,10 +618,14 @@ function getSampleQuestions(): Question[] {
     },
     {
       id: 19,
-      question_text: "Can you name the five great lakes between Canada and the US?",
-      option_a: "Lake Toronto, Lake Michigan, Lake Mexico, Lake Ontario, Lake St. Louis",
-      option_b: "Lake Superior, Lake Michigan, Lake Huron, Lake Erie, Lake Ontario",
-      option_c: "Lake Michigan, Lake Victoria, Lake Mexico, Lake Ontario, Lake St. Louis",
+      question_text:
+        "Can you name the five great lakes between Canada and the US?",
+      option_a:
+        "Lake Toronto, Lake Michigan, Lake Mexico, Lake Ontario, Lake St. Louis",
+      option_b:
+        "Lake Superior, Lake Michigan, Lake Huron, Lake Erie, Lake Ontario",
+      option_c:
+        "Lake Michigan, Lake Victoria, Lake Mexico, Lake Ontario, Lake St. Louis",
       option_d: "None of the above",
       correct_option: "b",
       answer_explanation:
@@ -484,14 +634,16 @@ function getSampleQuestions(): Question[] {
     },
     {
       id: 20,
-      question_text: "What do you call the king's representative in the provinces?",
+      question_text:
+        "What do you call the king's representative in the provinces?",
       option_a: "Governor lieutenant",
       option_b: "King's governor",
       option_c: "Lieutenant Governor",
       option_d: "Governor General",
       correct_option: "c",
-      answer_explanation: "The king's (or queen's) representative in each province is called the Lieutenant Governor.",
+      answer_explanation:
+        "The king's (or queen's) representative in each province is called the Lieutenant Governor.",
       category: "Government and Democracy",
     },
-  ]
+  ];
 }

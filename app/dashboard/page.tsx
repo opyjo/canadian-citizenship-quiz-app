@@ -1,64 +1,71 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase-client"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2, BarChart2, Award, BookOpen } from "lucide-react"
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import supabaseClient from "@/lib/supabase-client";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, BarChart2, Award, BookOpen } from "lucide-react";
 
 interface QuizAttempt {
-  id: number
-  score: number
-  total_questions: number
-  created_at: string
-  time_taken: number | null
-  is_timed: boolean
-  quiz_type: string
-  category: string | null
+  id: number;
+  score: number;
+  total_questions: number;
+  created_at: string;
+  time_taken: number | null;
+  is_timed: boolean;
+  quiz_type: string;
+  category: string | null;
 }
 
 export default function DashboardPage() {
-  const [quizAttempts, setQuizAttempts] = useState<QuizAttempt[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [user, setUser] = useState<any>(null)
-  const router = useRouter()
-  const supabase = createClient()
+  const [quizAttempts, setQuizAttempts] = useState<QuizAttempt[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
+  const supabase = supabaseClient;
 
   useEffect(() => {
     async function fetchData() {
       try {
         // Check if user is authenticated
-        const { data: userData } = await supabase.auth.getUser()
+        const { data: userData } = await supabase.auth.getUser();
         if (!userData.user) {
-          router.push("/auth")
-          return
+          router.push("/auth");
+          return;
         }
 
-        setUser(userData.user)
+        setUser(userData.user);
 
         // Fetch quiz attempts
         const { data, error } = await supabase
           .from("quiz_attempts")
           .select("*")
-          .order("created_at", { ascending: false })
+          .order("created_at", { ascending: false });
 
-        if (error) throw error
+        if (error) throw error;
 
-        setQuizAttempts(data || [])
+        setQuizAttempts(data || []);
       } catch (err: any) {
-        console.error("Error fetching data:", err)
-        setError(err.message || "Failed to load dashboard data")
+        console.error("Error fetching data:", err);
+        setError(err.message || "Failed to load dashboard data");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
-    fetchData()
-  }, [router])
+    fetchData();
+  }, [router]);
 
   if (loading) {
     return (
@@ -68,7 +75,7 @@ export default function DashboardPage() {
           <p className="text-lg">Loading dashboard...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -86,37 +93,50 @@ export default function DashboardPage() {
           </CardFooter>
         </Card>
       </div>
-    )
+    );
   }
 
   // Calculate statistics
-  const totalQuizzes = quizAttempts.length
+  const totalQuizzes = quizAttempts.length;
   const averageScore =
     totalQuizzes > 0
       ? Math.round(
-          (quizAttempts.reduce((sum, attempt) => sum + (attempt.score / attempt.total_questions) * 100, 0) /
+          (quizAttempts.reduce(
+            (sum, attempt) =>
+              sum + (attempt.score / attempt.total_questions) * 100,
+            0
+          ) /
             totalQuizzes) *
-            10,
+            10
         ) / 10
-      : 0
+      : 0;
   const bestScore =
     totalQuizzes > 0
-      ? Math.round(Math.max(...quizAttempts.map((attempt) => (attempt.score / attempt.total_questions) * 100)) * 10) /
-        10
-      : 0
+      ? Math.round(
+          Math.max(
+            ...quizAttempts.map(
+              (attempt) => (attempt.score / attempt.total_questions) * 100
+            )
+          ) * 10
+        ) / 10
+      : 0;
 
   return (
     <div className="container py-8 px-4">
       <div className="max-w-6xl mx-auto space-y-8">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Track your progress and quiz history</p>
+          <p className="text-muted-foreground">
+            Track your progress and quiz history
+          </p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Quizzes</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Quizzes
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center">
@@ -128,7 +148,9 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Average Score</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Average Score
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center">
@@ -140,7 +162,9 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Best Score</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Best Score
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center">
@@ -154,12 +178,16 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Quiz History</CardTitle>
-            <CardDescription>View your past quiz attempts and results</CardDescription>
+            <CardDescription>
+              View your past quiz attempts and results
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {quizAttempts.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-muted-foreground">You haven't taken any quizzes yet.</p>
+                <p className="text-muted-foreground">
+                  You haven't taken any quizzes yet.
+                </p>
                 <div className="mt-4">
                   <Link href="/">
                     <Button>Take Your First Quiz</Button>
@@ -186,16 +214,26 @@ export default function DashboardPage() {
                     </div>
                     <div className="divide-y">
                       {quizAttempts.map((attempt) => (
-                        <div key={attempt.id} className="grid grid-cols-5 gap-4 p-4">
-                          <div>{new Date(attempt.created_at).toLocaleDateString()}</div>
+                        <div
+                          key={attempt.id}
+                          className="grid grid-cols-5 gap-4 p-4"
+                        >
+                          <div>
+                            {new Date(attempt.created_at).toLocaleDateString()}
+                          </div>
                           <div className="capitalize">{attempt.quiz_type}</div>
                           <div>
                             {attempt.score}/{attempt.total_questions} (
-                            {Math.round((attempt.score / attempt.total_questions) * 100)}%)
+                            {Math.round(
+                              (attempt.score / attempt.total_questions) * 100
+                            )}
+                            %)
                           </div>
                           <div>
                             {attempt.time_taken
-                              ? `${Math.floor(attempt.time_taken / 60)}m ${attempt.time_taken % 60}s`
+                              ? `${Math.floor(attempt.time_taken / 60)}m ${
+                                  attempt.time_taken % 60
+                                }s`
                               : "N/A"}
                           </div>
                           <div>{attempt.category || "All Categories"}</div>
@@ -218,16 +256,30 @@ export default function DashboardPage() {
                       {quizAttempts
                         .filter((attempt) => attempt.quiz_type === "standard")
                         .map((attempt) => (
-                          <div key={attempt.id} className="grid grid-cols-5 gap-4 p-4">
-                            <div>{new Date(attempt.created_at).toLocaleDateString()}</div>
-                            <div className="capitalize">{attempt.quiz_type}</div>
+                          <div
+                            key={attempt.id}
+                            className="grid grid-cols-5 gap-4 p-4"
+                          >
+                            <div>
+                              {new Date(
+                                attempt.created_at
+                              ).toLocaleDateString()}
+                            </div>
+                            <div className="capitalize">
+                              {attempt.quiz_type}
+                            </div>
                             <div>
                               {attempt.score}/{attempt.total_questions} (
-                              {Math.round((attempt.score / attempt.total_questions) * 100)}%)
+                              {Math.round(
+                                (attempt.score / attempt.total_questions) * 100
+                              )}
+                              %)
                             </div>
                             <div>
                               {attempt.time_taken
-                                ? `${Math.floor(attempt.time_taken / 60)}m ${attempt.time_taken % 60}s`
+                                ? `${Math.floor(attempt.time_taken / 60)}m ${
+                                    attempt.time_taken % 60
+                                  }s`
                                 : "N/A"}
                             </div>
                             <div>{attempt.category || "All Categories"}</div>
@@ -250,16 +302,30 @@ export default function DashboardPage() {
                       {quizAttempts
                         .filter((attempt) => attempt.quiz_type === "timed")
                         .map((attempt) => (
-                          <div key={attempt.id} className="grid grid-cols-5 gap-4 p-4">
-                            <div>{new Date(attempt.created_at).toLocaleDateString()}</div>
-                            <div className="capitalize">{attempt.quiz_type}</div>
+                          <div
+                            key={attempt.id}
+                            className="grid grid-cols-5 gap-4 p-4"
+                          >
+                            <div>
+                              {new Date(
+                                attempt.created_at
+                              ).toLocaleDateString()}
+                            </div>
+                            <div className="capitalize">
+                              {attempt.quiz_type}
+                            </div>
                             <div>
                               {attempt.score}/{attempt.total_questions} (
-                              {Math.round((attempt.score / attempt.total_questions) * 100)}%)
+                              {Math.round(
+                                (attempt.score / attempt.total_questions) * 100
+                              )}
+                              %)
                             </div>
                             <div>
                               {attempt.time_taken
-                                ? `${Math.floor(attempt.time_taken / 60)}m ${attempt.time_taken % 60}s`
+                                ? `${Math.floor(attempt.time_taken / 60)}m ${
+                                    attempt.time_taken % 60
+                                  }s`
                                 : "N/A"}
                             </div>
                             <div>{attempt.category || "All Categories"}</div>
@@ -282,16 +348,30 @@ export default function DashboardPage() {
                       {quizAttempts
                         .filter((attempt) => attempt.quiz_type === "practice")
                         .map((attempt) => (
-                          <div key={attempt.id} className="grid grid-cols-5 gap-4 p-4">
-                            <div>{new Date(attempt.created_at).toLocaleDateString()}</div>
-                            <div className="capitalize">{attempt.quiz_type}</div>
+                          <div
+                            key={attempt.id}
+                            className="grid grid-cols-5 gap-4 p-4"
+                          >
+                            <div>
+                              {new Date(
+                                attempt.created_at
+                              ).toLocaleDateString()}
+                            </div>
+                            <div className="capitalize">
+                              {attempt.quiz_type}
+                            </div>
                             <div>
                               {attempt.score}/{attempt.total_questions} (
-                              {Math.round((attempt.score / attempt.total_questions) * 100)}%)
+                              {Math.round(
+                                (attempt.score / attempt.total_questions) * 100
+                              )}
+                              %)
                             </div>
                             <div>
                               {attempt.time_taken
-                                ? `${Math.floor(attempt.time_taken / 60)}m ${attempt.time_taken % 60}s`
+                                ? `${Math.floor(attempt.time_taken / 60)}m ${
+                                    attempt.time_taken % 60
+                                  }s`
                                 : "N/A"}
                             </div>
                             <div>{attempt.category || "All Categories"}</div>
@@ -314,5 +394,5 @@ export default function DashboardPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

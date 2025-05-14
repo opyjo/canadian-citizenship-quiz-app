@@ -13,6 +13,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import supabaseClient from "@/lib/supabase-client";
 import { Loader2 } from "lucide-react";
+import ConfirmationModal from "@/components/confirmation-modal";
 
 interface Question {
   id: number;
@@ -33,6 +34,7 @@ export default function QuizPage() {
   >({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   useEffect(() => {
     async function fetchQuestions() {
@@ -130,6 +132,10 @@ export default function QuizPage() {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
+  };
+
+  const handleEndQuiz = () => {
+    setIsConfirmModalOpen(true);
   };
 
   const finishQuiz = () => {
@@ -260,25 +266,47 @@ export default function QuizPage() {
               </div>
             ))}
           </CardContent>
-          <CardFooter className="flex justify-between">
+          <CardFooter className="flex justify-between items-center">
             <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentQuestionIndex === 0}
+              variant="destructive"
+              onClick={handleEndQuiz}
+              className="mr-auto"
             >
-              Previous
+              End Quiz
             </Button>
-            <Button
-              onClick={handleNext}
-              disabled={!selectedAnswers[currentQuestionIndex]}
-            >
-              {currentQuestionIndex === questions.length - 1
-                ? "Finish Quiz"
-                : "Next Question"}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentQuestionIndex === 0}
+              >
+                Previous
+              </Button>
+              <Button
+                onClick={handleNext}
+                disabled={!selectedAnswers[currentQuestionIndex]}
+              >
+                {currentQuestionIndex === questions.length - 1
+                  ? "Finish Quiz"
+                  : "Next Question"}
+              </Button>
+            </div>
           </CardFooter>
         </Card>
       </div>
+
+      <ConfirmationModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={() => {
+          finishQuiz();
+          setIsConfirmModalOpen(false);
+        }}
+        title="End Quiz?"
+        message="Are you sure you want to end the quiz? Your current answers will be submitted, and you will be taken to the results page."
+        confirmText="End Quiz"
+        cancelText="Continue Quiz"
+      />
     </div>
   );
 }

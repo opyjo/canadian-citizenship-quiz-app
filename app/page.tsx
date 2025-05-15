@@ -1,13 +1,22 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function Home() {
   return (
     <div className="container flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
       <div className="max-w-3xl w-full text-center space-y-8">
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight">Canadian Citizenship Test Quiz</h1>
+          <h1 className="text-4xl font-bold tracking-tight">
+            Canadian Citizenship Test Quiz
+          </h1>
           <p className="text-xl text-muted-foreground">
             Test your knowledge of Canadian history, government, and culture
           </p>
@@ -17,7 +26,10 @@ export default function Home() {
           <Card className="w-full">
             <CardHeader>
               <CardTitle>Standard Quiz</CardTitle>
-              <CardDescription>Take a standard quiz with 20 random questions from all categories</CardDescription>
+              <CardDescription>
+                Take a standard quiz with 20 random questions from all
+                categories
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col space-y-4">
@@ -27,7 +39,9 @@ export default function Home() {
                   </div>
                   <div className="flex-1">
                     <p className="font-medium">Questions per quiz</p>
-                    <p className="text-sm text-muted-foreground">Each quiz contains 20 randomly selected questions</p>
+                    <p className="text-sm text-muted-foreground">
+                      Each quiz contains 20 randomly selected questions
+                    </p>
                   </div>
                 </div>
 
@@ -37,7 +51,9 @@ export default function Home() {
                   </div>
                   <div className="flex-1">
                     <p className="font-medium">No time limit</p>
-                    <p className="text-sm text-muted-foreground">Take your time to answer each question carefully</p>
+                    <p className="text-sm text-muted-foreground">
+                      Take your time to answer each question carefully
+                    </p>
                   </div>
                 </div>
               </div>
@@ -54,7 +70,10 @@ export default function Home() {
           <Card className="w-full">
             <CardHeader>
               <CardTitle>Timed Quiz</CardTitle>
-              <CardDescription>Challenge yourself with a timed quiz to simulate real test conditions</CardDescription>
+              <CardDescription>
+                Challenge yourself with a timed quiz to simulate real test
+                conditions
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col space-y-4">
@@ -64,7 +83,9 @@ export default function Home() {
                   </div>
                   <div className="flex-1">
                     <p className="font-medium">Questions per quiz</p>
-                    <p className="text-sm text-muted-foreground">Each quiz contains 20 randomly selected questions</p>
+                    <p className="text-sm text-muted-foreground">
+                      Each quiz contains 20 randomly selected questions
+                    </p>
                   </div>
                 </div>
 
@@ -74,7 +95,9 @@ export default function Home() {
                   </div>
                   <div className="flex-1">
                     <p className="font-medium">30 minute time limit</p>
-                    <p className="text-sm text-muted-foreground">Similar to the real citizenship test conditions</p>
+                    <p className="text-sm text-muted-foreground">
+                      Similar to the real citizenship test conditions
+                    </p>
                   </div>
                 </div>
               </div>
@@ -93,26 +116,14 @@ export default function Home() {
           <CardHeader>
             <CardTitle>Practice Mode</CardTitle>
             <CardDescription>
-              Focus on specific topics or practice questions you've previously answered incorrectly
+              Sharpen your knowledge by focusing on areas that need improvement.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-1">
               <div className="flex items-center space-x-2 p-4 border rounded-lg">
                 <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
-                  <span className="text-red-600 font-medium">🍁</span>
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium">Practice by Category</p>
-                  <p className="text-sm text-muted-foreground">
-                    Focus on specific topics like history, government, or geography
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
-                  <span className="text-red-600 font-medium">✓</span>
+                  <span className="text-red-600 font-medium">✍️</span>
                 </div>
                 <div className="flex-1">
                   <p className="font-medium">Practice Incorrect Questions</p>
@@ -149,5 +160,5 @@ export default function Home() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

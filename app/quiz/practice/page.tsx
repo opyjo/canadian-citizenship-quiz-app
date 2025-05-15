@@ -194,7 +194,9 @@ export default function PracticeQuizPage() {
     console.log("[PracticeQuizPage] getResultData called");
     try {
       const score = questions.filter(
-        (q, index) => selectedAnswers[index] === q.correct_option
+        (q, index) =>
+          selectedAnswers[index]?.trim().toLowerCase() ===
+          q.correct_option?.trim().toLowerCase()
       ).length;
       const timeTaken = Math.floor((Date.now() - startTime) / 1000);
 
@@ -205,7 +207,9 @@ export default function PracticeQuizPage() {
         questions: questions.map((q, index) => ({
           ...q,
           selected_option: selectedAnswers[index],
-          is_correct: selectedAnswers[index] === q.correct_option,
+          is_correct:
+            selectedAnswers[index]?.trim().toLowerCase() ===
+            q.correct_option?.trim().toLowerCase(),
         })),
         practiceType,
       };
@@ -287,46 +291,83 @@ export default function PracticeQuizPage() {
     // Existing logic for updating user_incorrect_questions if user is logged in
     if (userId) {
       console.log(
-        "[PracticeQuizPage] User is logged in. Attempting to update incorrect questions.",
-        { userId }
+        "[PracticeQuizPage] User is logged in. Processing practice results for user_incorrect_questions table.",
+        { userId, practiceType }
       );
       try {
-        // The direct insert into quiz_attempts is now handled by the API call above.
-        // console.log("[PracticeQuizPage] Saving to quiz_attempts...", { ... });
-        // await supabase.from("quiz_attempts").insert({ ... });
-        // console.log("[PracticeQuizPage] Successfully saved to quiz_attempts.");
-
-        const incorrectQuestionsToUpdate = resultData.questions
+        // Logic for questions the user got wrong IN THIS SESSION
+        const newlyIncorrectQuestions = resultData.questions
           .filter((q: any) => !q.is_correct && q.selected_option !== undefined)
           .map((q: any) => ({
             user_id: userId,
             question_id: q.id,
           }));
 
-        if (incorrectQuestionsToUpdate.length > 0) {
+        if (newlyIncorrectQuestions.length > 0) {
           console.log(
-            "[PracticeQuizPage] Updating incorrect questions:",
-            incorrectQuestionsToUpdate
+            "[PracticeQuizPage] Upserting newly incorrect questions:",
+            newlyIncorrectQuestions
           );
-          await supabase
+          const { error: upsertError } = await supabase
             .from("user_incorrect_questions")
-            .upsert(incorrectQuestionsToUpdate, {
-              // upsertPayload was already mapped correctly
+            .upsert(newlyIncorrectQuestions, {
               onConflict: "user_id,question_id",
               ignoreDuplicates: false,
             });
-          console.log(
-            "[PracticeQuizPage] Successfully updated incorrect questions."
-          );
+          if (upsertError) {
+            console.error(
+              "[PracticeQuizPage] Error upserting newly incorrect questions:",
+              upsertError
+            );
+            // Optionally set an error state for the user
+          } else {
+            console.log(
+              "[PracticeQuizPage] Successfully upserted newly incorrect questions."
+            );
+          }
         } else {
-          console.log("[PracticeQuizPage] No incorrect questions to update.");
+          console.log(
+            "[PracticeQuizPage] No new incorrect questions in this session."
+          );
+        }
+
+        // New logic: If this was a session for practicing incorrect questions,
+        // remove questions they got right from the user_incorrect_questions table.
+        if (practiceType === "incorrect") {
+          // Make sure practiceType reflects the mode
+          const correctlyAnsweredInThisSession = resultData.questions
+            .filter((q: any) => q.is_correct && q.selected_option !== undefined)
+            .map((q: any) => q.id);
+
+          if (correctlyAnsweredInThisSession.length > 0) {
+            console.log(
+              "[PracticeQuizPage] Removing correctly answered questions from user_incorrect_questions table:",
+              correctlyAnsweredInThisSession
+            );
+            const { error: deleteError } = await supabase
+              .from("user_incorrect_questions")
+              .delete()
+              .eq("user_id", userId)
+              .in("question_id", correctlyAnsweredInThisSession);
+
+            if (deleteError) {
+              console.error(
+                "[PracticeQuizPage] Error removing correctly answered questions:",
+                deleteError
+              );
+              // Optionally set an error state for the user
+            } else {
+              console.log(
+                "[PracticeQuizPage] Successfully removed correctly answered questions."
+              );
+            }
+          }
         }
       } catch (error) {
         console.error(
-          "[PracticeQuizPage] Error saving/updating user data to Supabase:",
+          "[PracticeQuizPage] Error updating user_incorrect_questions table:",
           error
         );
-        // Set error state if needed, but primary submission error is handled above
       }
     } else {
       console.log(

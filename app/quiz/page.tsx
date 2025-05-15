@@ -138,31 +138,51 @@ export default function QuizPage() {
     setIsConfirmModalOpen(true);
   };
 
-  const finishQuiz = () => {
-    const score = Object.values(selectedAnswers).filter(
-      (answer, index) =>
-        questions[index] &&
-        answer?.trim().toLowerCase() ===
-          questions[index].correct_option.trim().toLowerCase()
-    ).length;
-    const incorrectPercentage =
-      ((questions.length - score) / questions.length) * 100;
-    const correctPercentage = (score / questions.length) * 100;
-
-    // Pass question IDs along with other data
+  const finishQuiz = async () => {
     const questionIds = questions.map((q) => q.id);
 
-    router.push(
-      `/results?score=${score}&total=${
-        questions.length
-      }&incorrectPercentage=${incorrectPercentage.toFixed(
-        2
-      )}&correctPercentage=${correctPercentage.toFixed(
-        2
-      )}&userAnswers=${encodeURIComponent(
-        JSON.stringify(selectedAnswers)
-      )}&questionIds=${encodeURIComponent(JSON.stringify(questionIds))}`
-    );
+    // Ensure selectedAnswers keys are strings if they are numbers, matching API expectation if it stringifies numeric keys
+    const userAnswersForApi: Record<string, string> = {};
+    for (const key in selectedAnswers) {
+      userAnswersForApi[String(key)] = selectedAnswers[key];
+    }
+
+    try {
+      const response = await fetch("/api/quiz-attempt", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userAnswers: userAnswersForApi, // Use the transformed answers
+          questionIds: questionIds,
+          isTimed: false, // This is the standard quiz page
+          timeTaken: null, // No timer on this page
+          isPractice: false, // Assuming this is not a practice quiz
+          practiceType: null,
+          category: null, // Assuming no specific category for general quiz
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to save quiz attempt");
+      }
+
+      const result = await response.json();
+      const attemptId = result.attemptId;
+
+      if (attemptId) {
+        router.push(`/results/${attemptId}`);
+      } else {
+        throw new Error("No attempt ID received from API");
+      }
+    } catch (err: any) {
+      console.error("Error submitting quiz:", err);
+      setError(err.message || "Failed to submit quiz. Please try again.");
+      // Optional: redirect to home or show error inline
+      // router.push("/");
+    }
   };
 
   if (loading) {

@@ -22,8 +22,6 @@ interface Question {
   option_c: string;
   option_d: string;
   correct_option: string;
-  answer_explanation: string | null;
-  category: string | null;
 }
 
 export default function PracticeQuizPage() {
@@ -38,8 +36,7 @@ export default function PracticeQuizPage() {
   const [error, setError] = useState<string | null>(null);
   const [startTime, setStartTime] = useState<number>(0);
   const [userId, setUserId] = useState<string | null>(null);
-  const [practiceType, setPracticeType] = useState<string>("category");
-  const [categoryName, setCategoryName] = useState<string | null>(null);
+  const [practiceType, setPracticeType] = useState<string>("");
   const supabase = supabaseClient;
 
   useEffect(() => {
@@ -52,8 +49,9 @@ export default function PracticeQuizPage() {
         }
 
         // Get query parameters
-        const category = searchParams.get("category");
         const incorrect = searchParams.get("incorrect") === "true";
+        const mode = searchParams.get("mode");
+        const countParam = searchParams.get("count");
 
         if (incorrect) {
           setPracticeType("incorrect");
@@ -83,27 +81,71 @@ export default function PracticeQuizPage() {
               .limit(20);
 
             if (questionError) throw questionError;
-            if (questionData) setQuestions(questionData);
+            if (questionData) {
+              setQuestions(questionData);
+            } else {
+              setQuestions([]);
+            }
           } else {
             // No incorrect questions found
             setError(
               "You don't have any incorrect questions to practice. Take some quizzes first!"
             );
+            setQuestions([]);
           }
-        } else if (category) {
-          setPracticeType("category");
-          setCategoryName(category);
+        } else if (mode === "random" && countParam) {
+          setPracticeType("random");
+          const count = parseInt(countParam, 10);
 
-          // Fetch questions by category
-          const { data, error } = await supabase
+          if (isNaN(count) || count <= 0) {
+            setError(
+              "Invalid number of questions specified for random practice."
+            );
+            setQuestions([]);
+            router.push("/practice");
+            return;
+          }
+
+          // Fetch all question IDs
+          const { data: allQuestionIds, error: idError } = await supabase
             .from("questions")
-            .select("*")
-            .eq("category", category)
-            .order("id")
-            .limit(20);
+            .select("id");
 
-          if (error) throw error;
-          if (data) setQuestions(data);
+          if (idError) throw idError;
+
+          if (allQuestionIds && allQuestionIds.length > 0) {
+            const shuffledIds = allQuestionIds
+              .map((q) => q.id)
+              .sort(() => 0.5 - Math.random());
+            const selectedIds = shuffledIds.slice(0, count);
+
+            if (selectedIds.length > 0) {
+              // Fetch the actual questions by selected IDs
+              const { data: questionData, error: questionError } =
+                await supabase
+                  .from("questions")
+                  .select("*")
+                  .in("id", selectedIds);
+
+              if (questionError) throw questionError;
+
+              if (questionData) {
+                // Re-shuffle here to ensure the presentation order is random, as .in() might return them ordered by ID
+                const finalShuffledQuestions = [...questionData].sort(
+                  () => 0.5 - Math.random()
+                );
+                setQuestions(finalShuffledQuestions);
+              } else {
+                setQuestions([]);
+              }
+            } else {
+              setError("No questions available to select for random practice.");
+              setQuestions([]);
+            }
+          } else {
+            setError("No questions found in the database for random practice.");
+            setQuestions([]);
+          }
         } else {
           // No valid practice type specified
           router.push("/practice");
@@ -148,64 +190,149 @@ export default function PracticeQuizPage() {
     }
   };
 
+  const getResultData = () => {
+    console.log("[PracticeQuizPage] getResultData called");
+    try {
+      const score = questions.filter(
+        (q, index) => selectedAnswers[index] === q.correct_option
+      ).length;
+      const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+
+      const results = {
+        score,
+        totalQuestions: questions.length,
+        timeTaken,
+        questions: questions.map((q, index) => ({
+          ...q,
+          selected_option: selectedAnswers[index],
+          is_correct: selectedAnswers[index] === q.correct_option,
+        })),
+        practiceType,
+      };
+      console.log("[PracticeQuizPage] resultData prepared:", results);
+      return results;
+    } catch (error) {
+      console.error("[PracticeQuizPage] Error in getResultData:", error);
+      setError("Error preparing quiz results. Please try again."); // Update error state
+      throw error; // Re-throw to stop finishQuiz if critical
+    }
+  };
+
   const finishQuiz = async () => {
-    const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+    console.log("[PracticeQuizPage] finishQuiz called");
+    let resultData;
+    try {
+      resultData = getResultData();
+    } catch (e) {
+      // Error already logged and setError called in getResultData
+      return; // Stop execution if getResultData failed
+    }
 
-    // Calculate score
-    const score = questions.filter(
-      (q, index) => selectedAnswers[index] === q.correct_option
-    ).length;
+    const questionIds = questions.map((q) => q.id);
+    const userAnswersForApi: Record<string, string> = {};
+    resultData.questions.forEach((q: any, index: number) => {
+      // Assuming getResultData structures questions with selected_option, and we want to map it to the API's expected userAnswers format
+      // The key for userAnswers should be the original index of the question as a string.
+      if (q.selected_option !== undefined) {
+        userAnswersForApi[String(index)] = q.selected_option;
+      }
+    });
 
-    // Save quiz attempt if user is logged in
+    // setLoading(true); // Optional
+    // setError(null);
+
+    try {
+      const response = await fetch("/api/quiz-attempt", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userAnswers: userAnswersForApi,
+          questionIds: questionIds,
+          isTimed: false, // Practice quiz is not timed in the same way as /quiz/timed
+          timeTaken: resultData.timeTaken, // getResultData calculates a timeTaken
+          isPractice: true,
+          practiceType: resultData.practiceType, // Get practiceType from resultData
+          category:
+            practiceType === "category" ? searchParams.get("category") : null, // Pass category if it was a category practice
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || "Failed to save practice quiz attempt"
+        );
+      }
+
+      const result = await response.json();
+      const attemptId = result.attemptId;
+
+      if (attemptId) {
+        router.push(`/results/${attemptId}`);
+      } else {
+        throw new Error("No attempt ID received from API for practice quiz");
+      }
+    } catch (err: any) {
+      console.error("[PracticeQuizPage] Error submitting practice quiz:", err);
+      setError(
+        err.message || "Failed to submit practice quiz. Please try again."
+      );
+      // Optional: redirect to home or show error inline
+    } finally {
+      // setLoading(false);
+    }
+
+    // Existing logic for updating user_incorrect_questions if user is logged in
     if (userId) {
+      console.log(
+        "[PracticeQuizPage] User is logged in. Attempting to update incorrect questions.",
+        { userId }
+      );
       try {
-        await supabase.from("quiz_attempts").insert({
-          user_id: userId,
-          score,
-          total_questions: questions.length,
-          time_taken: timeTaken,
-          is_timed: false,
-          quiz_type: "practice",
-          category: categoryName,
-        });
+        // The direct insert into quiz_attempts is now handled by the API call above.
+        // console.log("[PracticeQuizPage] Saving to quiz_attempts...", { ... });
+        // await supabase.from("quiz_attempts").insert({ ... });
+        // console.log("[PracticeQuizPage] Successfully saved to quiz_attempts.");
 
-        // Update incorrect questions
-        const incorrectQuestions = questions
-          .filter(
-            (q, index) =>
-              selectedAnswers[index] !== q.correct_option &&
-              selectedAnswers[index] !== undefined
-          )
-          .map((q) => ({
+        const incorrectQuestionsToUpdate = resultData.questions
+          .filter((q: any) => !q.is_correct && q.selected_option !== undefined)
+          .map((q: any) => ({
             user_id: userId,
             question_id: q.id,
           }));
 
-        if (incorrectQuestions.length > 0) {
-          await supabase.from("user_incorrect_questions").upsert(
-            incorrectQuestions.map((q) => ({
-              ...q,
-              times_incorrect: 1,
-            })),
-            {
+        if (incorrectQuestionsToUpdate.length > 0) {
+          console.log(
+            "[PracticeQuizPage] Updating incorrect questions:",
+            incorrectQuestionsToUpdate
+          );
+          await supabase
+            .from("user_incorrect_questions")
+            .upsert(incorrectQuestionsToUpdate, {
+              // upsertPayload was already mapped correctly
               onConflict: "user_id,question_id",
               ignoreDuplicates: false,
-            }
+            });
+          console.log(
+            "[PracticeQuizPage] Successfully updated incorrect questions."
           );
+        } else {
+          console.log("[PracticeQuizPage] No incorrect questions to update.");
         }
       } catch (error) {
-        console.error("Error saving quiz results:", error);
+        console.error(
+          "[PracticeQuizPage] Error saving/updating user data to Supabase:",
+          error
+        );
+        // Set error state if needed, but primary submission error is handled above
       }
+    } else {
+      console.log(
+        "[PracticeQuizPage] User is not logged in. Skipping save/update of user data."
+      );
     }
-
-    // Navigate to results
-    router.push(
-      `/results?answers=${encodeURIComponent(
-        JSON.stringify(selectedAnswers)
-      )}&practice=true&practiceType=${practiceType}&category=${encodeURIComponent(
-        categoryName || ""
-      )}`
-    );
   };
 
   if (loading) {
@@ -268,9 +395,9 @@ export default function PracticeQuizPage() {
               Question {currentQuestionIndex + 1} of {questions.length}
             </h2>
             <div className="px-3 py-1 bg-red-100 text-red-600 rounded-full text-sm font-medium">
-              {practiceType === "category"
-                ? categoryName
-                : "Incorrect Questions"}
+              {practiceType === "incorrect"
+                ? "Incorrect Questions"
+                : "Random Practice"}
             </div>
           </div>
           <Progress value={progress} className="h-2" />
@@ -346,9 +473,6 @@ function getSampleQuestions(): Question[] {
       option_d:
         "The prime minister can call the election any time at his own will",
       correct_option: "b",
-      answer_explanation:
-        "According to Canadian legislation, a federal election must be held within four years of the most recent election.",
-      category: "Government and Democracy",
     },
     {
       id: 2,
@@ -359,9 +483,6 @@ function getSampleQuestions(): Question[] {
       option_c: "Education",
       option_d: "Interprovincial trade and communications",
       correct_option: "d",
-      answer_explanation:
-        "The federal government is responsible for interprovincial trade and communications, while highways, natural resources, and education typically fall under provincial jurisdiction.",
-      category: "Government and Democracy",
     },
     // Add more sample questions with explanations and categories
     {
@@ -373,9 +494,6 @@ function getSampleQuestions(): Question[] {
       option_c: "Canadian Confederation",
       option_d: "Dominion of Canada",
       correct_option: "d",
-      answer_explanation:
-        "At Confederation in 1867, the country was officially named the Dominion of Canada.",
-      category: "Canadian History",
     },
     {
       id: 4,
@@ -385,9 +503,6 @@ function getSampleQuestions(): Question[] {
       option_c: "Prairies",
       option_d: "Central Canada",
       correct_option: "d",
-      answer_explanation:
-        "More than half of Canada's population lives in Central Canada, specifically in the provinces of Ontario and Quebec.",
-      category: "Geography",
     },
     {
       id: 5,
@@ -397,9 +512,6 @@ function getSampleQuestions(): Question[] {
       option_c: "Sir Wilfried Laurier",
       option_d: "Sir John Alexander Macdonald",
       correct_option: "b",
-      answer_explanation:
-        "Sir George-Étienne Cartier was instrumental in bringing Quebec into Confederation, serving as a key French-Canadian Father of Confederation.",
-      category: "Canadian History",
     },
   ];
 }

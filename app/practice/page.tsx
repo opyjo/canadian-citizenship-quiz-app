@@ -14,15 +14,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, BookOpen, AlertTriangle } from "lucide-react";
-
-interface Category {
-  name: string;
-  count: number;
-}
+import { Loader2, BookOpen, AlertTriangle, Shuffle } from "lucide-react";
 
 export default function PracticePage() {
-  const [categories, setCategories] = useState<Category[]>([]);
   const [incorrectQuestionsCount, setIncorrectQuestionsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,29 +30,6 @@ export default function PracticePage() {
         // Check if user is authenticated
         const { data: userData } = await supabase.auth.getUser();
         setUser(userData.user);
-
-        // Fetch categories and question counts
-        const { data: categoryData, error: categoryError } = await supabase
-          .from("questions")
-          .select("category")
-          .not("category", "is", null);
-
-        if (categoryError) throw categoryError;
-
-        // Count questions by category
-        const categoryCounts: Record<string, number> = {};
-        categoryData?.forEach((item) => {
-          if (item.category) {
-            categoryCounts[item.category] =
-              (categoryCounts[item.category] || 0) + 1;
-          }
-        });
-
-        const formattedCategories = Object.entries(categoryCounts)
-          .map(([name, count]) => ({ name, count }))
-          .sort((a, b) => a.name.localeCompare(b.name));
-
-        setCategories(formattedCategories);
 
         // If user is logged in, fetch incorrect questions count
         if (userData.user) {
@@ -74,28 +45,16 @@ export default function PracticePage() {
       } catch (err: any) {
         console.error("Error fetching data:", err);
         setError(err.message || "Failed to load practice data");
-
-        // For demo purposes, set sample categories
-        setCategories([
-          { name: "Canadian History", count: 120 },
-          { name: "Government and Democracy", count: 95 },
-          { name: "Geography", count: 65 },
-          { name: "Rights and Responsibilities", count: 50 },
-          { name: "Indigenous Peoples", count: 30 },
-          { name: "Canadian Symbols and Identity", count: 40 },
-          { name: "General Knowledge", count: 14 },
-        ]);
-        setIncorrectQuestionsCount(12);
       } finally {
         setLoading(false);
       }
     }
 
     fetchData();
-  }, []);
+  }, [supabase]);
 
-  const startPracticeByCategory = (category: string) => {
-    router.push(`/quiz/practice?category=${encodeURIComponent(category)}`);
+  const startQuickPractice = (count: number) => {
+    router.push(`/quiz/practice?mode=random&count=${count}`);
   };
 
   const startPracticeIncorrect = () => {
@@ -119,127 +78,139 @@ export default function PracticePage() {
         <div>
           <h1 className="text-3xl font-bold">Practice Mode</h1>
           <p className="text-muted-foreground">
-            Focus on specific topics or questions you've answered incorrectly
+            Test your knowledge with a random mix of questions or focus on
+            questions you've answered incorrectly.
           </p>
         </div>
 
-        <Tabs defaultValue="categories">
-          <TabsList className="mb-4">
-            <TabsTrigger value="categories">Practice by Category</TabsTrigger>
-            <TabsTrigger value="incorrect">
-              Practice Incorrect Questions
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="categories" className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {categories.map((category) => (
-                <Card key={category.name} className="overflow-hidden">
-                  <CardHeader className="pb-3">
-                    <CardTitle>{category.name}</CardTitle>
-                    <CardDescription>
-                      {category.count} questions available
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center space-x-2">
-                      <BookOpen className="h-5 w-5 text-red-600" />
-                      <span>Focus on {category.name.toLowerCase()} topics</span>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="bg-gray-50 border-t">
-                    <Button
-                      className="w-full"
-                      onClick={() => startPracticeByCategory(category.name)}
-                    >
-                      Start Practice
-                    </Button>
-                  </CardFooter>
-                </Card>
+        {/* Quick Practice Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Shuffle className="mr-2 h-6 w-6 text-red-600" />
+              Quick Practice
+            </CardTitle>
+            <CardDescription>
+              Start a practice session with a random selection of questions.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p>Choose the number of questions for your random quiz:</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[10, 20, 50].map((count) => (
+                <Button
+                  key={count}
+                  variant="outline"
+                  className="w-full py-6 text-lg"
+                  onClick={() => startQuickPractice(count)}
+                >
+                  {count} Questions
+                </Button>
               ))}
             </div>
-          </TabsContent>
+          </CardContent>
+        </Card>
 
-          <TabsContent value="incorrect" className="space-y-6">
-            {!user ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Sign In Required</CardTitle>
-                  <CardDescription>
-                    You need to sign in to track and practice questions you've
-                    answered incorrectly
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center space-x-2 text-amber-600">
-                    <AlertTriangle className="h-5 w-5" />
-                    <p>
-                      This feature requires an account to track your quiz
-                      history
-                    </p>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Link href="/auth" className="w-full">
-                    <Button className="w-full">
-                      Sign In or Create Account
-                    </Button>
-                  </Link>
-                </CardFooter>
-              </Card>
-            ) : incorrectQuestionsCount === 0 ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>No Incorrect Questions</CardTitle>
-                  <CardDescription>
-                    You haven't answered any questions incorrectly yet, or you
-                    haven't taken any quizzes
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center space-x-2 text-green-600">
-                    <BookOpen className="h-5 w-5" />
-                    <p>Take some quizzes first to build your practice list</p>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Link href="/" className="w-full">
-                    <Button className="w-full">Take a Quiz</Button>
-                  </Link>
-                </CardFooter>
-              </Card>
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Practice Incorrect Questions</CardTitle>
-                  <CardDescription>
-                    Focus on the {incorrectQuestionsCount} questions you've
-                    previously answered incorrectly
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center space-x-2">
-                    <AlertTriangle className="h-5 w-5 text-amber-600" />
-                    <p>
-                      Practicing these questions will help improve your score
-                    </p>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button className="w-full" onClick={startPracticeIncorrect}>
-                    Start Practice
-                  </Button>
-                </CardFooter>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
+        {/* Practice Incorrect Questions Section - No longer in a Tab */}
+        {!user ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Sign In Required for Incorrect Questions</CardTitle>
+              <CardDescription>
+                Sign in to track and practice questions you've answered
+                incorrectly.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2 text-amber-600">
+                <AlertTriangle className="h-5 w-5" />
+                <p>
+                  Practicing incorrect questions requires an account to track
+                  your quiz history.
+                </p>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Link href="/auth" className="w-full">
+                <Button className="w-full" variant="default">
+                  Sign In or Create Account
+                </Button>
+              </Link>
+            </CardFooter>
+          </Card>
+        ) : incorrectQuestionsCount === 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>No Incorrect Questions</CardTitle>
+              <CardDescription>
+                You haven't answered any questions incorrectly yet, or you
+                haven't taken any quizzes. Great job!
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2 text-green-600">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <p>Keep up the good work!</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-3">
+              <CardTitle>Practice Incorrect Questions</CardTitle>
+              <CardDescription>
+                You have {incorrectQuestionsCount} question
+                {incorrectQuestionsCount !== 1 ? "s" : ""} answered incorrectly.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                <span>Focus on the questions you found tricky.</span>
+              </div>
+            </CardContent>
+            <CardFooter className="bg-gray-50 dark:bg-gray-800 border-t">
+              <Button
+                className="w-full"
+                variant="secondary"
+                onClick={startPracticeIncorrect}
+              >
+                Practice {incorrectQuestionsCount} Incorrect Question
+                {incorrectQuestionsCount !== 1 ? "s" : ""}
+              </Button>
+            </CardFooter>
+          </Card>
+        )}
 
-        <div className="flex justify-center">
-          <Link href="/">
-            <Button variant="outline">Return Home</Button>
-          </Link>
-        </div>
+        {error && (
+          <Card className="border-red-500 bg-red-50 dark:bg-red-900/30">
+            <CardHeader>
+              <CardTitle className="text-red-700 dark:text-red-400">
+                An Error Occurred
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-red-600 dark:text-red-300">{error}</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Please try refreshing the page. If the problem persists, some
+                data might be temporarily unavailable.
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

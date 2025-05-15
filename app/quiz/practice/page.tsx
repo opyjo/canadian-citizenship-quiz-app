@@ -87,11 +87,12 @@ export default function PracticeQuizPage() {
               setQuestions([]);
             }
           } else {
-            // No incorrect questions found
+            // No incorrect questions found for this user
             setError(
-              "You don't have any incorrect questions to practice. Take some quizzes first!"
+              "Congratulations! You have no incorrect questions to practice. Well done!"
             );
             setQuestions([]);
+            return;
           }
         } else if (mode === "random" && countParam) {
           setPracticeType("random");
@@ -392,14 +393,32 @@ export default function PracticeQuizPage() {
       <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <Card className="w-full max-w-3xl">
           <CardHeader>
-            <CardTitle className="text-red-600">Error</CardTitle>
+            <CardTitle
+              className={`${
+                error.startsWith("Congratulations")
+                  ? "text-green-600"
+                  : "text-red-600"
+              }`}
+            >
+              {error.startsWith("Congratulations") ? "All Clear!" : "Error"}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p>{error}</p>
           </CardContent>
           <CardFooter>
-            <Button onClick={() => router.push("/practice")}>
-              Return to Practice
+            <Button
+              onClick={() => {
+                if (error.startsWith("Congratulations")) {
+                  router.push("/"); // Go home if all clear
+                } else {
+                  router.push("/practice"); // Go back to practice options for other errors
+                }
+              }}
+            >
+              {error.startsWith("Congratulations")
+                ? "Return Home"
+                : "Return to Practice Options"}
             </Button>
           </CardFooter>
         </Card>
@@ -407,7 +426,7 @@ export default function PracticeQuizPage() {
     );
   }
 
-  if (!currentQuestion || questions.length === 0) {
+  if (!currentQuestion && !loading && !error) {
     return (
       <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <Card className="w-full max-w-3xl">
@@ -415,11 +434,15 @@ export default function PracticeQuizPage() {
             <CardTitle>No Questions Available</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>There are no questions available for this practice session.</p>
+            <p>
+              There are no questions available for this practice session. This
+              might be because all incorrect questions have been cleared or no
+              questions match the selected criteria.
+            </p>
           </CardContent>
           <CardFooter>
             <Button onClick={() => router.push("/practice")}>
-              Return to Practice
+              Return to Practice Options
             </Button>
           </CardFooter>
         </Card>

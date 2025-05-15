@@ -207,7 +207,10 @@ export default function ResultsPage() {
     totalQuestions > 0
       ? Math.round((correctAnswersCount / totalQuestions) * 100)
       : 0;
-  const passed = correctAnswersCount >= 15; // 75% passing threshold
+
+  // For non-practice quizzes, determine pass/fail. For practice, it's neutral.
+  const passed = !isPractice && correctAnswersCount >= 15;
+  const failed = !isPractice && correctAnswersCount < 15;
 
   // Format time taken
   const formattedTimeTaken = timeTaken
@@ -246,38 +249,57 @@ export default function ResultsPage() {
             <div className="flex flex-col items-center space-y-4 p-6 bg-gray-50 rounded-lg">
               <div
                 className={`text-5xl font-bold ${
-                  passed ? "text-green-600" : "text-red-600"
+                  isPractice
+                    ? "text-blue-600"
+                    : passed
+                    ? "text-green-600"
+                    : "text-red-600"
                 }`}
               >
                 {correctAnswersCount} / {totalQuestions}
               </div>
-              <div className="text-xl">Score: {scorePercentage}%</div>
-              <div className="flex items-center space-x-2">
-                {passed ? (
-                  <>
-                    <CheckCircle className="h-6 w-6 text-green-600" />
-                    <span className="font-medium text-green-600">Passed!</span>
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="h-6 w-6 text-red-600" />
-                    <span className="font-medium text-red-600">Failed</span>
-                  </>
-                )}
-              </div>
-              <p className="text-center text-sm text-muted-foreground">
-                {passed
-                  ? "Congratulations! You've passed the practice test."
-                  : "You need at least 15 correct answers (75%) to pass. Try again!"}
+              <p
+                className={`text-xl font-medium ${
+                  isPractice
+                    ? "text-blue-600"
+                    : passed
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+              >
+                Score: {scorePercentage}%
               </p>
-
-              {isTimed && timeTaken !== null && timeTaken > 0 && (
-                <div className="flex items-center mt-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4 mr-1" />
-                  <span>Time taken: {formattedTimeTaken}</span>
-                </div>
+              {!isPractice ? ( // Only show pass/fail message for non-practice quizzes
+                passed ? (
+                  <p className="text-lg text-green-700">
+                    You passed! Congratulations!
+                  </p>
+                ) : (
+                  <p className="text-lg text-red-700">
+                    Failed. You need at least 15 correct answers (75%) to pass.
+                    Try again!
+                  </p>
+                )
+              ) : (
+                <p className="text-lg text-gray-700">
+                  Practice Session Complete
+                </p>
               )}
             </div>
+            {isPractice &&
+              practiceType === "incorrect" &&
+              scorePercentage === 100 && (
+                <div className="text-center p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-green-700 font-semibold">
+                    Great job! You've correctly answered all questions in this
+                    practice session.
+                  </p>
+                  <p className="text-sm text-green-600">
+                    These questions should now be removed from your incorrect
+                    questions list.
+                  </p>
+                </div>
+              )}
 
             <Tabs defaultValue="all" className="w-full">
               <TabsList className="grid w-full grid-cols-3">

@@ -55,95 +55,125 @@ export default function TimedQuizPage() {
     if (quizFinished) return;
     setQuizFinished(true);
     setQuizActive(false);
-    const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+    // Calculate time taken. Ensure startTime was set when the quiz began.
+    const timeTakenSeconds =
+      startTime > 0
+        ? Math.floor((Date.now() - startTime) / 1000)
+        : TIME_LIMIT - timeRemaining;
 
-    // Calculate score
-    let newScore = 0;
-    const incorrectQs: {
-      question_id: number;
-      user_answer: string;
-      correct_answer: string;
-      question_text: string;
-    }[] = [];
+    const questionIds = originalQuestions.map((q) => q.id);
 
-    questions.forEach((question, index) => {
-      const userAnswer = selectedAnswers[index];
-      if (
-        userAnswer &&
-        question.correct_option.toLowerCase() === userAnswer.toLowerCase()
-      ) {
-        newScore++;
-      } else if (userAnswer) {
-        const qIdAsNumber = Number(question.id);
-        if (isNaN(qIdAsNumber)) {
-          console.error(
-            `Invalid question.id: ${question.id} cannot be converted to a number.`
-          );
-          return;
-        }
-        incorrectQs.push({
-          question_id: qIdAsNumber,
-          user_answer: userAnswer,
-          correct_answer: question.correct_option,
-          question_text: question.question_text,
-        });
+    // Ensure selectedAnswers keys are strings
+    const userAnswersForApi: Record<string, string> = {};
+    for (const key in selectedAnswers) {
+      userAnswersForApi[String(key)] = selectedAnswers[key];
+    }
+
+    // setLoading(true); // Optional: indicate loading
+    // setError(null);
+
+    try {
+      const response = await fetch("/api/quiz-attempt", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userAnswers: userAnswersForApi,
+          questionIds: questionIds,
+          isTimed: true,
+          timeTaken: timeTakenSeconds,
+          isPractice: false, // Assuming timed quiz is not a practice quiz by default
+          practiceType: null,
+          category: null, // Or a specific category if applicable to all timed quizzes
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to save timed quiz attempt");
       }
-    });
 
-    // Save quiz attempt if user is logged in
+      const result = await response.json();
+      const attemptId = result.attemptId;
+
+      if (attemptId) {
+        router.push(`/results/${attemptId}`);
+      } else {
+        throw new Error("No attempt ID received from API for timed quiz");
+      }
+    } catch (err: any) {
+      console.error("Error submitting timed quiz:", err);
+      setError(err.message || "Failed to submit timed quiz. Please try again.");
+      // Optional: redirect to home or show error inline
+    } finally {
+      // setLoading(false);
+    }
+
+    // The existing logic for saving incorrect questions if userId is present can be kept or refactored.
+    // For now, it's outside the new API call flow but was part of the original function.
+    // Consider if this should also move to the API route or be triggered differently.
     if (userId) {
+      let newScore = 0;
+      const incorrectQs: {
+        question_id: number;
+        user_answer: string;
+        correct_answer: string;
+        question_text: string;
+      }[] = [];
+
+      questions.forEach((question, index) => {
+        const userAnswer = selectedAnswers[index];
+        if (
+          userAnswer &&
+          question.correct_option.toLowerCase() === userAnswer.toLowerCase()
+        ) {
+          newScore++;
+        } else if (userAnswer) {
+          const qIdAsNumber = Number(question.id);
+          if (isNaN(qIdAsNumber)) {
+            console.error(
+              `Invalid question.id: ${question.id} cannot be converted to a number.`
+            );
+            return;
+          }
+          incorrectQs.push({
+            question_id: qIdAsNumber,
+            user_answer: userAnswer,
+            correct_answer: question.correct_option,
+            question_text: question.question_text,
+          });
+        }
+      });
+
       try {
-        await supabaseClient.from("quiz_attempts").insert({
-          user_id: userId,
-          score: newScore,
-          total_questions: questions.length,
-          time_taken: TIME_LIMIT - timeRemaining,
-          attempt_date: new Date().toISOString(),
-        });
+        // This was the old way of saving, the API route now handles the primary attempt saving.
+        // The quiz_attempts insert here is now redundant if the API call above succeeds.
+        // await supabaseClient.from("quiz_attempts").insert({ ... });
 
         if (incorrectQs.length > 0) {
           await supabaseClient.from("user_incorrect_questions").upsert(
-            incorrectQs.map((iq) => ({ ...iq })),
+            incorrectQs.map((iq) => ({ ...iq, user_id: userId })), // ensure user_id is part of the object
             {
-              onConflict: "user_id, question_id", // Specify conflict resolution strategy
-              ignoreDuplicates: false, // Set to false to update existing records or handle as needed
+              onConflict: "user_id, question_id",
+              ignoreDuplicates: false,
             }
           );
         }
       } catch (dbError) {
-        console.error("Error saving quiz attempt:", dbError);
-        // Optionally, set an error state to inform the user
+        console.error("Error saving user incorrect questions:", dbError);
       }
     }
-
-    const incorrectPercentage =
-      ((questions.length - newScore) / questions.length) * 100;
-    const correctPercentage = (newScore / questions.length) * 100;
-    const questionIdsForResults = originalQuestions.map((q) => q.id);
-
-    // Manually construct the URL with query parameters
-    const queryParams = new URLSearchParams({
-      score: newScore.toString(),
-      totalQuestions: originalQuestions.length.toString(),
-      questionIds: JSON.stringify(questionIdsForResults),
-      userAnswers: JSON.stringify(selectedAnswers),
-      timeTaken: (TIME_LIMIT - timeRemaining).toString(),
-      quizType: "Timed",
-    });
-    const url = `/results?${queryParams.toString()}`;
-
-    // Navigate to results
-    router.push(url); // Pass the constructed URL string
   }, [
-    questions,
-    selectedAnswers,
     quizFinished,
-    router,
-    userId,
-    timeRemaining,
-    originalQuestions,
     setQuizActive,
     startTime,
+    timeRemaining,
+    originalQuestions,
+    selectedAnswers,
+    router,
+    userId, // Added userId here as it's used in the latter part
+    questions, // Added questions here as it's used for score calculation for incorrectQs
   ]);
 
   useEffect(() => {

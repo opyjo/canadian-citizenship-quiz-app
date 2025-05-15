@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation"; // Import useParams
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,104 +27,123 @@ interface Question {
   category: string | null;
 }
 
+// Define a type for the quiz attempt data fetched from Supabase
+interface QuizAttempt {
+  id: string;
+  user_answers: Record<string, string>;
+  question_ids: number[];
+  is_timed: boolean;
+  time_taken_seconds: number | null;
+  is_practice: boolean;
+  practice_type: string | null;
+  category: string | null; // Category of the quiz attempt if applicable
+  created_at: string;
+}
+
 export default function ResultsPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const params = useParams();
+  const attemptId = params.attemptId as string;
+
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
+  const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isTimed, setIsTimed] = useState(false);
-  const [timeTaken, setTimeTaken] = useState<number | null>(null);
+  const [timeTaken, setTimeTaken] = useState<number | null>(null); // in seconds
   const [isPractice, setIsPractice] = useState(false);
   const [practiceType, setPracticeType] = useState<string | null>(null);
-  const [category, setCategory] = useState<string | null>(null);
+  const [quizCategory, setQuizCategory] = useState<string | null>(null); // Renamed to avoid conflict with question.category
   const supabase = supabaseClient;
 
   useEffect(() => {
     async function loadResults() {
+      if (!attemptId) {
+        setLoading(false);
+        setError("Attempt ID not found in URL.");
+        // router.push("/"); // Optionally redirect
+        return;
+      }
+
       try {
-        const answersParam = searchParams.get("userAnswers");
-        const questionIdsParam = searchParams.get("questionIds");
+        setLoading(true);
+        setError(null);
+        // 1. Fetch the quiz attempt data
+        const { data: attemptData, error: attemptError } = await supabase
+          .from("quiz_attempts")
+          .select("*")
+          .eq("id", attemptId)
+          .single();
 
-        if (!answersParam) {
-          router.push("/");
-          return;
-        }
+        if (attemptError) throw attemptError;
+        if (!attemptData) throw new Error("Quiz attempt not found.");
 
-        const parsedAnswers = JSON.parse(decodeURIComponent(answersParam));
-        setUserAnswers(parsedAnswers);
+        const typedAttemptData = attemptData as QuizAttempt;
 
-        const timedParam = searchParams.get("timed");
-        setIsTimed(timedParam === "true");
+        setUserAnswers(typedAttemptData.user_answers || {}); // Ensure userAnswers is an object
+        setIsTimed(typedAttemptData.is_timed || false);
+        setTimeTaken(typedAttemptData.time_taken_seconds);
+        setIsPractice(typedAttemptData.is_practice || false);
+        setPracticeType(typedAttemptData.practice_type);
+        setQuizCategory(typedAttemptData.category); // Category for the overall quiz/practice session
 
-        const timeTakenParam = searchParams.get("timeTaken");
-        if (timeTakenParam) {
-          setTimeTaken(Number.parseInt(timeTakenParam));
-        }
-
-        const practiceParam = searchParams.get("practice");
-        setIsPractice(practiceParam === "true");
-
-        const practiceTypeParam = searchParams.get("practiceType");
-        if (practiceTypeParam) {
-          setPracticeType(practiceTypeParam);
-        }
-
-        const categoryParam = searchParams.get("category");
-        if (categoryParam) {
-          setCategory(categoryParam);
-        }
-
+        // 2. Fetch the questions based on IDs from the attempt
         let fetchedQuestions: Question[] | null = null;
         let fetchError: any = null;
 
-        if (questionIdsParam) {
-          const questionIdsArray = JSON.parse(
-            decodeURIComponent(questionIdsParam)
-          );
-          if (Array.isArray(questionIdsArray) && questionIdsArray.length > 0) {
-            const { data, error } = await supabase
-              .from("questions")
-              .select("*")
-              .in("id", questionIdsArray);
-            fetchedQuestions = data;
-            fetchError = error;
+        if (
+          typedAttemptData.question_ids &&
+          typedAttemptData.question_ids.length > 0
+        ) {
+          const { data: questionData, error: questionsError } = await supabase
+            .from("questions")
+            .select("*")
+            .in("id", typedAttemptData.question_ids);
 
-            if (data) {
-              const questionMap = new Map(data.map((q) => [q.id, q]));
-              fetchedQuestions = questionIdsArray
-                .map((id: number) => questionMap.get(id))
-                .filter(Boolean) as Question[];
-            }
-          } else {
-            console.warn("Invalid question IDs provided.");
+          fetchError = questionsError;
+
+          if (questionData) {
+            const questionMap = new Map(
+              questionData.map((q: Question) => [q.id, q])
+            );
+            fetchedQuestions = typedAttemptData.question_ids
+              .map((id: number) => questionMap.get(id))
+              .filter(Boolean) as Question[];
           }
+        } else {
+          console.warn("No question IDs found in the quiz attempt.");
         }
 
         if (fetchError) {
-          throw new Error(fetchError.message);
+          throw new Error(fetchError.message || "Failed to fetch questions.");
         }
 
         if (fetchedQuestions && fetchedQuestions.length > 0) {
           setQuestions(fetchedQuestions);
         } else {
           console.warn(
-            "Could not fetch specific questions by ID, or no IDs were provided."
+            "Could not fetch specific questions by ID, or no questions were associated with the attempt."
           );
-          setQuestions(getSampleQuestions());
+          // Do not fall back to sample questions here, as this page is for specific attempts.
+          // setError("Failed to load questions for this quiz attempt. Critical data missing.");
+          // Forcing an error state if questions can't be loaded for a valid attempt.
+          if (!fetchError)
+            setError(
+              "Failed to load questions for this quiz attempt. Questions not found or IDs missing."
+            );
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error loading results:", err);
-        setError("Failed to load quiz results. Please try again.");
-        setQuestions(getSampleQuestions());
+        setError(
+          err.message || "Failed to load quiz results. Please try again."
+        );
       } finally {
         setLoading(false);
       }
     }
 
     loadResults();
-  }, [router, searchParams, supabase]);
+  }, [attemptId, router, supabase]);
 
   if (loading) {
     return (
@@ -152,9 +171,35 @@ export default function ResultsPage() {
     );
   }
 
+  // Guard against rendering if questions are not loaded, which can happen if attemptId was invalid or data missing.
+  if (questions.length === 0 && !loading) {
+    // This check might be redundant if error state is properly set above,
+    // but good as a safeguard before score calculation.
+    return (
+      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+        <Card className="w-full max-w-3xl">
+          <CardHeader>
+            <CardTitle className="text-orange-600">No Questions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>
+              No questions were loaded for this quiz attempt. This might be due
+              to an invalid attempt ID or missing data.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Button onClick={() => router.push("/")}>Return Home</Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
   // Calculate score
+  // Assuming userAnswers is an object keyed by original question index (0-based) like {"0": "A", "1": "C"}
+  // And questions array is ordered by original question order.
   const correctAnswersCount = questions.filter(
-    (q, index) => userAnswers[index]?.toUpperCase() === q.correct_option
+    (q, index) => userAnswers[String(index)]?.toUpperCase() === q.correct_option
   ).length;
 
   const totalQuestions = questions.length;
@@ -184,7 +229,7 @@ export default function ResultsPage() {
               {isPractice && (
                 <div className="px-3 py-1 bg-red-100 text-red-600 rounded-full text-sm font-medium">
                   {practiceType === "category"
-                    ? category
+                    ? quizCategory // Use quizCategory state for the practice category
                     : "Incorrect Questions"}{" "}
                   Practice
                 </div>
@@ -226,7 +271,7 @@ export default function ResultsPage() {
                   : "You need at least 15 correct answers (75%) to pass. Try again!"}
               </p>
 
-              {isTimed && (
+              {isTimed && timeTaken !== null && timeTaken > 0 && (
                 <div className="flex items-center mt-2 text-sm text-muted-foreground">
                   <Clock className="h-4 w-4 mr-1" />
                   <span>Time taken: {formattedTimeTaken}</span>
@@ -247,12 +292,14 @@ export default function ResultsPage() {
 
               <TabsContent value="all" className="space-y-4 mt-4">
                 {questions.map((question, index) => {
-                  const userAnswer = userAnswers[index];
+                  // userAnswers is keyed by index string
+                  const userAnswerKey = String(index);
+                  const userAnswer = userAnswers[userAnswerKey];
                   const isCorrect =
                     userAnswer?.toUpperCase() === question.correct_option;
                   return (
                     <QuestionReview
-                      key={index}
+                      key={question.id} // Use question.id for key if available and unique
                       question={question}
                       userAnswer={userAnswer}
                       isCorrect={isCorrect}
@@ -265,17 +312,21 @@ export default function ResultsPage() {
 
               <TabsContent value="correct" className="space-y-4 mt-4">
                 {questions
-                  .filter(
-                    (q, index) =>
-                      userAnswers[index]?.toUpperCase() === q.correct_option
-                  )
+                  .filter((q, index) => {
+                    const userAnswerKey = String(index);
+                    return (
+                      userAnswers[userAnswerKey]?.toUpperCase() ===
+                      q.correct_option
+                    );
+                  })
                   .map((question) => {
                     const originalIndex = questions.indexOf(question);
+                    const userAnswerKey = String(originalIndex);
                     return (
                       <QuestionReview
-                        key={originalIndex}
+                        key={question.id}
                         question={question}
-                        userAnswer={userAnswers[originalIndex]}
+                        userAnswer={userAnswers[userAnswerKey]}
                         isCorrect={true}
                         questionNumber={originalIndex + 1}
                         reviewContext="correct"
@@ -286,18 +337,22 @@ export default function ResultsPage() {
 
               <TabsContent value="incorrect" className="space-y-4 mt-4">
                 {questions
-                  .filter(
-                    (q, index) =>
-                      userAnswers[index] !== undefined &&
-                      userAnswers[index]?.toUpperCase() !== q.correct_option
-                  )
+                  .filter((q, index) => {
+                    const userAnswerKey = String(index);
+                    return (
+                      userAnswers[userAnswerKey] !== undefined &&
+                      userAnswers[userAnswerKey]?.toUpperCase() !==
+                        q.correct_option
+                    );
+                  })
                   .map((question) => {
                     const originalIndex = questions.indexOf(question);
+                    const userAnswerKey = String(originalIndex);
                     return (
                       <QuestionReview
-                        key={originalIndex}
+                        key={question.id}
                         question={question}
-                        userAnswer={userAnswers[originalIndex]}
+                        userAnswer={userAnswers[userAnswerKey]}
                         isCorrect={false}
                         questionNumber={originalIndex + 1}
                         reviewContext="incorrect"
@@ -320,8 +375,9 @@ export default function ResultsPage() {
                 <Button>Try Another Timed Quiz</Button>
               </Link>
             ) : (
+              // Default fallback, consider if /quiz is the right general "try again"
               <Link href="/quiz">
-                <Button>Try Again</Button>
+                <Button>Try Another Quiz</Button>
               </Link>
             )}
           </CardFooter>
@@ -377,6 +433,9 @@ function QuestionReview({
 
       <div className="space-y-2 pl-8">
         {["a", "b", "c", "d"].map((option) => {
+          const optionValue = question[
+            `option_${option}` as keyof Question
+          ] as string;
           const isThisOptionTheUserAnswer =
             userAnswer?.toUpperCase() === option.toUpperCase();
           const isThisOptionTheCorrectAnswer =
@@ -385,44 +444,20 @@ function QuestionReview({
           let optionBgStyle = "";
           let optionBorderStyle = "border-gray-300"; // Default border
           let optionIconContainerStyle = "border-gray-300";
-          let optionIconTextStyle = "";
+          // let optionIconTextStyle = ""; // Not currently used for specific styling
 
-          if (reviewContext === "correct") {
-            if (isThisOptionTheCorrectAnswer) {
-              // Should always be true for the selected answer in this context
-              optionBgStyle = "bg-green-50";
-              optionBorderStyle = "border-green-600";
-              optionIconContainerStyle =
-                "border-green-600 bg-green-600 text-white";
-            }
-          } else if (reviewContext === "incorrect") {
-            if (isThisOptionTheUserAnswer) {
-              // User's incorrect selection
-              optionBgStyle = "bg-red-50";
-              optionBorderStyle = "border-red-600";
-              optionIconContainerStyle = "border-red-600 bg-red-600 text-white";
-            } else if (isThisOptionTheCorrectAnswer) {
-              // The actual correct answer
-              optionBgStyle = "bg-green-50";
-              optionBorderStyle = "border-green-600";
-              // Show correct answer icon prominently
-              optionIconContainerStyle =
-                "border-green-600 bg-green-600 text-white";
-            }
-          } else {
-            // reviewContext === "all"
-            if (isThisOptionTheCorrectAnswer) {
-              optionBgStyle = "bg-green-50";
-              optionBorderStyle = "border-green-600";
-              optionIconContainerStyle =
-                "border-green-600 bg-green-600 text-white";
-            }
-            if (isThisOptionTheUserAnswer && !isThisOptionTheCorrectAnswer) {
-              // User answered and it's wrong
-              optionBgStyle = "bg-red-50"; // Override if selected and wrong
-              optionBorderStyle = "border-red-600";
-              optionIconContainerStyle = "border-red-600 bg-red-600 text-white";
-            }
+          // Unified styling logic
+          if (isThisOptionTheCorrectAnswer) {
+            optionBgStyle = "bg-green-50";
+            optionBorderStyle = "border-green-600";
+            optionIconContainerStyle =
+              "border-green-600 bg-green-600 text-white";
+          }
+          if (isThisOptionTheUserAnswer && !isThisOptionTheCorrectAnswer) {
+            // User answered, and it's wrong - overrides correct answer styling for this specific option if it happens
+            optionBgStyle = "bg-red-50";
+            optionBorderStyle = "border-red-600";
+            optionIconContainerStyle = "border-red-600 bg-red-600 text-white";
           }
 
           // Default hover for non-selected, non-correct options
@@ -438,16 +473,15 @@ function QuestionReview({
             >
               <div className="flex items-start gap-3">
                 <div
-                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${optionIconContainerStyle} ${optionIconTextStyle}`}
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${optionIconContainerStyle}`}
                 >
                   <span className="text-sm">{option.toUpperCase()}</span>
                 </div>
-                <span>{question[`option_${option}` as keyof Question]}</span>
+                <span>{optionValue}</span>
 
-                {/* Show alert icon for actual correct answer if user picked wrong (only in 'incorrect' or 'all' context and if answered) */}
                 {isThisOptionTheCorrectAnswer &&
-                  !isCorrect &&
-                  userAnswer !== undefined &&
+                  !isCorrect && // Show only if the overall question was answered incorrectly
+                  userAnswer !== undefined && // And the user actually provided an answer
                   (reviewContext === "incorrect" ||
                     reviewContext === "all") && (
                     <AlertCircle className="h-5 w-5 text-green-600 ml-auto" />
@@ -479,7 +513,8 @@ function QuestionReview({
   );
 }
 
-// Sample questions for demo purposes when Supabase is not set up
+// Sample questions for demo purposes - can be removed if not needed as fallback.
+// Kept for now as it's part of the original file.
 function getSampleQuestions(): Question[] {
   return [
     {
@@ -491,7 +526,7 @@ function getSampleQuestions(): Question[] {
       option_c: "Within 5 years of the last election",
       option_d:
         "The prime minister can call the election any time at his own will",
-      correct_option: "B", // Assuming correct_option is uppercase from DB/upload
+      correct_option: "B",
       answer_explanation:
         "According to Canadian legislation, a federal election must be held within four years of the most recent election.",
       category: "Government and Democracy",
@@ -509,7 +544,6 @@ function getSampleQuestions(): Question[] {
         "The federal government is responsible for interprovincial trade and communications, while highways, natural resources, and education typically fall under provincial jurisdiction.",
       category: "Government and Democracy",
     },
-    // Add more sample questions with explanations and categories
     {
       id: 3,
       question_text:
@@ -547,7 +581,6 @@ function getSampleQuestions(): Question[] {
         "Sir George-Étienne Cartier was instrumental in bringing Quebec into Confederation, serving as a key French-Canadian Father of Confederation.",
       category: "Canadian History",
     },
-    // Add more sample questions to make 20 total
     {
       id: 6,
       question_text:
@@ -622,7 +655,7 @@ function getSampleQuestions(): Question[] {
       option_a: "Great Canada",
       option_b: "O Canada",
       option_c: "God save the queen or king",
-      option_d: "O Canada",
+      option_d: "O Canada", // Note: Original sample had "O Canada" twice, correct_option "C" implies the other is intended.
       correct_option: "C",
       answer_explanation:
         "The royal anthem of Canada is 'God Save the Queen' (or 'God Save the King' when the monarch is male).",

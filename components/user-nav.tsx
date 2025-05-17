@@ -16,11 +16,11 @@ import {
 import {
   User,
   LogOut,
-  Home,
-  BarChart,
-  Settings,
   LogIn,
   UserPlus,
+  Home,
+  LayoutDashboard,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -31,111 +31,124 @@ export default function UserNav() {
   const supabase = supabaseClient;
 
   useEffect(() => {
-    // Listen for auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);
         setLoading(false);
-        // router.refresh(); // Refreshing on every auth change might be too much, consider if needed
       }
     );
-
-    // Initial check for user still useful in case onAuthStateChange doesn't fire immediately
-    // or if there's a brief moment before subscription is active.
-    // However, the primary update mechanism will be onAuthStateChange.
-    // supabase.auth.getUser().then(({ data: { user } }) => {
-    //   if (!user && !authListener.subscription) { // If no user and listener hasn't updated yet
-    //     setLoading(false);
-    //   }
-    //   // setUser(user); // Let onAuthStateChange handle this to avoid race conditions
-    // });
 
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [supabase, router]); // Added router to dependencies if its refresh is used
+  }, [supabase]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    setUser(null);
+    setUser(null); // Optimistic update
     router.push("/");
     router.refresh();
   };
 
+  const handleProtectedLinkClick = (path: string) => {
+    if (!user) {
+      router.push("/auth");
+    } else {
+      router.push(path);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="h-10 w-10 rounded-full bg-gray-200 animate-pulse"></div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="flex items-center gap-2">
-        <Link href="/auth">
-          <Button variant="ghost" size="sm" className="flex items-center gap-1">
-            <LogIn className="h-4 w-4" />
-            <span>Sign In</span>
-          </Button>
-        </Link>
-        <Link href="/signup">
-          <Button size="sm" className="flex items-center gap-1">
-            <UserPlus className="h-4 w-4" />
-            <span>Sign Up</span>
-          </Button>
-        </Link>
+      <div className="flex items-center gap-4">
+        <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
+        <div className="h-6 w-20 bg-gray-200 rounded animate-pulse"></div>
+        <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
+        <div className="h-10 w-24 bg-gray-200 rounded animate-pulse"></div>
       </div>
     );
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-          <div className="flex h-full w-full items-center justify-center rounded-full bg-red-100 text-red-600">
-            <User className="h-5 w-5" />
-          </div>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
-        <DropdownMenuLabel>
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">My Account</p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {user.email}
-            </p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/" className="flex w-full cursor-pointer items-center">
-            <Home className="mr-2 h-4 w-4" />
-            <span>Home</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link
-            href="/dashboard"
-            className="flex w-full cursor-pointer items-center"
-          >
-            <BarChart className="mr-2 h-4 w-4" />
-            <span>Dashboard</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link
-            href="/settings"
-            className="flex w-full cursor-pointer items-center"
-          >
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Sign Out</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <nav className="flex items-center gap-x-3 sm:gap-x-4">
+      <Link
+        href="/"
+        className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+      >
+        <Home className="h-4 w-4" />
+        Home
+      </Link>
+      <button
+        onClick={() => handleProtectedLinkClick("/dashboard")}
+        className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+      >
+        <LayoutDashboard className="h-4 w-4" />
+        Dashboard
+      </button>
+      <button
+        onClick={() => handleProtectedLinkClick("/settings")}
+        className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+      >
+        <SettingsIcon className="h-4 w-4" />
+        Settings
+      </button>
+
+      <div className="flex items-center gap-x-2 ml-auto sm:ml-4">
+        {" "}
+        {/* Use ml-auto to push auth items to the right, or adjust gap */}
+        {user ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                <div className="flex h-full w-full items-center justify-center rounded-full bg-red-100 text-red-600">
+                  {/* You can enhance this to show initials or an avatar if available in user.user_metadata */}
+                  <User className="h-5 w-5" />
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    {user.user_metadata?.full_name || "My Account"}
+                  </p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user.email}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {/* Removed Home, Dashboard, Settings from here */}
+              <DropdownMenuItem
+                onClick={handleSignOut}
+                className="cursor-pointer text-red-600 hover:!text-red-700 focus:!text-red-700"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sign Out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <>
+            <Link href="/auth">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-1"
+              >
+                <LogIn className="h-4 w-4" />
+                <span>Sign In</span>
+              </Button>
+            </Link>
+            <Link href="/signup">
+              <Button size="sm" className="flex items-center gap-1">
+                <UserPlus className="h-4 w-4" />
+                <span>Sign Up</span>
+              </Button>
+            </Link>
+          </>
+        )}
+      </div>
+    </nav>
   );
 }

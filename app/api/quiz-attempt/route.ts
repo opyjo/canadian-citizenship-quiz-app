@@ -1,64 +1,112 @@
-import { createClient } from "@supabase/supabase-js";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-
-// Initialize Supabase client with the ANONYMOUS key
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY; // Using anon key
-
-if (!supabaseUrl) {
-  throw new Error("Missing env.NEXT_PUBLIC_SUPABASE_URL");
-}
-if (!supabaseAnonKey) {
-  // Check for anon key
-  throw new Error("Missing env.NEXT_PUBLIC_SUPABASE_ANON_KEY");
-}
-
-// Initialize with anon key
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import type { Database } from "@/types/supabase";
 
 export async function POST(request: Request) {
+  console.log("API Route: POST function in route.ts has been ENTERED.");
+
+  const body = await request.json();
+  console.log(
+    "API Route: Incoming request body:",
+    JSON.stringify(body, null, 2)
+  );
+
+  const {
+    userAnswers, // e.g., { "0": "a", "1": "c", ... }
+    questionIds, // e.g., [101, 203, 305, ...]
+    isTimed,
+    timeTaken, // Assuming this is time_taken_seconds
+    isPractice,
+    practiceType,
+    // category, // Category is no longer used at the attempt level
+  } = body;
+
+  if (!userAnswers || !questionIds) {
+    return NextResponse.json(
+      { error: "Missing required quiz data: userAnswers or questionIds" },
+      { status: 400 }
+    );
+  }
+
+  const cookieStore = cookies();
+  const supabase = createRouteHandlerClient<Database>({
+    cookies: () => cookieStore,
+  });
+
+  let userId = null;
+  let userEmail = null; // For logging
   try {
-    const body = await request.json();
     const {
-      userAnswers,
-      questionIds,
-      isTimed,
-      timeTaken, // Assuming this is time_taken_seconds
-      isPractice,
-      practiceType,
-      category,
-    } = body;
-
-    // Validate required fields
-    if (!userAnswers || !questionIds) {
-      return NextResponse.json(
-        { error: "Missing required quiz data: userAnswers or questionIds" },
-        { status: 400 }
-      );
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError) {
+      console.warn("API Route: Error fetching user:", userError.message);
     }
+    if (user) {
+      userId = user.id;
+      userEmail = user.email;
+      console.log("API Route: User identified:", { userId, userEmail });
+    } else {
+      console.warn("API Route: No user found from session.");
+    }
+  } catch (e: any) {
+    console.warn("API Route: Exception fetching user:", e.message);
+  }
 
-    // Use the 'supabase' client (initialized with anon key)
+  // Determine quiz_type
+  let determinedQuizType = "standard"; // Default
+  if (isTimed) {
+    determinedQuizType = "timed";
+  } else if (isPractice) {
+    if (practiceType) {
+      determinedQuizType = `practice_${practiceType
+        .toLowerCase()
+        .replace(/\s+/g, "_")}`;
+    } else {
+      determinedQuizType = "practice_general"; // Fallback if practiceType is null/empty
+    }
+  }
+  console.log("API Route: Determined quizType:", determinedQuizType);
+
+  // Placeholder for score and total_questions_in_attempt -
+  // This logic needs to be implemented based on userAnswers and question details
+  // For now, we'll set them as null or a default if not easily calculable here.
+  // Ideally, the client would send the score and total questions, or we fetch question details here to calculate.
+  const calculatedScore = null; // TODO: Implement score calculation
+  const totalQuestions = questionIds ? questionIds.length : 0; // Can be derived from questionIds array length
+
+  console.log("API Route: Calculated score (TODO):", calculatedScore);
+  console.log("API Route: Total questions:", totalQuestions);
+
+  const attemptDataToInsert = {
+    user_answers: userAnswers,
+    question_ids: questionIds,
+    is_timed: isTimed || false,
+    time_taken_seconds: timeTaken,
+    is_practice: isPractice || false,
+    practice_type: practiceType, // Storing the original practice_type can be useful
+    // category: undefined, // Explicitly not including category
+    user_id: userId,
+    quiz_type: determinedQuizType,
+    score: calculatedScore,
+    total_questions_in_attempt: totalQuestions,
+  };
+  console.log(
+    "API Route: Data to insert:",
+    JSON.stringify(attemptDataToInsert, null, 2)
+  );
+
+  try {
     const { data, error } = await supabase
       .from("quiz_attempts")
-      .insert([
-        {
-          user_answers: userAnswers,
-          question_ids: questionIds,
-          is_timed: isTimed || false,
-          time_taken_seconds: timeTaken,
-          is_practice: isPractice || false,
-          practice_type: practiceType,
-          category: category,
-        },
-      ])
-      .select("id") // Return the id of the inserted row
-      .single(); // Expect a single row to be inserted and returned
+      .insert([attemptDataToInsert])
+      .select("id")
+      .single();
 
     if (error) {
-      console.error(
-        "Supabase error inserting quiz attempt (using anon key):",
-        error
-      );
+      console.error("API Route: Supabase error inserting quiz attempt:", error);
       return NextResponse.json(
         { error: error.message || "Failed to save quiz attempt" },
         { status: 500 }
@@ -67,17 +115,15 @@ export async function POST(request: Request) {
 
     if (!data) {
       return NextResponse.json(
-        {
-          error: "Failed to save quiz attempt and retrieve ID (using anon key)",
-        },
+        { error: "Failed to save quiz attempt and retrieve ID" },
         { status: 500 }
       );
     }
-
+    console.log("API Route: Successfully inserted attempt, ID:", data.id);
     return NextResponse.json({ attemptId: data.id }, { status: 200 });
   } catch (err: any) {
     console.error(
-      "Error processing quiz attempt POST request (using anon key):",
+      "API Route: Error processing quiz attempt POST request:",
       err
     );
     return NextResponse.json(

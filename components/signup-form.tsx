@@ -35,6 +35,7 @@ export default function SignUpForm() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccessMessage(null);
 
     // Validate form
     if (password !== confirmPassword) {
@@ -51,37 +52,30 @@ export default function SignUpForm() {
 
     try {
       // Create user account
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: fullName,
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
-      if (error) throw error;
+      if (signUpError) throw signUpError;
 
-      // Show success message
-      setSuccessMessage(
-        "Success! Please check your email for the confirmation link. You'll be redirected to your dashboard after verification."
-      );
+      setSuccessMessage("Account created successfully! Please sign in.");
 
-      // If auto-confirmation is enabled (development mode)
-      if (
-        data?.user &&
-        !data?.user?.identities?.[0]?.identity_data?.email_verified
-      ) {
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 5000);
-      }
+      setTimeout(() => {
+        router.push("/auth");
+        router.refresh();
+      }, 1500);
     } catch (error: any) {
       setError(error.message || "An error occurred during sign up");
     } finally {
-      setLoading(false);
+      if (error) {
+        setLoading(false);
+      }
     }
   };
 
@@ -92,8 +86,6 @@ export default function SignUpForm() {
       await supabase.auth.signInWithOAuth({ provider: "google" });
     } catch (error: any) {
       setError(error.message || "An error occurred during Google sign up");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -112,7 +104,7 @@ export default function SignUpForm() {
           </Alert>
         )}
 
-        {successMessage && (
+        {successMessage && !error && (
           <Alert className="mb-4 bg-green-50 text-green-800 border-green-200">
             <CheckCircle className="h-4 w-4 mr-2" />
             <AlertDescription>{successMessage}</AlertDescription>
@@ -126,7 +118,7 @@ export default function SignUpForm() {
           onClick={handleGoogleSignUp}
           disabled={loading}
         >
-          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           <svg
             width="20"
             height="20"
@@ -165,6 +157,7 @@ export default function SignUpForm() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
           <div className="space-y-2">
@@ -176,6 +169,7 @@ export default function SignUpForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
           <div className="space-y-2">
@@ -186,6 +180,7 @@ export default function SignUpForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={loading}
             />
             <p className="text-sm text-muted-foreground">
               Password must be at least 6 characters
@@ -199,10 +194,11 @@ export default function SignUpForm() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Create Account
           </Button>
         </form>
@@ -213,6 +209,8 @@ export default function SignUpForm() {
           <Link
             href="/auth"
             className="text-red-600 hover:text-red-800 font-medium"
+            aria-disabled={loading}
+            onClick={(e) => loading && e.preventDefault()}
           >
             Sign In
           </Link>

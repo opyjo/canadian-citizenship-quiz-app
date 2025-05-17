@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type React from "react";
+import Link from "next/link";
 import { ThemeProvider } from "@/components/theme-provider";
 import UserNav from "@/components/user-nav";
 import "./globals.css";
@@ -26,14 +27,16 @@ export default function RootLayout({
             <header className="border-b">
               {/* Header content, constrained by the parent's max-width and padding. h-16 for height. */}
               <div className="flex h-16 items-center justify-between">
-                <div className="flex items-center gap-2">
+                <Link href="/" className="flex items-center gap-2 group">
                   <img
                     src="/favicon.ico"
                     alt="Canadian Flag"
-                    className="h-8 w-8"
+                    className="h-8 w-8 group-hover:opacity-80 transition-opacity"
                   />
-                  <span className="font-bold">Canadian Citizenship Quiz</span>
-                </div>
+                  <span className="font-bold group-hover:text-primary transition-colors">
+                    Canadian Citizenship Test
+                  </span>
+                </Link>
                 <UserNav />
               </div>
             </header>
@@ -59,7 +62,7 @@ export default function RootLayout({
 }
 
 export const metadata: Metadata = {
-  title: "Canadian Citizenship Test Quiz",
+  title: "Canadian Citizenship Test",
   description:
     "Practice for your Canadian Citizenship Test with this interactive quiz application",
   icons: {

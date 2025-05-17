@@ -236,15 +236,24 @@ export default function PracticeQuizPage() {
     const questionIds = questions.map((q) => q.id);
     const userAnswersForApi: Record<string, string> = {};
     resultData.questions.forEach((q: any, index: number) => {
-      // Assuming getResultData structures questions with selected_option, and we want to map it to the API's expected userAnswers format
-      // The key for userAnswers should be the original index of the question as a string.
       if (q.selected_option !== undefined) {
         userAnswersForApi[String(index)] = q.selected_option;
       }
     });
 
-    // setLoading(true); // Optional
-    // setError(null);
+    const payload = {
+      userAnswers: userAnswersForApi,
+      questionIds: questionIds,
+      isTimed: false, // Practice quizzes are not timed in this context
+      timeTaken: resultData.timeTaken, // getResultData calculates this
+      isPractice: true,
+      practiceType: practiceType, // From component state (e.g., "incorrect", "random")
+      category: null, // Category is no longer used for practice mode attempts
+    };
+    console.log(
+      "[PracticeQuizPage] resultData prepared for submission:",
+      payload
+    );
 
     try {
       const response = await fetch("/api/quiz-attempt", {
@@ -252,16 +261,7 @@ export default function PracticeQuizPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          userAnswers: userAnswersForApi,
-          questionIds: questionIds,
-          isTimed: false, // Practice quiz is not timed in the same way as /quiz/timed
-          timeTaken: resultData.timeTaken, // getResultData calculates a timeTaken
-          isPractice: true,
-          practiceType: resultData.practiceType, // Get practiceType from resultData
-          category:
-            practiceType === "category" ? searchParams.get("category") : null, // Pass category if it was a category practice
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -285,8 +285,6 @@ export default function PracticeQuizPage() {
         err.message || "Failed to submit practice quiz. Please try again."
       );
       // Optional: redirect to home or show error inline
-    } finally {
-      // setLoading(false);
     }
 
     // Existing logic for updating user_incorrect_questions if user is logged in

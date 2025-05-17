@@ -14,29 +14,44 @@ export default function RootLayout({
       <head>
         {/* Title and Description will be handled by the metadata object */}
       </head>
-      <body>
+      <body className="min-h-screen bg-background antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >
-          <header className="border-b">
-            <div className="container flex h-16 items-center justify-between">
-              <div className="flex items-center gap-2">
-                <img
-                  src="/placeholder.svg?key=59xw6"
-                  alt="Canadian Flag"
-                  className="h-8 w-8"
-                />
-                <span className="font-bold">Canadian Citizenship Quiz</span>
+          {/* This div acts as the main centered container for the entire app content */}
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col min-h-screen">
+            <header className="border-b">
+              {/* Header content, constrained by the parent's max-width and padding. h-16 for height. */}
+              <div className="flex h-16 items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <img
+                    src="/favicon.ico"
+                    alt="Canadian Flag"
+                    className="h-8 w-8"
+                  />
+                  <span className="font-bold">Canadian Citizenship Quiz</span>
+                </div>
+                <UserNav />
               </div>
-              <UserNav />
-            </div>
-          </header>
-          <main className="min-h-[calc(100vh-4rem)] bg-background">
-            {children}
-          </main>
+            </header>
+
+            <main className="flex-grow py-8">
+              {" "}
+              {/* Main content area with vertical padding */}
+              {children}
+            </main>
+
+            {/* Optional Footer Example:
+            <footer className="py-6 border-t text-center">
+              <p className="text-sm text-muted-foreground">
+                © {new Date().getFullYear()} Canadian Citizenship Quiz
+              </p>
+            </footer>
+            */}
+          </div>
         </ThemeProvider>
       </body>
     </html>

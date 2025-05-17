@@ -19,12 +19,11 @@ import { Loader2, BarChart2, Award, BookOpen } from "lucide-react";
 interface QuizAttempt {
   id: number;
   score: number;
-  total_questions: number;
+  total_questions_in_attempt: number;
   created_at: string;
   time_taken: number | null;
   is_timed: boolean;
   quiz_type: string;
-  category: string | null;
 }
 
 export default function DashboardPage() {
@@ -50,12 +49,23 @@ export default function DashboardPage() {
         // Fetch quiz attempts
         const { data, error } = await supabase
           .from("quiz_attempts")
-          .select("*")
+          .select(
+            "id, score, total_questions_in_attempt, created_at, time_taken_seconds, is_timed, quiz_type"
+          )
           .order("created_at", { ascending: false });
 
         if (error) throw error;
 
-        setQuizAttempts(data || []);
+        // Map data to ensure correct field names for the component's QuizAttempt interface
+        const mappedData =
+          data?.map((attempt) => ({
+            ...attempt,
+            id: attempt.id,
+            total_questions: attempt.total_questions_in_attempt,
+            time_taken: attempt.time_taken_seconds,
+          })) || [];
+
+        setQuizAttempts(mappedData as any);
       } catch (err: any) {
         console.error("Error fetching data:", err);
         setError(err.message || "Failed to load dashboard data");
@@ -103,7 +113,7 @@ export default function DashboardPage() {
       ? Math.round(
           (quizAttempts.reduce(
             (sum, attempt) =>
-              sum + (attempt.score / attempt.total_questions) * 100,
+              sum + (attempt.score / attempt.total_questions_in_attempt) * 100,
             0
           ) /
             totalQuizzes) *
@@ -115,7 +125,8 @@ export default function DashboardPage() {
       ? Math.round(
           Math.max(
             ...quizAttempts.map(
-              (attempt) => (attempt.score / attempt.total_questions) * 100
+              (attempt) =>
+                (attempt.score / attempt.total_questions_in_attempt) * 100
             )
           ) * 10
         ) / 10
@@ -205,27 +216,29 @@ export default function DashboardPage() {
 
                 <TabsContent value="all" className="space-y-4">
                   <div className="rounded-md border">
-                    <div className="grid grid-cols-5 gap-4 p-4 font-medium border-b">
+                    <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b">
                       <div>Date</div>
                       <div>Type</div>
                       <div>Score</div>
                       <div>Time Taken</div>
-                      <div>Category</div>
                     </div>
                     <div className="divide-y">
                       {quizAttempts.map((attempt) => (
                         <div
                           key={attempt.id}
-                          className="grid grid-cols-5 gap-4 p-4"
+                          className="grid grid-cols-4 gap-4 p-4"
                         >
                           <div>
                             {new Date(attempt.created_at).toLocaleDateString()}
                           </div>
                           <div className="capitalize">{attempt.quiz_type}</div>
                           <div>
-                            {attempt.score}/{attempt.total_questions} (
+                            {attempt.score}/{attempt.total_questions_in_attempt}{" "}
+                            (
                             {Math.round(
-                              (attempt.score / attempt.total_questions) * 100
+                              (attempt.score /
+                                attempt.total_questions_in_attempt) *
+                                100
                             )}
                             %)
                           </div>
@@ -236,7 +249,6 @@ export default function DashboardPage() {
                                 }s`
                               : "N/A"}
                           </div>
-                          <div>{attempt.category || "All Categories"}</div>
                         </div>
                       ))}
                     </div>
@@ -245,12 +257,11 @@ export default function DashboardPage() {
 
                 <TabsContent value="standard" className="space-y-4">
                   <div className="rounded-md border">
-                    <div className="grid grid-cols-5 gap-4 p-4 font-medium border-b">
+                    <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b">
                       <div>Date</div>
                       <div>Type</div>
                       <div>Score</div>
                       <div>Time Taken</div>
-                      <div>Category</div>
                     </div>
                     <div className="divide-y">
                       {quizAttempts
@@ -258,7 +269,7 @@ export default function DashboardPage() {
                         .map((attempt) => (
                           <div
                             key={attempt.id}
-                            className="grid grid-cols-5 gap-4 p-4"
+                            className="grid grid-cols-4 gap-4 p-4"
                           >
                             <div>
                               {new Date(
@@ -269,9 +280,12 @@ export default function DashboardPage() {
                               {attempt.quiz_type}
                             </div>
                             <div>
-                              {attempt.score}/{attempt.total_questions} (
+                              {attempt.score}/
+                              {attempt.total_questions_in_attempt} (
                               {Math.round(
-                                (attempt.score / attempt.total_questions) * 100
+                                (attempt.score /
+                                  attempt.total_questions_in_attempt) *
+                                  100
                               )}
                               %)
                             </div>
@@ -282,7 +296,6 @@ export default function DashboardPage() {
                                   }s`
                                 : "N/A"}
                             </div>
-                            <div>{attempt.category || "All Categories"}</div>
                           </div>
                         ))}
                     </div>
@@ -291,12 +304,11 @@ export default function DashboardPage() {
 
                 <TabsContent value="timed" className="space-y-4">
                   <div className="rounded-md border">
-                    <div className="grid grid-cols-5 gap-4 p-4 font-medium border-b">
+                    <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b">
                       <div>Date</div>
                       <div>Type</div>
                       <div>Score</div>
                       <div>Time Taken</div>
-                      <div>Category</div>
                     </div>
                     <div className="divide-y">
                       {quizAttempts
@@ -304,7 +316,7 @@ export default function DashboardPage() {
                         .map((attempt) => (
                           <div
                             key={attempt.id}
-                            className="grid grid-cols-5 gap-4 p-4"
+                            className="grid grid-cols-4 gap-4 p-4"
                           >
                             <div>
                               {new Date(
@@ -315,9 +327,12 @@ export default function DashboardPage() {
                               {attempt.quiz_type}
                             </div>
                             <div>
-                              {attempt.score}/{attempt.total_questions} (
+                              {attempt.score}/
+                              {attempt.total_questions_in_attempt} (
                               {Math.round(
-                                (attempt.score / attempt.total_questions) * 100
+                                (attempt.score /
+                                  attempt.total_questions_in_attempt) *
+                                  100
                               )}
                               %)
                             </div>
@@ -328,7 +343,6 @@ export default function DashboardPage() {
                                   }s`
                                 : "N/A"}
                             </div>
-                            <div>{attempt.category || "All Categories"}</div>
                           </div>
                         ))}
                     </div>
@@ -337,12 +351,11 @@ export default function DashboardPage() {
 
                 <TabsContent value="practice" className="space-y-4">
                   <div className="rounded-md border">
-                    <div className="grid grid-cols-5 gap-4 p-4 font-medium border-b">
+                    <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b">
                       <div>Date</div>
                       <div>Type</div>
                       <div>Score</div>
                       <div>Time Taken</div>
-                      <div>Category</div>
                     </div>
                     <div className="divide-y">
                       {quizAttempts
@@ -350,7 +363,7 @@ export default function DashboardPage() {
                         .map((attempt) => (
                           <div
                             key={attempt.id}
-                            className="grid grid-cols-5 gap-4 p-4"
+                            className="grid grid-cols-4 gap-4 p-4"
                           >
                             <div>
                               {new Date(
@@ -361,9 +374,12 @@ export default function DashboardPage() {
                               {attempt.quiz_type}
                             </div>
                             <div>
-                              {attempt.score}/{attempt.total_questions} (
+                              {attempt.score}/
+                              {attempt.total_questions_in_attempt} (
                               {Math.round(
-                                (attempt.score / attempt.total_questions) * 100
+                                (attempt.score /
+                                  attempt.total_questions_in_attempt) *
+                                  100
                               )}
                               %)
                             </div>
@@ -374,7 +390,6 @@ export default function DashboardPage() {
                                   }s`
                                 : "N/A"}
                             </div>
-                            <div>{attempt.category || "All Categories"}</div>
                           </div>
                         ))}
                     </div>

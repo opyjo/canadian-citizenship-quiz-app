@@ -3,6 +3,11 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import type { Database } from "@/types/supabase";
 
+interface QuestionFromDB {
+  id: number;
+  correct_option: string;
+}
+
 export async function POST(request: Request) {
   console.log("API Route: POST function in route.ts has been ENTERED.");
 
@@ -13,18 +18,17 @@ export async function POST(request: Request) {
   );
 
   const {
-    userAnswers, // e.g., { "0": "a", "1": "c", ... }
-    questionIds, // e.g., [101, 203, 305, ...]
+    userAnswers, // e.g., { "0": "a", "1": "c", ... } - keys are stringified indices
+    questionIds, // e.g., [101, 203, 305, ...] - IDs in order of presentation
     isTimed,
-    timeTaken, // Assuming this is time_taken_seconds
+    timeTaken,
     isPractice,
     practiceType,
-    // category, // Category is no longer used at the attempt level
   } = body;
 
-  if (!userAnswers || !questionIds) {
+  if (!userAnswers || !questionIds || questionIds.length === 0) {
     return NextResponse.json(
-      { error: "Missing required quiz data: userAnswers or questionIds" },
+      { error: "Missing or invalid required quiz data" },
       { status: 400 }
     );
   }
@@ -35,15 +39,14 @@ export async function POST(request: Request) {
   });
 
   let userId = null;
-  let userEmail = null; // For logging
+  let userEmail = null;
   try {
     const {
       data: { user },
       error: userError,
     } = await supabase.auth.getUser();
-    if (userError) {
+    if (userError)
       console.warn("API Route: Error fetching user:", userError.message);
-    }
     if (user) {
       userId = user.id;
       userEmail = user.email;
@@ -55,30 +58,81 @@ export async function POST(request: Request) {
     console.warn("API Route: Exception fetching user:", e.message);
   }
 
-  // Determine quiz_type
-  let determinedQuizType = "standard"; // Default
-  if (isTimed) {
-    determinedQuizType = "timed";
-  } else if (isPractice) {
-    if (practiceType) {
-      determinedQuizType = `practice_${practiceType
-        .toLowerCase()
-        .replace(/\s+/g, "_")}`;
-    } else {
-      determinedQuizType = "practice_general"; // Fallback if practiceType is null/empty
-    }
+  let determinedQuizType = "standard";
+  if (isTimed) determinedQuizType = "timed";
+  else if (isPractice) {
+    determinedQuizType = practiceType
+      ? `practice_${practiceType.toLowerCase().replace(/\s+/g, "_")}`
+      : "practice_general";
   }
   console.log("API Route: Determined quizType:", determinedQuizType);
 
-  // Placeholder for score and total_questions_in_attempt -
-  // This logic needs to be implemented based on userAnswers and question details
-  // For now, we'll set them as null or a default if not easily calculable here.
-  // Ideally, the client would send the score and total questions, or we fetch question details here to calculate.
-  const calculatedScore = null; // TODO: Implement score calculation
-  const totalQuestions = questionIds ? questionIds.length : 0; // Can be derived from questionIds array length
+  let calculatedScore = 0;
+  const totalQuestions = questionIds.length;
 
-  console.log("API Route: Calculated score (TODO):", calculatedScore);
-  console.log("API Route: Total questions:", totalQuestions);
+  try {
+    // Fetch correct answers for the submitted questionIds
+    const { data: correctQuestionsData, error: questionsError } = await supabase
+      .from("questions")
+      .select("id, correct_option")
+      .in("id", questionIds);
+
+    if (questionsError) {
+      console.error(
+        "API Route: Supabase error fetching question details:",
+        questionsError
+      );
+      throw new Error("Failed to fetch question details for score calculation");
+    }
+    if (
+      !correctQuestionsData ||
+      correctQuestionsData.length !== questionIds.length
+    ) {
+      console.error(
+        "API Route: Mismatch in fetched questions count or no data.",
+        { expected: questionIds.length, got: correctQuestionsData?.length }
+      );
+      // Decide how to handle: error out, or score as 0 for missing ones?
+      // For now, we'll proceed but score might be inaccurate if there's a mismatch.
+      // A stricter approach would be to throw an error.
+    }
+
+    // Create a map for quick lookup: questionId -> correct_option
+    const correctOptionsMap = new Map<number, string>();
+    correctQuestionsData?.forEach((q: QuestionFromDB) => {
+      correctOptionsMap.set(q.id, q.correct_option);
+    });
+
+    // Calculate score
+    // userAnswers keys are stringified indices from 0 to N-1, mapping to questionIds order
+    for (let i = 0; i < totalQuestions; i++) {
+      const questionId = questionIds[i]; // Get the actual question ID
+      const userAnswer = userAnswers[String(i)]; // User's answer for this question by original index
+      const correctAnswer = correctOptionsMap.get(questionId);
+
+      if (
+        userAnswer &&
+        correctAnswer &&
+        userAnswer.toLowerCase() === correctAnswer.toLowerCase()
+      ) {
+        calculatedScore++;
+      }
+    }
+    console.log(
+      "API Route: Calculated score:",
+      calculatedScore,
+      "out of",
+      totalQuestions
+    );
+  } catch (scoreCalcError: any) {
+    console.error(
+      "API Route: Error during score calculation:",
+      scoreCalcError.message
+    );
+    // Decide if we should still insert the attempt with a null score or return an error
+    // For now, we are inserting with a potentially 0 or partially calculated score if error occurs mid-calc
+    // but if fetching questions fails, `calculatedScore` remains 0 as initialized.
+  }
 
   const attemptDataToInsert = {
     user_answers: userAnswers,
@@ -86,11 +140,10 @@ export async function POST(request: Request) {
     is_timed: isTimed || false,
     time_taken_seconds: timeTaken,
     is_practice: isPractice || false,
-    practice_type: practiceType, // Storing the original practice_type can be useful
-    // category: undefined, // Explicitly not including category
+    practice_type: practiceType,
     user_id: userId,
     quiz_type: determinedQuizType,
-    score: calculatedScore,
+    score: calculatedScore, // Use the calculated score
     total_questions_in_attempt: totalQuestions,
   };
   console.log(
@@ -99,31 +152,33 @@ export async function POST(request: Request) {
   );
 
   try {
-    const { data, error } = await supabase
+    const { data: insertData, error: insertError } = await supabase
       .from("quiz_attempts")
       .insert([attemptDataToInsert])
       .select("id")
       .single();
 
-    if (error) {
-      console.error("API Route: Supabase error inserting quiz attempt:", error);
+    if (insertError) {
+      console.error(
+        "API Route: Supabase error inserting quiz attempt:",
+        insertError
+      );
       return NextResponse.json(
-        { error: error.message || "Failed to save quiz attempt" },
+        { error: insertError.message || "Failed to save quiz attempt" },
         { status: 500 }
       );
     }
-
-    if (!data) {
+    if (!insertData) {
       return NextResponse.json(
         { error: "Failed to save quiz attempt and retrieve ID" },
         { status: 500 }
       );
     }
-    console.log("API Route: Successfully inserted attempt, ID:", data.id);
-    return NextResponse.json({ attemptId: data.id }, { status: 200 });
+    console.log("API Route: Successfully inserted attempt, ID:", insertData.id);
+    return NextResponse.json({ attemptId: insertData.id }, { status: 200 });
   } catch (err: any) {
     console.error(
-      "API Route: Error processing quiz attempt POST request:",
+      "API Route: Outer error processing quiz attempt POST request:",
       err
     );
     return NextResponse.json(

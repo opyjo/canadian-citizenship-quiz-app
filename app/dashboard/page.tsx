@@ -359,7 +359,9 @@ export default function DashboardPage() {
                     </div>
                     <div className="divide-y">
                       {quizAttempts
-                        .filter((attempt) => attempt.quiz_type === "practice")
+                        .filter((attempt) =>
+                          attempt.quiz_type.startsWith("practice")
+                        )
                         .map((attempt) => (
                           <div
                             key={attempt.id}

@@ -173,6 +173,43 @@ export async function POST(request: Request) {
       );
     }
     console.log("API Route: Successfully inserted attempt, ID:", insertData.id);
+
+    // Increment freemium attempt count if user is logged in
+    if (userId) {
+      let quizModeForFreemium: "practice" | "standard" | "timed";
+      if (isPractice) {
+        quizModeForFreemium = "practice";
+      } else if (isTimed) {
+        quizModeForFreemium = "timed";
+      } else {
+        quizModeForFreemium = "standard";
+      }
+
+      console.log(
+        `API Route: Incrementing freemium count for user ${userId}, mode ${quizModeForFreemium}`
+      );
+      const { error: rpcError } = await supabase.rpc(
+        "increment_user_quiz_mode_attempts",
+        {
+          p_user_id: userId,
+          p_quiz_mode: quizModeForFreemium,
+        }
+      );
+
+      if (rpcError) {
+        // Log the error but don't let it fail the entire request,
+        // as the main quiz attempt was already saved.
+        console.error(
+          `API Route: Supabase RPC error incrementing freemium attempts for user ${userId}, mode ${quizModeForFreemium}:`,
+          rpcError
+        );
+      } else {
+        console.log(
+          `API Route: Successfully incremented freemium count for user ${userId}, mode ${quizModeForFreemium}`
+        );
+      }
+    }
+
     return NextResponse.json({ attemptId: insertData.id }, { status: 200 });
   } catch (err: any) {
     console.error(

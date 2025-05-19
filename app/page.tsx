@@ -1,3 +1,5 @@
+"use client"; // Ensure this is at the top if not already
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,8 +10,77 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useState } from "react"; // useEffect commented if not used
+import { useRouter } from "next/navigation";
+import supabaseClient from "@/lib/supabase-client"; // Your Supabase client - COMMENTED OUT FOR TEST
+import {
+  checkAttemptLimits, // COMMENTED OUT FOR TEST
+  type QuizMode,
+  type AttemptCheckResult, // COMMENTED OUT FOR TEST
+} from "@/lib/quizLimits"; // checkAttemptLimits and AttemptCheckResult depend on SupabaseClient
+import ConfirmationModal from "@/components/confirmation-modal";
 
 export default function Home() {
+  const router = useRouter(); // Keep router for other potential links/navigation
+  const supabase = supabaseClient; // COMMENTED OUT FOR TEST
+
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    cancelText: string;
+    onConfirm: () => void;
+    onClose?: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    cancelText: "Cancel",
+    onConfirm: () => {},
+  });
+
+  const handleStartQuiz = async (quizMode: QuizMode, quizPath: string) => {
+    // console.log( // Debug log removed
+    //   `[HomePage] handleStartQuiz called for mode: ${quizMode}, path: ${quizPath}`
+    // );
+    const result = await checkAttemptLimits(quizMode, supabase);
+    // console.log("[HomePage] checkAttemptLimits result:", result); // Debug log removed
+
+    if (result.canAttempt) {
+      router.push(quizPath);
+    } else {
+      let confirmText = "OK";
+      let cancelText = "Cancel";
+      let onConfirmAction = () =>
+        setModalState({ ...modalState, isOpen: false });
+
+      if (!result.isLoggedIn) {
+        confirmText = "Sign Up";
+        onConfirmAction = () => router.push("/signup");
+        cancelText = "Later";
+      } else if (!result.isPaidUser) {
+        confirmText = "Upgrade Plan";
+        onConfirmAction = () => router.push("/pricing");
+        cancelText = "OK";
+      }
+
+      setModalState({
+        isOpen: true,
+        title: "Quiz Limit Reached",
+        message: result.message,
+        confirmText,
+        cancelText,
+        onConfirm: () => {
+          onConfirmAction();
+          setModalState({ ...modalState, isOpen: false });
+        },
+        onClose: () => setModalState({ ...modalState, isOpen: false }),
+      });
+    }
+  };
+
   return (
     <div className="container flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
       <div className="max-w-3xl w-full text-center space-y-8">
@@ -59,11 +130,13 @@ export default function Home() {
               </div>
             </CardContent>
             <CardFooter>
-              <Link href="/quiz" className="w-full">
-                <Button className="w-full" size="lg">
-                  Start Standard Quiz
-                </Button>
-              </Link>
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={() => handleStartQuiz("standard", "/quiz")}
+              >
+                Start Standard Quiz
+              </Button>
             </CardFooter>
           </Card>
 
@@ -103,11 +176,13 @@ export default function Home() {
               </div>
             </CardContent>
             <CardFooter>
-              <Link href="/quiz/timed" className="w-full">
-                <Button className="w-full" size="lg">
-                  Start Timed Quiz
-                </Button>
-              </Link>
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={() => handleStartQuiz("timed", "/quiz/timed")}
+              >
+                Start Timed Quiz
+              </Button>
             </CardFooter>
           </Card>
         </div>
@@ -135,11 +210,14 @@ export default function Home() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <Link href="/practice" className="w-full">
-              <Button className="w-full" size="lg" variant="outline">
-                Go to Practice Mode
-              </Button>
-            </Link>
+            <Button
+              className="w-full"
+              size="lg"
+              variant="outline"
+              onClick={() => handleStartQuiz("practice", "/quiz/practice")} // Or appropriate path & mode
+            >
+              Go to Practice Mode
+            </Button>
 
             <div className="text-center w-full">
               <p className="text-sm text-muted-foreground mb-2">
@@ -159,6 +237,20 @@ export default function Home() {
           </CardFooter>
         </Card>
       </div>
+
+      <ConfirmationModal
+        isOpen={modalState.isOpen}
+        title={modalState.title}
+        message={modalState.message}
+        confirmText={modalState.confirmText}
+        cancelText={modalState.cancelText}
+        onConfirm={modalState.onConfirm}
+        onClose={() =>
+          modalState.onClose
+            ? modalState.onClose()
+            : setModalState({ ...modalState, isOpen: false })
+        }
+      />
     </div>
   );
 }

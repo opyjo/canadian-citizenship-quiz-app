@@ -75,7 +75,9 @@ export const config = {
      * - /login (if you have a separate login page not under /auth)
      * - /signup (if you have a separate signup page)
      * - api/stripe/webhooks (Stripe webhook)
-     * Feel free to modify this pattern to include more paths.
+     * - .svg, .png, etc. (image assets)
+     * The middleware WILL run on /quiz and other content pages to refresh sessions.
+     * The content access/redirect logic for /quiz is handled by the page/layout components themselves.
      */
     "/((?!_next/static|_next/image|favicon.ico|auth|login|signup|api/stripe/webhooks|.*.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],

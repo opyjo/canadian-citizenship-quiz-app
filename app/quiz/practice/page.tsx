@@ -13,6 +13,9 @@ import {
 import { Progress } from "@/components/ui/progress";
 import supabaseClient from "@/lib/supabase-client";
 import { Loader2 } from "lucide-react";
+import { incrementLocalAttemptCount } from "@/lib/quizLimits";
+import ConfirmationModal from "@/components/confirmation-modal";
+import { checkAttemptLimits } from "@/lib/quizLimits";
 
 interface Question {
   id: number;
@@ -38,17 +41,73 @@ export default function PracticeQuizPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [practiceType, setPracticeType] = useState<string>("");
   const supabase = supabaseClient;
+  const [isAccessChecked, setIsAccessChecked] = useState(false);
+
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    cancelText: string;
+    onConfirm: () => void;
+    onClose?: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    cancelText: "Cancel",
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
-    async function fetchInitialData() {
+    async function performAccessCheckAndFetchData() {
+      // Perform access check first
+      const accessResult = await checkAttemptLimits("practice", supabase);
+      setIsAccessChecked(true); // Mark access check as done
+
+      if (!accessResult.canAttempt) {
+        setLoading(false); // Stop loading indicator
+        setQuestions([]); // Clear any potential questions
+        //setError(accessResult.message); // Or use modal
+
+        let confirmText = "OK";
+        let onConfirmAction = () => router.push("/practice"); // Go back to practice options
+
+        if (!accessResult.isLoggedIn) {
+          confirmText = "Sign Up";
+          onConfirmAction = () => router.push("/signup");
+        } else if (!accessResult.isPaidUser) {
+          confirmText = "Upgrade Plan";
+          onConfirmAction = () => router.push("/pricing");
+        }
+
+        setModalState({
+          isOpen: true,
+          title: "Access Denied",
+          message: accessResult.message,
+          confirmText: confirmText,
+          cancelText: "Go Home", // Changed cancel to Go Home or similar
+          onConfirm: () => {
+            onConfirmAction();
+            setModalState({ ...modalState, isOpen: false });
+          },
+          onClose: () => {
+            router.push("/"); // Default close action: go home
+            setModalState({ ...modalState, isOpen: false });
+          },
+        });
+        return; // Stop further execution if access is denied
+      }
+
+      // If access is granted, proceed to fetch quiz data
+      setLoading(true); // Ensure loading is true before fetching actual questions
       try {
-        // Check if user is authenticated
         const { data: userData } = await supabase.auth.getUser();
         if (userData.user) {
           setUserId(userData.user.id);
         }
 
-        // Get query parameters
         const incorrect = searchParams.get("incorrect") === "true";
         const mode = searchParams.get("mode");
         const countParam = searchParams.get("count");
@@ -164,8 +223,8 @@ export default function PracticeQuizPage() {
       }
     }
 
-    fetchInitialData();
-  }, [supabase, searchParams, router, userId]);
+    performAccessCheckAndFetchData();
+  }, [supabase, searchParams, router]);
 
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
@@ -255,7 +314,13 @@ export default function PracticeQuizPage() {
       payload
     );
 
+    let attemptIdToRedirect: string | null = null;
+
     try {
+      // This API call is for both authenticated and unauthenticated users initially.
+      // The API route itself should handle auth and save differently if needed,
+      // or we rely on userId being null/present in the payload for the API to distinguish.
+      // For now, the API call structure is kept as it was.
       const response = await fetch("/api/quiz-attempt", {
         method: "POST",
         headers: {
@@ -272,22 +337,33 @@ export default function PracticeQuizPage() {
       }
 
       const result = await response.json();
-      const attemptId = result.attemptId;
+      attemptIdToRedirect = result.attemptId; // Store attemptId for redirection
 
-      if (attemptId) {
-        router.push(`/results/${attemptId}`);
-      } else {
-        throw new Error("No attempt ID received from API for practice quiz");
+      // If no attemptId is received, it's an issue, but we might still want to update local counts.
+      if (!attemptIdToRedirect) {
+        console.warn(
+          "[PracticeQuizPage] No attempt ID received from API for practice quiz, but proceeding with local/UI updates."
+        );
       }
     } catch (err: any) {
       console.error("[PracticeQuizPage] Error submitting practice quiz:", err);
       setError(
         err.message || "Failed to submit practice quiz. Please try again."
       );
-      // Optional: redirect to home or show error inline
+      // Even if API submission fails, if it was an unauth user, we might still want to count the attempt locally.
+      // Or, decide not to count if API fails. For now, let's count it if an attempt was made.
     }
 
-    // Existing logic for updating user_incorrect_questions if user is logged in
+    // Increment local count for unauthenticated users OR if userId was not set (should be equivalent)
+    // This should happen regardless of API success if an attempt was made by an unauth user.
+    if (!userId) {
+      console.log(
+        "[PracticeQuizPage] User is not logged in. Incrementing local practice attempt count."
+      );
+      incrementLocalAttemptCount("practice");
+    }
+
+    // Logic for updating user_incorrect_questions if user is logged in (remains unchanged)
     if (userId) {
       console.log(
         "[PracticeQuizPage] User is logged in. Processing practice results for user_incorrect_questions table.",
@@ -369,11 +445,56 @@ export default function PracticeQuizPage() {
         );
       }
     } else {
+      // This log was already here, confirming user is not logged in.
       console.log(
-        "[PracticeQuizPage] User is not logged in. Skipping save/update of user data."
+        "[PracticeQuizPage] User is not logged in. Skipping save/update of user data (user_incorrect_questions)."
       );
     }
+
+    // Finally, redirect if an attemptId was successfully obtained
+    if (attemptIdToRedirect) {
+      router.push(`/results/${attemptIdToRedirect}`);
+    } else if (!error) {
+      // If there was no attemptId but also no specific API submission error caught earlier,
+      // it implies a potential issue with the API not returning an ID.
+      // We might want to redirect to a generic page or show an inline message.
+      // For now, if no explicit error was set, and no ID, let's go to practice options.
+      // This might happen if the API call was successful (200 OK) but didn't return an attemptId.
+      console.warn(
+        "[PracticeQuizPage] No attemptId from API and no explicit error. Routing to practice options."
+      );
+      router.push("/practice");
+    }
+    // If 'error' state is set, the page will render the error message, so no explicit redirect here for that case.
   };
+
+  if (modalState.isOpen) {
+    return (
+      <ConfirmationModal
+        isOpen={modalState.isOpen}
+        title={modalState.title}
+        message={modalState.message}
+        confirmText={modalState.confirmText}
+        cancelText={modalState.cancelText}
+        onConfirm={modalState.onConfirm}
+        onClose={
+          modalState.onClose ||
+          (() => setModalState({ ...modalState, isOpen: false }))
+        }
+      />
+    );
+  }
+
+  if (!isAccessChecked && loading) {
+    return (
+      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-red-600" />
+          <p className="text-lg">Checking access...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

@@ -14,6 +14,12 @@ import { Progress } from "@/components/ui/progress";
 import supabaseClient from "@/lib/supabase-client";
 import { Loader2 } from "lucide-react";
 import ConfirmationModal from "@/components/confirmation-modal";
+import {
+  checkAttemptLimits,
+  incrementLocalAttemptCount,
+  type QuizMode,
+} from "@/lib/quizLimits";
+import Link from "next/link";
 
 interface Question {
   id: number;
@@ -27,6 +33,7 @@ interface Question {
 
 export default function QuizPage() {
   const router = useRouter();
+  const supabase = supabaseClient;
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<
@@ -34,83 +41,122 @@ export default function QuizPage() {
   >({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isConfirmEndQuizModalOpen, setIsConfirmEndQuizModalOpen] =
+    useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  const [isAccessChecked, setIsAccessChecked] = useState(false);
+  const [limitModalState, setLimitModalState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    cancelText: string;
+    onConfirm: () => void;
+    onClose?: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    cancelText: "Cancel",
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
-    async function fetchQuestions() {
+    async function performAccessCheckAndFetchData() {
+      const accessResult = await checkAttemptLimits("standard", supabase);
+      setIsAccessChecked(true);
+
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
+      setUserId(authUser?.id || null);
+
+      if (!accessResult.canAttempt) {
+        setLoading(false);
+        setQuestions([]);
+        let confirmText = "OK";
+        let onConfirmAction = () => router.push("/");
+        if (!accessResult.isLoggedIn) {
+          confirmText = "Sign Up";
+          onConfirmAction = () => router.push("/signup");
+        } else if (!accessResult.isPaidUser) {
+          confirmText = "Upgrade Plan";
+          onConfirmAction = () => router.push("/pricing");
+        }
+        setLimitModalState({
+          isOpen: true,
+          title: "Access Denied",
+          message: accessResult.message,
+          confirmText,
+          cancelText: "Go Home",
+          onConfirm: () => {
+            onConfirmAction();
+            setLimitModalState({ ...limitModalState, isOpen: false });
+          },
+          onClose: () => {
+            router.push("/");
+            setLimitModalState({ ...limitModalState, isOpen: false });
+          },
+        });
+        return;
+      }
+
+      setLoading(true);
       try {
-        // 1. Fetch all question IDs
-        const { data: idObjects, error: idError } = await supabaseClient
+        const { data: idObjects, error: idError } = await supabase
           .from("questions")
           .select("id");
-
-        if (idError) {
-          console.error("Supabase error fetching IDs:", idError);
-          throw new Error(idError.message);
-        }
-
-        if (!idObjects || idObjects.length === 0) {
+        if (idError) throw new Error(idError.message);
+        if (!idObjects || idObjects.length === 0)
           throw new Error("No question IDs found.");
-        }
 
         let questionIds = idObjects.map((item) => item.id);
-
-        // 2. Shuffle the IDs (Fisher-Yates shuffle algorithm)
         for (let i = questionIds.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [questionIds[i], questionIds[j]] = [questionIds[j], questionIds[i]];
         }
-
-        // 3. Take the first 20 IDs (or fewer if not enough questions)
         const selectedIds = questionIds.slice(0, 20);
 
         if (selectedIds.length === 0) {
-          // This case should ideally not be hit if idObjects.length > 0 initially
-          // but as a safeguard if slicing results in empty (e.g. questionIds.length < 20)
-          setQuestions([]); // Or handle as an error/empty state
+          setQuestions([]);
           setError("Not enough questions to start a quiz.");
           setLoading(false);
           return;
         }
 
-        // 4. Fetch the full data for these 20 questions
-        const { data, error } = await supabaseClient
+        const { data, error: questionsFetchError } = await supabase
           .from("questions")
           .select("*")
           .in("id", selectedIds);
-
-        if (error) {
-          console.error("Supabase error fetching questions by ID:", error);
-          throw new Error(error.message);
-        }
+        if (questionsFetchError) throw new Error(questionsFetchError.message);
 
         if (data) {
-          // Ensure the questions are in the same order as selectedIds for consistency
           const questionMap = new Map(data.map((q) => [q.id, q]));
           const orderedQuestions = selectedIds
             .map((id) => questionMap.get(id))
             .filter(Boolean) as Question[];
           setQuestions(orderedQuestions);
         } else {
-          setQuestions([]); // Handle case where no data is returned for selected IDs
+          setQuestions([]);
         }
       } catch (err) {
         console.error("Error fetching questions:", err);
-        setError(
-          (err as Error).message ||
-            "Failed to load questions. Please try again later."
-        );
-        setQuestions(getSampleQuestions()); // Fallback to sample questions
+        setError((err as Error).message || "Failed to load questions.");
       } finally {
         setLoading(false);
       }
     }
 
-    fetchQuestions();
-  }, []);
+    performAccessCheckAndFetchData();
+  }, [supabase, router]);
 
   const currentQuestion = questions[currentQuestionIndex];
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+  const progress =
+    questions.length > 0
+      ? ((currentQuestionIndex + 1) / questions.length) * 100
+      : 0;
 
   const handleAnswerSelect = (option: string) => {
     setSelectedAnswers({
@@ -123,7 +169,6 @@ export default function QuizPage() {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
-      // Quiz completed, navigate to results
       finishQuiz();
     }
   };
@@ -135,13 +180,15 @@ export default function QuizPage() {
   };
 
   const handleEndQuiz = () => {
-    setIsConfirmModalOpen(true);
+    setIsConfirmEndQuizModalOpen(true);
   };
 
   const finishQuiz = async () => {
-    const questionIds = questions.map((q) => q.id);
+    if (!userId) {
+      incrementLocalAttemptCount("standard");
+    }
 
-    // Ensure selectedAnswers keys are strings if they are numbers, matching API expectation if it stringifies numeric keys
+    const questionIds = questions.map((q) => q.id);
     const userAnswersForApi: Record<string, string> = {};
     for (const key in selectedAnswers) {
       userAnswersForApi[String(key)] = selectedAnswers[key];
@@ -154,13 +201,12 @@ export default function QuizPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userAnswers: userAnswersForApi, // Use the transformed answers
+          userAnswers: userAnswersForApi,
           questionIds: questionIds,
-          isTimed: false, // This is the standard quiz page
-          timeTaken: null, // No timer on this page
-          isPractice: false, // Assuming this is not a practice quiz
+          isTimed: false,
+          timeTaken: null,
+          isPractice: false,
           practiceType: null,
-          category: null, // Assuming no specific category for general quiz
         }),
       });
 
@@ -180,10 +226,36 @@ export default function QuizPage() {
     } catch (err: any) {
       console.error("Error submitting quiz:", err);
       setError(err.message || "Failed to submit quiz. Please try again.");
-      // Optional: redirect to home or show error inline
-      // router.push("/");
     }
   };
+
+  if (limitModalState.isOpen) {
+    return (
+      <ConfirmationModal
+        isOpen={limitModalState.isOpen}
+        title={limitModalState.title}
+        message={limitModalState.message}
+        confirmText={limitModalState.confirmText}
+        cancelText={limitModalState.cancelText}
+        onConfirm={limitModalState.onConfirm}
+        onClose={
+          limitModalState.onClose ||
+          (() => setLimitModalState({ ...limitModalState, isOpen: false }))
+        }
+      />
+    );
+  }
+
+  if (!isAccessChecked && loading) {
+    return (
+      <div className="container flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-red-600" />
+          <p className="text-lg">Checking access...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -214,7 +286,7 @@ export default function QuizPage() {
     );
   }
 
-  if (!currentQuestion) {
+  if (!currentQuestion && !loading && isAccessChecked) {
     return (
       <div className="container flex items-center justify-center min-h-screen">
         <Card className="w-full max-w-3xl">
@@ -223,14 +295,25 @@ export default function QuizPage() {
           </CardHeader>
           <CardContent>
             <p>
-              There are no questions available at this time. Please try again
-              later.
+              There are no questions available for this quiz at the moment, or
+              you may have encountered an issue.
             </p>
           </CardContent>
           <CardFooter>
             <Button onClick={() => router.push("/")}>Return Home</Button>
           </CardFooter>
         </Card>
+      </div>
+    );
+  }
+
+  if (!currentQuestion) {
+    return (
+      <div className="container flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-red-600" />
+          <p className="text-lg">Preparing quiz...</p>
+        </div>
       </div>
     );
   }
@@ -316,11 +399,11 @@ export default function QuizPage() {
       </div>
 
       <ConfirmationModal
-        isOpen={isConfirmModalOpen}
-        onClose={() => setIsConfirmModalOpen(false)}
+        isOpen={isConfirmEndQuizModalOpen}
+        onClose={() => setIsConfirmEndQuizModalOpen(false)}
         onConfirm={() => {
           finishQuiz();
-          setIsConfirmModalOpen(false);
+          setIsConfirmEndQuizModalOpen(false);
         }}
         title="End Quiz?"
         message="Are you sure you want to end the quiz? Your current answers will be submitted, and you will be taken to the results page."

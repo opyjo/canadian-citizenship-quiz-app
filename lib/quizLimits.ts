@@ -18,7 +18,9 @@ export const FREE_TIER_LIMITS: Readonly<AttemptCounts> = {
 };
 
 const LOCAL_STORAGE_KEY = "quizAttemptCounts";
-const PAID_USER_ACCESS_LEVEL = "premium"; // Adjust if your field/value is different
+
+// Define an array of what constitutes a paid access level
+const PAID_ACCESS_LEVELS = ["premium", "lifetime", "subscribed_monthly"]; // Added "lifetime" and "subscribed_monthly"
 
 // 2. localStorage Functions (for Unauthenticated Users)
 // #############################################################################
@@ -114,7 +116,13 @@ export async function checkAttemptLimits(
         };
       }
 
-      if (profile && profile.access_level === PAID_USER_ACCESS_LEVEL) {
+      // Modify this check to see if access_level is one of the paid types
+      if (
+        profile &&
+        profile.access_level &&
+        PAID_ACCESS_LEVELS.includes(profile.access_level)
+      ) {
+        // console.log("[checkAttemptLimits] Paid user, access_level:", profile.access_level); // Keep commented
         return {
           canAttempt: true,
           message: "Paid user, unlimited access.",

@@ -1,7 +1,6 @@
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import type { Database } from "@/types/supabase";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 interface QuestionFromDB {
   id: number;
@@ -9,7 +8,9 @@ interface QuestionFromDB {
 }
 
 export async function POST(request: Request) {
-  console.log("API Route: POST function in route.ts has been ENTERED.");
+  console.log(
+    "API Route: POST function in quiz-attempt/route.ts has been ENTERED."
+  );
 
   const body = await request.json();
   console.log(
@@ -33,10 +34,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const cookieStore = cookies();
-  const supabase = createRouteHandlerClient<Database>({
-    cookies: () => cookieStore,
-  });
+  const supabase = createSupabaseServerClient();
 
   let userId = null;
   let userEmail = null;

@@ -10,30 +10,58 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const appUrl = process.env.APP_URL || "http://localhost:3000";
 
 export async function POST(request: Request) {
-  const supabase = createSupabaseServerClient();
-
-  // const { data: { user }, error: userError } = await supabase.auth.getUser();
-  // console.log("API Route: User object:", user);
-  // console.log("API Route: User error:", userError);
-
-  const { priceId, quantity = 1 } = await request.json();
-
-  if (!priceId) {
-    return NextResponse.json(
-      { error: "Price ID is required" },
-      { status: 400 }
-    );
-  }
+  console.log("API Route: /api/stripe/create-checkout-session HIT");
 
   try {
+    console.log("API Route: Incoming request headers:", request.headers);
+    const requestCookies = request.headers.get("cookie");
+    console.log(
+      "API Route: Raw cookies from request:",
+      requestCookies || "No cookies found"
+    );
+
+    const supabase = createSupabaseServerClient();
+    console.log("API Route: Supabase server client initialized.");
+
+    const { priceId, quantity = 1 } = await request.json();
+
+    if (!priceId) {
+      console.error("API Route: Price ID is required but was not provided.");
+      return NextResponse.json(
+        { error: "Price ID is required" },
+        { status: 400 }
+      );
+    }
+    console.log(
+      `API Route: Received priceId: ${priceId}, quantity: ${quantity}`
+    );
+
+    console.log("API Route: Attempting to get user from Supabase...");
     const {
       data: { user },
       error: userError,
     } = await supabase.auth.getUser();
 
+    console.log(
+      "API Route: supabase.auth.getUser() response - User:",
+      JSON.stringify(user, null, 2)
+    );
+    console.log(
+      "API Route: supabase.auth.getUser() response - Error:",
+      JSON.stringify(userError, null, 2)
+    );
+
     if (userError || !user) {
-      console.error("User not authenticated (API Route):");
-      if (userError) console.error("Supabase auth error:", userError.message);
+      console.warn(
+        "API Route: User authentication failed. Condition (userError || !user) is TRUE."
+      );
+      if (userError)
+        console.error(
+          "API Route: Supabase auth error details:",
+          userError.message,
+          userError
+        );
+      if (!user) console.warn("API Route: User object is null or undefined.");
       return NextResponse.json(
         { error: "User not authenticated" },
         { status: 401 }
@@ -47,20 +75,23 @@ export async function POST(request: Request) {
       .eq("id", user.id)
       .single();
 
-    // PGRST116: "No rows found" - this is expected if the profile/customer_id doesn't exist yet.
     if (profileError && profileError.code !== "PGRST116") {
-      console.error("Error fetching profile:", profileError);
+      console.error("API Route: Error fetching profile:", profileError);
       return NextResponse.json(
         { error: "Error fetching user profile" },
         { status: 500 }
       );
     }
+    console.log(
+      "API Route: User profile fetched (or confirmed not existing yet):",
+      profile
+    );
 
     let stripeCustomerId = profile?.stripe_customer_id;
 
     if (!stripeCustomerId) {
       console.log(
-        "Creating Stripe customer for user:",
+        "API Route: Stripe customer ID not found in profile. Creating new Stripe customer for user:",
         user.id,
         "email:",
         user.email
@@ -72,7 +103,7 @@ export async function POST(request: Request) {
         },
       });
       stripeCustomerId = customer.id;
-      console.log("Stripe customer created:", stripeCustomerId);
+      console.log("API Route: Stripe customer created:", stripeCustomerId);
 
       const { error: updateProfileError } = await supabase
         .from("profiles")
@@ -80,11 +111,13 @@ export async function POST(request: Request) {
         .eq("id", user.id);
 
       if (updateProfileError) {
-        // It's good to log this, but you might not want to fail the entire request
-        // if the primary operation (creating Stripe customer) succeeded.
         console.error(
-          "Error updating profile with Stripe ID:",
+          "API Route: Error updating profile with Stripe ID:",
           updateProfileError
+        );
+      } else {
+        console.log(
+          "API Route: Profile updated successfully with Stripe customer ID."
         );
       }
     }
@@ -93,7 +126,7 @@ export async function POST(request: Request) {
     const mode = price.type === "recurring" ? "subscription" : "payment";
 
     console.log(
-      `Creating Stripe Checkout session for customer ${stripeCustomerId}, price ${priceId}, mode ${mode}`
+      `API Route: Creating Stripe Checkout session for customer ${stripeCustomerId}, price ${priceId}, mode ${mode}`
     );
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
@@ -114,15 +147,22 @@ export async function POST(request: Request) {
     });
 
     if (!session.id) {
+      console.error(
+        "API Route: Could not create Stripe Checkout session (session.id is missing)."
+      );
       throw new Error("Could not create Stripe Checkout session");
     }
-    console.log("Stripe Checkout session created:", session.id);
+    console.log(
+      "API Route: Stripe Checkout session created successfully:",
+      session.id
+    );
     return NextResponse.json({ sessionId: session.id });
   } catch (error: any) {
     console.error(
-      "Error creating Stripe Checkout session:",
+      "API Route: Error in POST /api/stripe/create-checkout-session:",
       error.message,
-      error.stack
+      error.stack,
+      error
     );
     return NextResponse.json(
       { error: error.message || "Failed to create checkout session" },

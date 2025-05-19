@@ -41,6 +41,14 @@ export default function AuthForm() {
 
       if (error) throw error;
 
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
+      console.log("SIGNIN SUCCESS - Current session:", sessionData);
+      if (sessionError) {
+        console.error("SIGNIN SUCCESS - Error getting session:", sessionError);
+      }
+      console.log("SIGNIN SUCCESS - Document cookies:", document.cookie);
+
       router.push("/");
       router.refresh();
     } catch (error: any) {

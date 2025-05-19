@@ -64,12 +64,19 @@ export default function SignUpForm() {
 
       if (signUpError) throw signUpError;
 
-      setSuccessMessage("Account created successfully! Please sign in.");
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
+      console.log("SIGNUP SUCCESS - Current session:", sessionData);
+      if (sessionError) {
+        console.error("SIGNUP SUCCESS - Error getting session:", sessionError);
+      }
+      console.log("SIGNUP SUCCESS - Document cookies:", document.cookie);
 
-      setTimeout(() => {
-        router.push("/auth");
-        router.refresh();
-      }, 1500);
+      setSuccessMessage("Account created successfully! You are now logged in.");
+
+      // Restore redirect
+      router.push("/"); // Redirect to homepage or dashboard after signup
+      router.refresh(); // Ensure server components are re-evaluated with new auth state
     } catch (error: any) {
       setError(error.message || "An error occurred during sign up");
     } finally {

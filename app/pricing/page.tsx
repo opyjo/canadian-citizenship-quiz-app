@@ -88,6 +88,7 @@ export default function PricingPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ priceId }),
+        credentials: "include",
       });
 
       const checkoutSession = await response.json();

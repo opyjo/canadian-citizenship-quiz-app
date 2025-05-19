@@ -1,4 +1,4 @@
-import SignUpForm from "@/components/signup-form"
+import SignUpForm from "@/components/signup-form";
 
 export default function SignUpPage() {
   return (
@@ -6,10 +6,12 @@ export default function SignUpPage() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold">Create Your Account</h1>
-          <p className="text-muted-foreground mt-2">Join thousands of Canadians preparing for their citizenship test</p>
+          <p className="text-muted-foreground mt-2">
+            Join thousands of Canadians preparing for their citizenship test
+          </p>
         </div>
         <SignUpForm />
       </div>
     </div>
-  )
+  );
 }

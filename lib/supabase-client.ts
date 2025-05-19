@@ -1,9 +1,14 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient as originalCreateBrowserClient } from "@supabase/ssr";
 import type { Database } from "@/types/supabase";
-import "dotenv/config"; // Ensure dotenv is loaded
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+console.log("Supabase Client Init - URL:", supabaseUrl);
+console.log(
+  "Supabase Client Init - Key:",
+  supabaseKey ? "Key is SET" : "Key is NOT SET"
+);
 
 if (!supabaseUrl) {
   throw new Error(
@@ -16,7 +21,10 @@ if (!supabaseKey) {
   );
 }
 
-// Create and export a single Supabase client instance
-const supabase = createSupabaseClient<Database>(supabaseUrl, supabaseKey);
+// Using createBrowserClient from @supabase/ssr
+const supabase = originalCreateBrowserClient<Database>(
+  supabaseUrl,
+  supabaseKey
+);
 
 export default supabase;

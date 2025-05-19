@@ -13,8 +13,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, BookOpen, AlertTriangle, Shuffle } from "lucide-react";
+import {
+  checkAttemptLimits,
+  type QuizMode,
+  type AttemptCheckResult,
+} from "@/lib/quizLimits";
+import ConfirmationModal from "@/components/confirmation-modal";
 
 export default function PracticePage() {
   const [incorrectQuestionsCount, setIncorrectQuestionsCount] = useState(0);
@@ -24,22 +29,37 @@ export default function PracticePage() {
   const router = useRouter();
   const supabase = supabaseClient;
 
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    cancelText: string;
+    onConfirm: () => void;
+    onClose?: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    cancelText: "Cancel",
+    onConfirm: () => {},
+  });
+
   useEffect(() => {
     async function fetchData() {
+      setLoading(true);
       try {
-        // Check if user is authenticated
         const { data: userData } = await supabase.auth.getUser();
         setUser(userData.user);
 
-        // If user is logged in, fetch incorrect questions count
         if (userData.user) {
           const { data: incorrectData, error: incorrectError } = await supabase
             .from("user_incorrect_questions")
-            .select("*", { count: "exact" })
+            .select("question_id", { count: "exact" })
             .eq("user_id", userData.user.id);
 
           if (incorrectError) throw incorrectError;
-
           setIncorrectQuestionsCount(incorrectData?.length || 0);
         }
       } catch (err: any) {
@@ -53,12 +73,90 @@ export default function PracticePage() {
     fetchData();
   }, [supabase]);
 
+  const handleStartQuizFlow = async (
+    quizMode: QuizMode,
+    quizPath: string,
+    actionName: string
+  ) => {
+    console.log(`[PracticePage] Attempting to start ${actionName}`);
+    const result = await checkAttemptLimits(quizMode, supabase);
+
+    if (result.canAttempt) {
+      console.log(
+        `[PracticePage] Access granted for ${actionName}. Navigating to ${quizPath}`
+      );
+      router.push(quizPath);
+    } else {
+      console.log(
+        `[PracticePage] Access denied for ${actionName}. Reason: ${result.reason}, Message: ${result.message}`
+      );
+      let confirmText = "OK";
+      let cancelText = "Later";
+      let onConfirmAction = () =>
+        setModalState({ ...modalState, isOpen: false });
+
+      if (!result.isLoggedIn) {
+        confirmText = "Sign Up";
+        onConfirmAction = () => router.push("/signup");
+      } else if (!result.isPaidUser) {
+        confirmText = "Upgrade Plan";
+        onConfirmAction = () => router.push("/pricing");
+      }
+
+      setModalState({
+        isOpen: true,
+        title: "Practice Limit Reached",
+        message: result.message,
+        confirmText,
+        cancelText,
+        onConfirm: () => {
+          onConfirmAction();
+          setModalState({ ...modalState, isOpen: false });
+        },
+        onClose: () => setModalState({ ...modalState, isOpen: false }),
+      });
+    }
+  };
+
   const startQuickPractice = (count: number) => {
-    router.push(`/quiz/practice?mode=random&count=${count}`);
+    handleStartQuizFlow(
+      "practice",
+      `/quiz/practice?mode=random&count=${count}`,
+      `Quick Practice (${count} questions)`
+    );
   };
 
   const startPracticeIncorrect = () => {
-    router.push("/quiz/practice?incorrect=true");
+    if (!user) {
+      setModalState({
+        isOpen: true,
+        title: "Sign In Required",
+        message:
+          "You need to be signed in to practice your incorrect questions.",
+        confirmText: "Sign In",
+        cancelText: "Later",
+        onConfirm: () => router.push("/auth"),
+        onClose: () => setModalState({ ...modalState, isOpen: false }),
+      });
+      return;
+    }
+    if (incorrectQuestionsCount === 0 && user) {
+      setModalState({
+        isOpen: true,
+        title: "No Incorrect Questions",
+        message: "You have no incorrect questions to practice. Great job!",
+        confirmText: "OK",
+        cancelText: "",
+        onConfirm: () => setModalState({ ...modalState, isOpen: false }),
+        onClose: () => setModalState({ ...modalState, isOpen: false }),
+      });
+      return;
+    }
+    handleStartQuizFlow(
+      "practice",
+      "/quiz/practice?incorrect=true",
+      "Practice Incorrect Questions"
+    );
   };
 
   if (loading) {
@@ -187,6 +285,7 @@ export default function PracticePage() {
                 className="w-full"
                 variant="secondary"
                 onClick={startPracticeIncorrect}
+                disabled={!user || incorrectQuestionsCount === 0}
               >
                 Practice {incorrectQuestionsCount} Incorrect Question
                 {incorrectQuestionsCount !== 1 ? "s" : ""}
@@ -212,6 +311,20 @@ export default function PracticePage() {
           </Card>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={modalState.isOpen}
+        title={modalState.title}
+        message={modalState.message}
+        confirmText={modalState.confirmText}
+        cancelText={modalState.cancelText}
+        onConfirm={modalState.onConfirm}
+        onClose={() =>
+          modalState.onClose
+            ? modalState.onClose()
+            : setModalState({ ...modalState, isOpen: false })
+        }
+      />
     </div>
   );
 }

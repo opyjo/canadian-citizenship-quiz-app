@@ -15,6 +15,8 @@ import supabaseClient from "@/lib/supabase-client";
 import { Loader2 } from "lucide-react";
 import Timer from "@/components/timer";
 import ConfirmationModal from "@/components/confirmation-modal";
+import { incrementLocalAttemptCount } from "@/lib/quizLimits";
+import { checkAttemptLimits } from "@/lib/quizLimits";
 
 interface Question {
   id: number;
@@ -24,8 +26,6 @@ interface Question {
   option_c: string;
   option_d: string;
   correct_option: string;
-  answer_explanation: string | null;
-  category: string | null;
 }
 
 export default function TimedQuizPage() {
@@ -44,6 +44,23 @@ export default function TimedQuizPage() {
   const [timeRemaining, setTimeRemaining] = useState(60 * 15); // 15 minutes in seconds
   const [quizFinished, setQuizFinished] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isAccessChecked, setIsAccessChecked] = useState(false);
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    cancelText: string;
+    onConfirm: () => void;
+    onClose?: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    cancelText: "Cancel",
+    onConfirm: () => {},
+  });
 
   const TIME_LIMIT = 60 * 15; // 15 minutes in seconds
 
@@ -55,22 +72,18 @@ export default function TimedQuizPage() {
     if (quizFinished) return;
     setQuizFinished(true);
     setQuizActive(false);
-    // Calculate time taken. Ensure startTime was set when the quiz began.
     const timeTakenSeconds =
       startTime > 0
         ? Math.floor((Date.now() - startTime) / 1000)
         : TIME_LIMIT - timeRemaining;
 
     const questionIds = originalQuestions.map((q) => q.id);
-
-    // Ensure selectedAnswers keys are strings
     const userAnswersForApi: Record<string, string> = {};
     for (const key in selectedAnswers) {
       userAnswersForApi[String(key)] = selectedAnswers[key];
     }
 
-    // setLoading(true); // Optional: indicate loading
-    // setError(null);
+    let attemptIdToRedirect: string | null = null;
 
     try {
       const response = await fetch("/api/quiz-attempt", {
@@ -83,9 +96,8 @@ export default function TimedQuizPage() {
           questionIds: questionIds,
           isTimed: true,
           timeTaken: timeTakenSeconds,
-          isPractice: false, // Assuming timed quiz is not a practice quiz by default
+          isPractice: false,
           practiceType: null,
-          category: null, // Or a specific category if applicable to all timed quizzes
         }),
       });
 
@@ -95,24 +107,27 @@ export default function TimedQuizPage() {
       }
 
       const result = await response.json();
-      const attemptId = result.attemptId;
-
-      if (attemptId) {
-        router.push(`/results/${attemptId}`);
-      } else {
-        throw new Error("No attempt ID received from API for timed quiz");
+      attemptIdToRedirect = result.attemptId;
+      if (!attemptIdToRedirect) {
+        console.warn(
+          "[TimedQuizPage] No attempt ID received from API for timed quiz, but proceeding with local/UI updates."
+        );
       }
     } catch (err: any) {
       console.error("Error submitting timed quiz:", err);
       setError(err.message || "Failed to submit timed quiz. Please try again.");
-      // Optional: redirect to home or show error inline
-    } finally {
-      // setLoading(false);
     }
 
-    // The existing logic for saving incorrect questions if userId is present can be kept or refactored.
-    // For now, it's outside the new API call flow but was part of the original function.
-    // Consider if this should also move to the API route or be triggered differently.
+    // Increment local count for unauthenticated users
+    if (!userId) {
+      // Check if userId is null/undefined
+      console.log(
+        "[TimedQuizPage] User is not logged in. Incrementing local timed attempt count."
+      );
+      incrementLocalAttemptCount("timed");
+    }
+
+    // Existing logic for saving incorrect questions if userId is present
     if (userId) {
       let newScore = 0;
       const incorrectQs: {
@@ -147,13 +162,9 @@ export default function TimedQuizPage() {
       });
 
       try {
-        // This was the old way of saving, the API route now handles the primary attempt saving.
-        // The quiz_attempts insert here is now redundant if the API call above succeeds.
-        // await supabaseClient.from("quiz_attempts").insert({ ... });
-
         if (incorrectQs.length > 0) {
           await supabaseClient.from("user_incorrect_questions").upsert(
-            incorrectQs.map((iq) => ({ ...iq, user_id: userId })), // ensure user_id is part of the object
+            incorrectQs.map((iq) => ({ ...iq, user_id: userId })),
             {
               onConflict: "user_id, question_id",
               ignoreDuplicates: false,
@@ -163,7 +174,22 @@ export default function TimedQuizPage() {
       } catch (dbError) {
         console.error("Error saving user incorrect questions:", dbError);
       }
+    } else {
+      console.log(
+        "[TimedQuizPage] User not logged in. Skipping update of user_incorrect_questions."
+      );
     }
+
+    // Redirect logic
+    if (attemptIdToRedirect) {
+      router.push(`/results/${attemptIdToRedirect}`);
+    } else if (!error) {
+      console.warn(
+        "[TimedQuizPage] No attemptId from API and no explicit error. Routing to home."
+      );
+      router.push("/"); // Or perhaps /dashboard or /practice if more appropriate
+    }
+    // If 'error' state is set, the page will render the error message.
   }, [
     quizFinished,
     setQuizActive,
@@ -172,8 +198,8 @@ export default function TimedQuizPage() {
     originalQuestions,
     selectedAnswers,
     router,
-    userId, // Added userId here as it's used in the latter part
-    questions, // Added questions here as it's used for score calculation for incorrectQs
+    userId,
+    questions,
   ]);
 
   useEffect(() => {
@@ -220,8 +246,46 @@ export default function TimedQuizPage() {
   };
 
   useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
+    async function performAccessCheckAndFetchData() {
+      // Perform access check first
+      const accessResult = await checkAttemptLimits("timed", supabaseClient);
+      setIsAccessChecked(true); // Mark access check as done
+
+      if (!accessResult.canAttempt) {
+        setLoading(false); // Stop loading indicator
+        setQuestions([]); // Clear any potential questions
+
+        let confirmText = "OK";
+        let onConfirmAction = () => router.push("/"); // Go back to home
+
+        if (!accessResult.isLoggedIn) {
+          confirmText = "Sign Up";
+          onConfirmAction = () => router.push("/signup");
+        } else if (!accessResult.isPaidUser) {
+          confirmText = "Upgrade Plan";
+          onConfirmAction = () => router.push("/pricing");
+        }
+
+        setModalState({
+          isOpen: true,
+          title: "Access Denied",
+          message: accessResult.message,
+          confirmText: confirmText,
+          cancelText: "Go Home",
+          onConfirm: () => {
+            onConfirmAction();
+            setModalState({ ...modalState, isOpen: false });
+          },
+          onClose: () => {
+            router.push("/");
+            setModalState({ ...modalState, isOpen: false });
+          },
+        });
+        return; // Stop further execution if access is denied
+      }
+
+      // If access is granted, proceed to fetch quiz data
+      setLoading(true); // Ensure loading is true before fetching actual questions
       try {
         // 1. Fetch all question IDs
         const { data: idObjects, error: idError } = await supabaseClient
@@ -237,29 +301,25 @@ export default function TimedQuizPage() {
           throw new Error("No question IDs found (timed).");
         }
 
-        // Ensure questionIds are numbers, assuming item.id from DB is number
         let questionIds = idObjects.map((item: { id: number }) => item.id);
-
-        // 2. Shuffle the IDs (Fisher-Yates shuffle algorithm)
         for (let i = questionIds.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [questionIds[i], questionIds[j]] = [questionIds[j], questionIds[i]];
         }
-
-        // 3. Take the first 20 IDs (or fewer if not enough questions)
         const selectedIds = questionIds.slice(0, 20);
 
         if (selectedIds.length === 0) {
           setQuestions([]);
           setError("Not enough questions to start a timed quiz.");
-          setLoading(false);
+          setLoading(false); // Ensure loading is set to false here
           return;
         }
 
-        // 4. Fetch the full data for these 20 questions
         const { data, error } = await supabaseClient
           .from("questions")
-          .select("*")
+          .select(
+            "id, question_text, option_a, option_b, option_c, option_d, correct_option"
+          )
           .in("id", selectedIds);
 
         if (error) {
@@ -273,7 +333,7 @@ export default function TimedQuizPage() {
         if (data) {
           const questionMap = new Map(data.map((q: Question) => [q.id, q]));
           const orderedQuestions = selectedIds
-            .map((id: number) => questionMap.get(id)) // id is now number
+            .map((id: number) => questionMap.get(id))
             .filter(Boolean) as Question[];
           setQuestions(orderedQuestions);
           setOriginalQuestions(orderedQuestions);
@@ -288,12 +348,42 @@ export default function TimedQuizPage() {
         setQuestions([]);
       } finally {
         setLoading(false);
-        setStartTime(Date.now());
+        setStartTime(Date.now()); // Set start time only if quiz is loaded and access granted
       }
     }
 
-    fetchData();
-  }, []);
+    performAccessCheckAndFetchData();
+  }, [router]); // Simplified dependencies, supabaseClient is stable, searchParams not used here
+
+  // Conditional rendering for the limit modal
+  if (modalState.isOpen) {
+    return (
+      <ConfirmationModal
+        isOpen={modalState.isOpen}
+        title={modalState.title}
+        message={modalState.message}
+        confirmText={modalState.confirmText}
+        cancelText={modalState.cancelText}
+        onConfirm={modalState.onConfirm}
+        onClose={
+          modalState.onClose ||
+          (() => setModalState({ ...modalState, isOpen: false }))
+        }
+      />
+    );
+  }
+
+  // Initial loading state for access check
+  if (!isAccessChecked && loading) {
+    return (
+      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-red-600" />
+          <p className="text-lg">Checking access...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

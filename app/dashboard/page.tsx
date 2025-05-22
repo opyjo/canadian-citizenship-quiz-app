@@ -216,7 +216,7 @@ export default function DashboardPage() {
 
                 <TabsContent value="all" className="space-y-4">
                   <div className="rounded-md border">
-                    <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b">
+                    <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b text-xs sm:text-sm">
                       <div>Date</div>
                       <div>Type</div>
                       <div>Score</div>
@@ -226,7 +226,7 @@ export default function DashboardPage() {
                       {quizAttempts.map((attempt) => (
                         <div
                           key={attempt.id}
-                          className="grid grid-cols-4 gap-4 p-4"
+                          className="grid grid-cols-4 gap-4 p-4 text-xs sm:text-sm"
                         >
                           <div>
                             {new Date(attempt.created_at).toLocaleDateString()}
@@ -257,7 +257,7 @@ export default function DashboardPage() {
 
                 <TabsContent value="standard" className="space-y-4">
                   <div className="rounded-md border">
-                    <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b">
+                    <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b text-xs sm:text-sm">
                       <div>Date</div>
                       <div>Type</div>
                       <div>Score</div>
@@ -269,7 +269,7 @@ export default function DashboardPage() {
                         .map((attempt) => (
                           <div
                             key={attempt.id}
-                            className="grid grid-cols-4 gap-4 p-4"
+                            className="grid grid-cols-4 gap-4 p-4 text-xs sm:text-sm"
                           >
                             <div>
                               {new Date(
@@ -304,7 +304,7 @@ export default function DashboardPage() {
 
                 <TabsContent value="timed" className="space-y-4">
                   <div className="rounded-md border">
-                    <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b">
+                    <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b text-xs sm:text-sm">
                       <div>Date</div>
                       <div>Type</div>
                       <div>Score</div>
@@ -316,7 +316,7 @@ export default function DashboardPage() {
                         .map((attempt) => (
                           <div
                             key={attempt.id}
-                            className="grid grid-cols-4 gap-4 p-4"
+                            className="grid grid-cols-4 gap-4 p-4 text-xs sm:text-sm"
                           >
                             <div>
                               {new Date(
@@ -351,7 +351,7 @@ export default function DashboardPage() {
 
                 <TabsContent value="practice" className="space-y-4">
                   <div className="rounded-md border">
-                    <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b">
+                    <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b text-xs sm:text-sm">
                       <div>Date</div>
                       <div>Type</div>
                       <div>Score</div>
@@ -365,7 +365,7 @@ export default function DashboardPage() {
                         .map((attempt) => (
                           <div
                             key={attempt.id}
-                            className="grid grid-cols-4 gap-4 p-4"
+                            className="grid grid-cols-4 gap-4 p-4 text-xs sm:text-sm"
                           >
                             <div>
                               {new Date(

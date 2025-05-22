@@ -9,6 +9,48 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          access_level: string | null
+          active_monthly_plan_price_id: string | null
+          active_stripe_subscription_id: string | null
+          cancel_at_period_end: boolean | null
+          created_at: string
+          id: string
+          purchased_lifetime_price_id: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_status: string | null
+          subscription_current_period_end: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_level?: string | null
+          active_monthly_plan_price_id?: string | null
+          active_stripe_subscription_id?: string | null
+          cancel_at_period_end?: boolean | null
+          created_at?: string
+          id: string
+          purchased_lifetime_price_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_status?: string | null
+          subscription_current_period_end?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_level?: string | null
+          active_monthly_plan_price_id?: string | null
+          active_stripe_subscription_id?: string | null
+          cancel_at_period_end?: boolean | null
+          created_at?: string
+          id?: string
+          purchased_lifetime_price_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_status?: string | null
+          subscription_current_period_end?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       questions: {
         Row: {
           correct_option: string
@@ -41,48 +83,85 @@ export type Database = {
       }
       quiz_attempts: {
         Row: {
-          created_at: string
-          id: string
+          created_at: string | null
+          id: number
           is_practice: boolean | null
           is_timed: boolean | null
           practice_type: string | null
-          question_ids: Json
+          question_ids: number[] | null
           quiz_type: string | null
           score: number | null
           time_taken_seconds: number | null
           total_questions_in_attempt: number | null
-          user_answers: Json
+          user_answers: Json | null
           user_id: string | null
         }
         Insert: {
-          created_at?: string
-          id?: string
+          created_at?: string | null
+          id?: number
           is_practice?: boolean | null
           is_timed?: boolean | null
           practice_type?: string | null
-          question_ids: Json
+          question_ids?: number[] | null
           quiz_type?: string | null
           score?: number | null
           time_taken_seconds?: number | null
           total_questions_in_attempt?: number | null
-          user_answers: Json
+          user_answers?: Json | null
           user_id?: string | null
         }
         Update: {
-          created_at?: string
-          id?: string
+          created_at?: string | null
+          id?: number
           is_practice?: boolean | null
           is_timed?: boolean | null
           practice_type?: string | null
-          question_ids?: Json
+          question_ids?: number[] | null
           quiz_type?: string | null
           score?: number | null
           time_taken_seconds?: number | null
           total_questions_in_attempt?: number | null
-          user_answers?: Json
+          user_answers?: Json | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_user_id_fkey1"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_freemium_quiz_counts: {
+        Row: {
+          count: number
+          last_attempted: string | null
+          mode: string
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          last_attempted?: string | null
+          mode: string
+          user_id: string
+        }
+        Update: {
+          count?: number
+          last_attempted?: string | null
+          mode?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_freemium_quiz_counts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_incorrect_questions: {
         Row: {
@@ -113,12 +192,44 @@ export type Database = {
           },
         ]
       }
+      user_mode_attempt_counts: {
+        Row: {
+          count: number
+          last_attempted: string | null
+          mode: string
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          last_attempted?: string | null
+          mode: string
+          user_id: string
+        }
+        Update: {
+          count?: number
+          last_attempted?: string | null
+          mode?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_user_quiz_mode_attempts: {
+        Args: { p_user_id: string; p_quiz_mode: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

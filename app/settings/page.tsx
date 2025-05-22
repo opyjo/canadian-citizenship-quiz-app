@@ -41,6 +41,7 @@ export default function SettingsPage() {
   const [subscriptionDetails, setSubscriptionDetails] =
     useState<SubscriptionDetails | null>(null);
   const [cancellingSubscription, setCancellingSubscription] = useState(false);
+  const [isUncancelling, setIsUncancelling] = useState(false);
   const [subscriptionMessage, setSubscriptionMessage] = useState<string | null>(
     null
   );
@@ -230,6 +231,65 @@ export default function SettingsPage() {
     }
   };
 
+  const handleReactivateSubscription = async () => {
+    setIsUncancelling(true);
+    setSubscriptionMessage(null);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/stripe/uncancel-subscription", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to reactivate subscription.");
+      }
+
+      setSubscriptionMessage(
+        result.message || "Subscription reactivation initiated."
+      );
+      // Re-fetch profile to update subscription status display
+      // This relies on the webhook having updated the DB quickly.
+      // For immediate UI feedback, we could also optimistically update or use the API response.
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select(
+          "stripe_subscription_status, subscription_current_period_end, cancel_at_period_end, active_stripe_subscription_id"
+        )
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) {
+        console.error(
+          "Error re-fetching profile after reactivation:",
+          profileError
+        );
+      } else if (profileData) {
+        const pData = profileData as any;
+        setSubscriptionDetails({
+          status: pData.stripe_subscription_status || "none", // Or infer 'active' as discussed before
+          current_period_end: pData.subscription_current_period_end,
+          cancel_at_period_end: pData.cancel_at_period_end || false,
+          active_stripe_subscription_id:
+            pData.active_stripe_subscription_id || null,
+        });
+      }
+    } catch (err: any) {
+      console.error("Reactivation error:", err);
+      setSubscriptionMessage(null);
+      setError(
+        err.message || "An error occurred while reactivating your subscription."
+      );
+    } finally {
+      setIsUncancelling(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -416,14 +476,29 @@ export default function SettingsPage() {
                       )}
                     {subscriptionDetails.cancel_at_period_end &&
                       subscriptionDetails.current_period_end && (
-                        <p className="text-orange-600 font-semibold">
-                          Your subscription is set to cancel at the end of the
-                          current billing period:{" "}
-                          {new Date(
-                            subscriptionDetails.current_period_end
-                          ).toLocaleDateString()}
-                          . You will have access until this date.
-                        </p>
+                        <div className="space-y-2">
+                          <p className="text-orange-600 font-semibold">
+                            Your subscription is set to cancel at the end of the
+                            current billing period:{" "}
+                            {new Date(
+                              subscriptionDetails.current_period_end
+                            ).toLocaleDateString()}
+                            . You will have access until this date.
+                          </p>
+                          {subscriptionDetails.status === "active" && (
+                            <Button
+                              onClick={handleReactivateSubscription}
+                              disabled={isUncancelling}
+                              variant="outline" // Or your preferred variant
+                              className="border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700"
+                            >
+                              {isUncancelling ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : null}
+                              Renew subscription
+                            </Button>
+                          )}
+                        </div>
                       )}
 
                     {subscriptionDetails.status === "active" &&

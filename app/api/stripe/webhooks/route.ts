@@ -202,6 +202,9 @@ export async function POST(req: Request) {
             active_monthly_plan_price_id:
               subscriptionDetails.items.data[0].price.id,
             purchased_lifetime_price_id: null,
+            stripe_subscription_status: "active",
+            cancel_at_period_end:
+              subscriptionDetails.cancel_at_period_end || false,
           });
         }
         break;
@@ -333,6 +336,9 @@ export async function POST(req: Request) {
               access_level: "subscribed_monthly",
               active_monthly_plan_price_id:
                 subscriptionDetails.items.data[0].price.id,
+              stripe_subscription_status: "active",
+              cancel_at_period_end:
+                subscriptionDetails.cancel_at_period_end || false,
             });
           } else {
             console.error(
@@ -405,6 +411,8 @@ export async function POST(req: Request) {
               active_stripe_subscription_id: sub.id,
               subscription_current_period_end: subEventPeriodEnd,
               active_monthly_plan_price_id: sub.items.data[0].price.id,
+              stripe_subscription_status: "active",
+              cancel_at_period_end: sub.cancel_at_period_end || false,
             });
           } else {
             // Handles 'canceled', 'past_due', 'unpaid', etc.
@@ -462,6 +470,9 @@ export async function POST(req: Request) {
                 accessLevel !== "free" && subFinalPeriodEnd
                   ? subFinalPeriodEnd
                   : null,
+              stripe_subscription_status: sub.status,
+              cancel_at_period_end:
+                sub.cancel_at_period_end || sub.status === "canceled",
             });
           }
         } else {

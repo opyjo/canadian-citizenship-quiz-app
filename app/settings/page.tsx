@@ -19,6 +19,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
 
+// Define a type for subscription details
+interface SubscriptionDetails {
+  status: string; // e.g., 'active', 'canceled', 'past_due', 'none'
+  current_period_end: string | null; // ISO string date
+  cancel_at_period_end: boolean;
+  active_stripe_subscription_id: string | null;
+}
+
 export default function SettingsPage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -30,26 +38,70 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [subscriptionDetails, setSubscriptionDetails] =
+    useState<SubscriptionDetails | null>(null);
+  const [cancellingSubscription, setCancellingSubscription] = useState(false);
+  const [subscriptionMessage, setSubscriptionMessage] = useState<string | null>(
+    null
+  );
   const router = useRouter();
   const supabase = supabaseClient;
 
   useEffect(() => {
-    async function getUser() {
-      const { data } = await supabase.auth.getUser();
+    async function getUserAndProfile() {
+      const { data: authData, error: authError } =
+        await supabase.auth.getUser();
 
-      if (!data.user) {
+      if (authError || !authData.user) {
         router.push("/auth");
         return;
       }
 
-      setUser(data.user);
-      setEmail(data.user.email || "");
-      setFullName(data.user.user_metadata?.full_name || "");
+      setUser(authData.user);
+      setEmail(authData.user.email || "");
+      setFullName(authData.user.user_metadata?.full_name || "");
+
+      // Fetch profile to get subscription status
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select(
+          "stripe_subscription_status, subscription_current_period_end, cancel_at_period_end, active_stripe_subscription_id"
+        )
+        .eq("id", authData.user.id)
+        .single();
+
+      if (profileError && profileError.code !== "PGRST116") {
+        console.error("Error fetching profile:", profileError);
+        // Set a default or error state for subscription details
+        setSubscriptionDetails({
+          status: "Error fetching status",
+          current_period_end: null,
+          cancel_at_period_end: false,
+          active_stripe_subscription_id: null,
+        });
+      } else if (profileData) {
+        const pData = profileData as any; // Temporary cast to any
+        setSubscriptionDetails({
+          status: pData.stripe_subscription_status || "none",
+          current_period_end: pData.subscription_current_period_end,
+          cancel_at_period_end: pData.cancel_at_period_end || false,
+          active_stripe_subscription_id:
+            pData.active_stripe_subscription_id || null,
+        });
+      } else {
+        setSubscriptionDetails({
+          status: "none",
+          current_period_end: null,
+          cancel_at_period_end: false,
+          active_stripe_subscription_id: null,
+        });
+      }
+
       setLoading(false);
     }
 
-    getUser();
-  }, [router]);
+    getUserAndProfile();
+  }, [router, supabase]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,6 +173,63 @@ export default function SettingsPage() {
     }
   };
 
+  const handleCancelSubscription = async () => {
+    setCancellingSubscription(true);
+    setSubscriptionMessage(null);
+    setError(null); // Clear general errors as well
+
+    try {
+      const response = await fetch("/api/stripe/cancel-subscription", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to cancel subscription");
+      }
+
+      setSubscriptionMessage(
+        result.message || "Subscription cancellation initiated."
+      );
+      // Re-fetch profile to update subscription status display
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select(
+          "stripe_subscription_status, subscription_current_period_end, cancel_at_period_end, active_stripe_subscription_id"
+        )
+        .eq("id", user.id) // user should be available here
+        .single();
+
+      if (profileError) {
+        console.error(
+          "Error re-fetching profile after cancellation:",
+          profileError
+        );
+      } else if (profileData) {
+        const pData = profileData as any; // Temporary cast to any
+        setSubscriptionDetails({
+          status: pData.stripe_subscription_status || "none",
+          current_period_end: pData.subscription_current_period_end,
+          cancel_at_period_end: pData.cancel_at_period_end || false,
+          active_stripe_subscription_id:
+            pData.active_stripe_subscription_id || null,
+        });
+      }
+    } catch (err: any) {
+      console.error("Cancellation error:", err);
+      setSubscriptionMessage(null); // Clear any success message from API if client-side error happens
+      setError(
+        err.message || "An error occurred while cancelling your subscription."
+      );
+    } finally {
+      setCancellingSubscription(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -146,6 +255,7 @@ export default function SettingsPage() {
           <TabsList className="mb-4">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="password">Password</TabsTrigger>
+            <TabsTrigger value="subscription">Subscription</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile">
@@ -263,6 +373,95 @@ export default function SettingsPage() {
                     Update Password
                   </Button>
                 </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="subscription">
+            <Card>
+              <CardHeader>
+                <CardTitle>Subscription Management</CardTitle>
+                <CardDescription>
+                  View and manage your subscription details
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {error && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+                {subscriptionMessage && (
+                  <Alert className="mb-4 bg-blue-50 text-blue-800 border-blue-200">
+                    <AlertDescription>{subscriptionMessage}</AlertDescription>
+                  </Alert>
+                )}
+
+                {subscriptionDetails ? (
+                  <div className="space-y-3">
+                    <p>
+                      <strong>Status:</strong>{" "}
+                      <span className="capitalize">
+                        {subscriptionDetails.status}
+                      </span>
+                    </p>
+                    {subscriptionDetails.status === "active" &&
+                      subscriptionDetails.current_period_end && (
+                        <p>
+                          <strong>Renews on:</strong>{" "}
+                          {new Date(
+                            subscriptionDetails.current_period_end
+                          ).toLocaleDateString()}
+                        </p>
+                      )}
+                    {subscriptionDetails.cancel_at_period_end &&
+                      subscriptionDetails.current_period_end && (
+                        <p className="text-orange-600 font-semibold">
+                          Your subscription is set to cancel at the end of the
+                          current billing period:{" "}
+                          {new Date(
+                            subscriptionDetails.current_period_end
+                          ).toLocaleDateString()}
+                          . You will have access until this date.
+                        </p>
+                      )}
+
+                    {subscriptionDetails.status === "active" &&
+                      !subscriptionDetails.cancel_at_period_end && (
+                        <Button
+                          onClick={handleCancelSubscription}
+                          disabled={
+                            cancellingSubscription ||
+                            !subscriptionDetails.active_stripe_subscription_id
+                          }
+                          variant="destructive"
+                        >
+                          {cancellingSubscription ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : null}
+                          Cancel Subscription
+                        </Button>
+                      )}
+                    {subscriptionDetails.status !== "active" &&
+                      subscriptionDetails.status !== "none" &&
+                      subscriptionDetails.status !== "Error fetching status" &&
+                      !subscriptionDetails.cancel_at_period_end && (
+                        <p className="text-muted-foreground">
+                          Your subscription is not currently active. Please
+                          check your payment details or contact support.
+                        </p>
+                      )}
+                    {subscriptionDetails.status === "none" && (
+                      <p className="text-muted-foreground">
+                        You do not have an active subscription.
+                      </p>
+                      // Optionally, add a button/link to your pricing page here
+                      // <Button onClick={() => router.push('/pricing')}>View Plans</Button>
+                    )}
+                  </div>
+                ) : (
+                  <p>Loading subscription details...</p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

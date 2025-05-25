@@ -25,6 +25,7 @@ export default function AuthForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isForgotPasswordView, setIsForgotPasswordView] = useState(false);
   const router = useRouter();
   const supabase = supabaseClient;
 
@@ -58,7 +59,8 @@ export default function AuthForm() {
     }
   };
 
-  const handleForgotPassword = async () => {
+  const handleForgotPasswordRequest = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!email) {
       setError("Please enter your email address");
       return;
@@ -74,7 +76,8 @@ export default function AuthForm() {
 
       if (error) throw error;
 
-      alert("Password reset link sent to your email");
+      alert("Password reset link sent to your email. Please check your inbox.");
+      setIsForgotPasswordView(false);
     } catch (error: any) {
       setError(
         error.message || "An error occurred sending the password reset link"
@@ -99,9 +102,13 @@ export default function AuthForm() {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Sign In</CardTitle>
+        <CardTitle>
+          {isForgotPasswordView ? "Reset Password" : "Sign In"}
+        </CardTitle>
         <CardDescription>
-          Enter your credentials to access your account
+          {isForgotPasswordView
+            ? "Enter your email to receive a password reset link"
+            : "Enter your credentials to access your account"}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -147,7 +154,12 @@ export default function AuthForm() {
           Sign in with Google
         </Button>
 
-        <form onSubmit={handleSignIn} className="space-y-4">
+        <form
+          onSubmit={
+            isForgotPasswordView ? handleForgotPasswordRequest : handleSignIn
+          }
+          className="space-y-4"
+        >
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -159,41 +171,59 @@ export default function AuthForm() {
               required
             />
           </div>
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <Label htmlFor="password">Password</Label>
-              <button
-                type="button"
-                onClick={handleForgotPassword}
-                className="text-sm text-red-600 hover:text-red-800"
-              >
-                Forgot Password?
-              </button>
+          {!isForgotPasswordView && (
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="password">Password</Label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsForgotPasswordView(true);
+                    setError(null);
+                  }}
+                  className="text-sm text-red-600 hover:text-red-800"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
+          )}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Sign In
+            {isForgotPasswordView ? "Send Reset Link" : "Sign In"}
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="flex justify-center">
-        <p className="text-sm text-muted-foreground">
-          Don't have an account?{" "}
-          <Link
-            href="/signup"
-            className="text-red-600 hover:text-red-800 font-medium"
+      <CardFooter className="flex flex-col items-center space-y-2">
+        {isForgotPasswordView ? (
+          <Button
+            variant="link"
+            className="p-0 h-auto text-sm text-muted-foreground"
+            onClick={() => {
+              setIsForgotPasswordView(false);
+              setError(null);
+            }}
           >
-            Sign Up
-          </Link>
-        </p>
+            Back to Sign In
+          </Button>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Don't have an account?{" "}
+            <Link
+              href="/signup"
+              className="text-red-600 hover:text-red-800 font-medium"
+            >
+              Sign Up
+            </Link>
+          </p>
+        )}
       </CardFooter>
     </Card>
   );

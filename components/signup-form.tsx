@@ -72,17 +72,17 @@ export default function SignUpForm() {
       }
       console.log("SIGNUP SUCCESS - Document cookies:", document.cookie);
 
-      setSuccessMessage("Account created successfully! You are now logged in.");
+      setSuccessMessage(
+        "Account created successfully! Please check your email to verify your account before signing in."
+      );
 
       // Restore redirect
-      router.push("/"); // Redirect to homepage or dashboard after signup
-      router.refresh(); // Ensure server components are re-evaluated with new auth state
+      // router.push("/"); // Redirect to homepage or dashboard after signup
+      // router.refresh(); // Ensure server components are re-evaluated with new auth state
     } catch (error: any) {
       setError(error.message || "An error occurred during sign up");
     } finally {
-      if (error) {
-        setLoading(false);
-      }
+      setLoading(false); // Always stop loading once the process is finished (either success or error)
     }
   };
 

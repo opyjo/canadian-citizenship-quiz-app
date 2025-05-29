@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import supabaseClient from "@/lib/supabase-client";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,18 +19,28 @@ import {
   LogOut,
   LogIn,
   UserPlus,
-  Home as HomeIcon,
+  HomeIcon,
   LayoutDashboard,
-  Settings as SettingsIcon,
-  Menu as MenuIcon,
-  X as XIcon,
+  SettingsIcon,
+  MenuIcon,
+  XIcon,
+  BookOpen,
+  HelpCircle,
+  ChevronDown,
+  Mountain,
+  TreePine,
+  Building,
+  Grape,
+  MapPin,
+  Compass,
 } from "lucide-react";
-import { User as SupabaseUser } from "@supabase/supabase-js";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 export default function UserNav() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDiscoverMenuOpen, setIsDiscoverMenuOpen] = useState(false);
   const router = useRouter();
   const supabase = supabaseClient;
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -54,7 +65,7 @@ export default function UserNav() {
         hamburgerButtonRef.current &&
         hamburgerButtonRef.current.contains(event.target as Node)
       ) {
-        return; // Click was on the toggle button itself
+        return;
       }
       if (
         mobileMenuRef.current &&
@@ -97,74 +108,108 @@ export default function UserNav() {
     setIsMobileMenuOpen(false);
   };
 
+  const discoverCanadaItems = [
+    {
+      title: "Natural Wonders",
+      href: "/discover/natural-wonders",
+      icon: Mountain,
+      description: "Niagara Falls, Rocky Mountains, Northern Lights",
+    },
+    {
+      title: "National Parks",
+      href: "/discover/national-parks",
+      icon: TreePine,
+      description: "Banff, Jasper, Algonquin and more",
+    },
+    {
+      title: "National Historic Sites",
+      href: "/discover/historic-sites",
+      icon: Building,
+      description: "Fortress of Louisbourg, Plains of Abraham, UNESCO sites",
+    },
+    {
+      title: "Wine Regions",
+      href: "/discover/wine-regions",
+      icon: Grape,
+      description: "Niagara, Okanagan Valley, Nova Scotia vineyards",
+    },
+    {
+      title: "Places to Visit",
+      href: "/discover/places-to-visit",
+      icon: Compass,
+      description: "Parks, plazas, landmarks, and public spaces",
+    },
+    {
+      title: "Must-Visit Cities",
+      href: "/discover/cities",
+      icon: MapPin,
+      description: "Toronto, Montreal, Vancouver, Quebec City",
+    },
+  ];
+
   const renderAuthBlock = (isMobile: boolean) => {
     if (loading && isMobile)
       return (
-        <div className="h-8 w-full bg-gray-200 rounded animate-pulse mt-2"></div>
+        <div className="h-10 w-full bg-gray-100 rounded-lg animate-pulse mt-4"></div>
       );
     if (loading && !isMobile)
       return (
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 bg-gray-200 rounded-full animate-pulse"></div>
-          <div className="h-6 w-20 bg-gray-200 rounded animate-pulse"></div>
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 bg-gray-100 rounded-full animate-pulse"></div>
+          <div className="h-5 w-20 bg-gray-100 rounded animate-pulse"></div>
         </div>
       );
 
     if (user) {
       if (isMobile) {
-        // Mobile Logged In View: User Info + Direct Sign Out Button
         return (
-          <div className="flex flex-col space-y-1 mt-4 border-t pt-4">
-            {/* User Info Display */}
-            <div className="flex items-center gap-2 w-full justify-start px-2 py-1 text-left">
-              <div className="flex items-center justify-center rounded-full bg-gray-200 text-gray-700 h-8 w-8">
+          <div className="flex flex-col space-y-3 mt-6 pt-6 border-t border-gray-200">
+            <div className="flex items-center gap-3 px-3 py-2 bg-red-50 rounded-lg">
+              <div className="flex items-center justify-center rounded-full bg-red-100 text-red-600 h-10 w-10 flex-shrink-0">
                 <User className="h-5 w-5" />
               </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">
-                  {user.user_metadata?.full_name || user.email || "My Account"}
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-sm font-semibold text-gray-900 truncate">
+                  {user.user_metadata?.full_name || "My Account"}
                 </span>
                 {user.email && (
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-gray-600 truncate">
                     {user.email}
                   </span>
                 )}
               </div>
             </div>
-            {/* Sign Out Button */}
             <Button
               variant="ghost"
-              className="w-full justify-start text-red-600 hover:!text-red-700 focus:!text-red-700 focus-visible:ring-0 hover:!bg-red-50 focus:!bg-red-50"
+              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
               onClick={handleSignOut}
             >
-              <LogOut className="mr-2 h-4 w-4" />
+              <LogOut className="mr-3 h-4 w-4" />
               <span>Sign Out</span>
             </Button>
           </div>
         );
       } else {
-        // Desktop Logged In View: DropdownMenu
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center justify-center rounded-full bg-red-100 text-red-600 h-9 w-9">
-                    <User className="h-5 w-5" />
-                  </div>
+              <Button
+                variant="ghost"
+                className="relative h-10 w-10 rounded-full hover:bg-red-50 transition-colors"
+              >
+                <div className="flex items-center justify-center rounded-full bg-red-100 text-red-600 h-10 w-10">
+                  <User className="h-5 w-5" />
                 </div>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuContent className="w-64" align="end" forceMount>
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    {user.user_metadata?.full_name ||
-                      user.email ||
-                      "My Account"}
+                  <p className="text-sm font-semibold leading-none">
+                    {user.user_metadata?.full_name || "My Account"}
                   </p>
                   {user.email && (
-                    <p className="text-xs leading-none text-muted-foreground">
+                    <p className="text-xs leading-none text-gray-600">
                       {user.email}
                     </p>
                   )}
@@ -173,7 +218,7 @@ export default function UserNav() {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={handleSignOut}
-                className="cursor-pointer text-red-600 hover:!text-red-700 focus:!text-red-700 focus-visible:ring-0 focus:bg-red-50 w-full"
+                className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Sign Out</span>
@@ -183,19 +228,18 @@ export default function UserNav() {
         );
       }
     } else {
-      // Unauthenticated view (Sign In / Sign Up buttons)
       return (
         <div
           className={`flex ${
             isMobile
-              ? "flex-col space-y-2 mt-4 border-t pt-4"
-              : "items-center gap-x-1"
+              ? "flex-col space-y-3 mt-6 pt-6 border-t border-gray-200"
+              : "items-center gap-2"
           }`}
         >
           <Button
             variant={isMobile ? "outline" : "ghost"}
             size="sm"
-            className={`flex items-center gap-1 ${
+            className={`flex items-center gap-2 transition-colors hover:bg-gray-50 ${
               isMobile ? "w-full justify-start" : ""
             }`}
             onClick={() => {
@@ -208,7 +252,7 @@ export default function UserNav() {
           </Button>
           <Button
             size="sm"
-            className={`flex items-center gap-1 ${
+            className={`flex items-center gap-2 bg-red-600 hover:bg-red-700 transition-colors ${
               isMobile ? "w-full justify-start" : ""
             }`}
             onClick={() => {
@@ -225,53 +269,129 @@ export default function UserNav() {
   };
 
   return (
-    <nav className="flex items-center justify-between gap-x-3 sm:gap-x-4 p-4 relative">
+    <nav className="flex items-center justify-between gap-4 p-4 bg-white border-b border-gray-200 shadow-sm">
+      {/* Logo/Brand */}
+      <Link
+        href="/"
+        className="flex items-center gap-2 font-bold text-xl text-red-600 hover:text-red-700 transition-colors"
+      >
+        <div className="h-6 w-6 bg-red-600 rounded-sm flex items-center justify-center">
+          <div className="h-4 w-4 bg-white rounded-sm flex items-center justify-center">
+            <div className="h-2 w-2 bg-red-600 rounded-full"></div>
+          </div>
+        </div>
+        <span className="hidden sm:inline">Canada Citizenship Guide</span>
+      </Link>
+
       {/* Desktop Navigation Links */}
-      <div className="hidden md:flex items-center gap-x-3 sm:gap-x-4">
+      <div className="hidden lg:flex items-center gap-4">
         <Link
           href="/"
-          className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+          className="text-sm font-medium text-gray-600 hover:text-red-600 transition-colors flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50"
         >
           <HomeIcon className="h-4 w-4" />
           Home
         </Link>
+
         <button
           onClick={() => handleProtectedLinkClick("/dashboard")}
-          className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+          className="text-sm font-medium text-gray-600 hover:text-red-600 transition-colors flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50 cursor-pointer"
         >
           <LayoutDashboard className="h-4 w-4" />
           Dashboard
         </button>
+
+        <Link
+          href="/study-guide"
+          className="text-sm font-medium text-gray-600 hover:text-red-600 transition-colors flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50"
+        >
+          <BookOpen className="h-4 w-4" />
+          Study Guide
+        </Link>
+
+        {/* Discover Canada Dropdown */}
+        <DropdownMenu
+          open={isDiscoverMenuOpen}
+          onOpenChange={setIsDiscoverMenuOpen}
+        >
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="text-sm font-medium text-gray-600 hover:text-red-600 transition-colors flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50"
+            >
+              <Mountain className="h-4 w-4" />
+              Discover Canada
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-96" align="start">
+            <DropdownMenuLabel className="text-red-600 font-semibold flex items-center gap-2">
+              <Mountain className="h-4 w-4" />
+              Explore Canada's Beauty
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <div className="grid grid-cols-2 gap-1 p-1">
+              {discoverCanadaItems.map((item) => {
+                const IconComponent = item.icon;
+                return (
+                  <DropdownMenuItem key={item.href} asChild>
+                    <Link
+                      href={item.href}
+                      className="flex items-start gap-3 p-3 cursor-pointer hover:bg-red-50 rounded-lg"
+                    >
+                      <IconComponent className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-900 text-sm">
+                          {item.title}
+                        </span>
+                        <span className="text-xs text-gray-600 leading-tight">
+                          {item.description}
+                        </span>
+                      </div>
+                    </Link>
+                  </DropdownMenuItem>
+                );
+              })}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <Link
+          href="/faq"
+          className="text-sm font-medium text-gray-600 hover:text-red-600 transition-colors flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50"
+        >
+          <HelpCircle className="h-4 w-4" />
+          FAQ
+        </Link>
+
         <button
           onClick={() => handleProtectedLinkClick("/settings")}
-          className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+          className="text-sm font-medium text-gray-600 hover:text-red-600 transition-colors flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50 cursor-pointer"
         >
           <SettingsIcon className="h-4 w-4" />
           Settings
         </button>
       </div>
 
-      {/* Desktop Auth Block - Pushed to the right */}
-      <div className="hidden md:flex items-center gap-x-2 ml-auto">
+      {/* Desktop Auth Block */}
+      <div className="hidden lg:flex items-center gap-3 ml-auto">
         {renderAuthBlock(false)}
       </div>
 
-      {/* Spacer for Mobile - Pushes Hamburger to the right */}
-      <div className="md:hidden flex-grow"></div>
-
       {/* Mobile Hamburger Button */}
-      <div className="md:hidden">
+      <div className="lg:hidden ml-auto">
         <Button
           ref={hamburgerButtonRef}
           variant="ghost"
           size="icon"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           aria-label="Toggle menu"
+          className="h-10 w-10 hover:bg-red-50 transition-colors"
         >
           {isMobileMenuOpen ? (
-            <XIcon className="h-6 w-6" />
+            <XIcon className="h-5 w-5" />
           ) : (
-            <MenuIcon className="h-6 w-6" />
+            <MenuIcon className="h-5 w-5" />
           )}
         </Button>
       </div>
@@ -280,36 +400,104 @@ export default function UserNav() {
       <div
         ref={mobileMenuRef}
         className={`
-          md:hidden absolute top-full right-0 w-64 bg-background border rounded-md shadow-lg z-50 p-4 flex flex-col space-y-1
+          lg:hidden absolute top-full right-0 w-80 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-6 flex flex-col space-y-1
           transform transition-all duration-300 ease-in-out
           ${
             isMobileMenuOpen
-              ? "opacity-100 translate-y-0"
+              ? "opacity-100 translate-y-2"
               : "opacity-0 -translate-y-4 invisible"
           }
         `}
       >
+        <div className="flex items-center gap-2 mb-4 pb-4 border-b border-gray-200">
+          <div className="h-5 w-5 bg-red-600 rounded-sm flex items-center justify-center">
+            <div className="h-3 w-3 bg-white rounded-sm flex items-center justify-center">
+              <div className="h-1 w-1 bg-red-600 rounded-full"></div>
+            </div>
+          </div>
+          <span className="font-semibold text-gray-900">Navigation Menu</span>
+        </div>
+
         <Button
           variant="ghost"
-          className="w-full justify-start"
+          className="w-full justify-start hover:bg-red-50 transition-colors"
           onClick={() => handleMobileLinkClick("/")}
         >
-          <HomeIcon className="mr-2 h-4 w-4" /> Home
+          <HomeIcon className="mr-3 h-4 w-4" /> Home
         </Button>
+
         <Button
           variant="ghost"
-          className="w-full justify-start"
+          className="w-full justify-start hover:bg-red-50 transition-colors"
           onClick={() => handleProtectedLinkClick("/dashboard")}
         >
-          <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
+          <LayoutDashboard className="mr-3 h-4 w-4" /> Dashboard
+          {!user && (
+            <Badge variant="secondary" className="ml-auto text-xs">
+              Login Required
+            </Badge>
+          )}
         </Button>
+
         <Button
           variant="ghost"
-          className="w-full justify-start"
+          className="w-full justify-start hover:bg-red-50 transition-colors"
+          onClick={() => handleMobileLinkClick("/study-guide")}
+        >
+          <BookOpen className="mr-3 h-4 w-4" /> Study Guide
+        </Button>
+
+        {/* Mobile Discover Canada Section */}
+        <div className="border-t border-gray-200 pt-4 mt-4">
+          <div className="text-sm font-semibold text-red-600 px-2 py-1 mb-3 flex items-center gap-2">
+            <Mountain className="h-4 w-4" />
+            Discover Canada
+          </div>
+          {discoverCanadaItems.map((item) => {
+            const IconComponent = item.icon;
+            return (
+              <Button
+                key={item.href}
+                variant="ghost"
+                className="w-full justify-start h-auto p-3 hover:bg-red-50 transition-colors"
+                onClick={() => handleMobileLinkClick(item.href)}
+              >
+                <IconComponent className="mr-3 h-4 w-4 text-red-600 flex-shrink-0" />
+                <div className="flex flex-col items-start">
+                  <span className="text-sm font-medium text-gray-900">
+                    {item.title}
+                  </span>
+                  <span className="text-xs text-gray-600">
+                    {item.description}
+                  </span>
+                </div>
+              </Button>
+            );
+          })}
+        </div>
+
+        <Button
+          variant="ghost"
+          className="w-full justify-start hover:bg-red-50 transition-colors"
+          onClick={() => handleMobileLinkClick("/faq")}
+        >
+          <HelpCircle className="mr-3 h-4 w-4" /> FAQ
+        </Button>
+
+        <Button
+          variant="ghost"
+          className="w-full justify-start hover:bg-red-50 transition-colors"
           onClick={() => handleProtectedLinkClick("/settings")}
         >
-          <SettingsIcon className="mr-2 h-4 w-4" /> Settings
+          <SettingsIcon className="mr-3 h-4 w-4" /> Settings
+          {!user && (
+            <Badge variant="secondary" className="ml-auto text-xs">
+              Login Required
+            </Badge>
+          )}
         </Button>
+
+        {/* Mobile Auth Section */}
         {renderAuthBlock(true)}
       </div>
     </nav>

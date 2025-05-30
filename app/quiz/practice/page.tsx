@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +27,7 @@ interface Question {
   correct_option: string;
 }
 
-export default function PracticeQuizPage() {
+function PracticeQuizContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -637,5 +637,26 @@ export default function PracticeQuizPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+// Loading fallback component
+function PracticeQuizLoading() {
+  return (
+    <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="flex flex-col items-center space-y-4">
+        <Loader2 className="h-12 w-12 animate-spin text-red-600" />
+        <p className="text-lg">Loading practice quiz...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main component with Suspense wrapper
+export default function PracticeQuizPage() {
+  return (
+    <Suspense fallback={<PracticeQuizLoading />}>
+      <PracticeQuizContent />
+    </Suspense>
   );
 }

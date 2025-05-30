@@ -1,10 +1,10 @@
-import AuthForm from "@/components/auth-form"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import AuthForm from "@/components/auth-form";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function AuthPage() {
   return (
-    <div className="container flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center py-12 px-4">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold">Sign In to Your Account</h1>
@@ -14,7 +14,9 @@ export default function AuthPage() {
         </div>
         <AuthForm />
         <div className="text-center">
-          <p className="text-sm text-muted-foreground mb-2">Don't have an account yet?</p>
+          <p className="text-sm text-muted-foreground mb-2">
+            Don't have an account yet?
+          </p>
           <Link href="/signup">
             <Button variant="outline" className="w-full">
               Create an Account
@@ -23,5 +25,5 @@ export default function AuthPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

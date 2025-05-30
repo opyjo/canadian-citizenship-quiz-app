@@ -146,8 +146,8 @@ export default function RootLayout({
 
         <footer className="bg-gray-900 text-white py-12">
           <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="text-center">
                 <h3 className="font-bold text-lg mb-4">Study Guide</h3>
                 <ul className="space-y-2 text-gray-300">
                   <li>
@@ -184,7 +184,7 @@ export default function RootLayout({
                   </li>
                 </ul>
               </div>
-              <div>
+              <div className="text-center">
                 <h3 className="font-bold text-lg mb-4">Practice Tests</h3>
                 <ul className="space-y-2 text-gray-300">
                   <li>
@@ -213,44 +213,8 @@ export default function RootLayout({
                   </li>
                 </ul>
               </div>
-              <div>
-                <h3 className="font-bold text-lg mb-4">Discover Canada</h3>
-                <ul className="space-y-2 text-gray-300">
-                  <li>
-                    <a
-                      href="/discover/natural-wonders"
-                      className="hover:text-white transition-colors"
-                    >
-                      Natural Wonders
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="/discover/cities"
-                      className="hover:text-white transition-colors"
-                    >
-                      Cities
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="/discover/historic-sites"
-                      className="hover:text-white transition-colors"
-                    >
-                      Historic Sites
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="/discover/national-parks"
-                      className="hover:text-white transition-colors"
-                    >
-                      National Parks
-                    </a>
-                  </li>
-                </ul>
-              </div>
-              <div>
+
+              <div className="text-center">
                 <h3 className="font-bold text-lg mb-4">About</h3>
                 <ul className="space-y-2 text-gray-300">
                   <li>
@@ -271,31 +235,17 @@ export default function RootLayout({
                   </li>
                   <li>
                     <a
-                      href="/privacy"
+                      href="/privacy-policy"
                       className="hover:text-white transition-colors"
                     >
                       Privacy Policy
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="/terms"
-                      className="hover:text-white transition-colors"
-                    >
-                      Terms of Service
                     </a>
                   </li>
                 </ul>
               </div>
             </div>
             <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-              <p>
-                &copy; 2024 Discover Canada Study Guide. All rights reserved.
-              </p>
-              <p className="mt-2 text-sm">
-                Based on official materials from Immigration, Refugees and
-                Citizenship Canada (IRCC)
-              </p>
+              <p>&copy; 2025 Canada Citizenship Guide. All rights reserved.</p>
             </div>
           </div>
         </footer>

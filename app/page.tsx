@@ -196,34 +196,16 @@ export default function HomePage() {
       description:
         "Practice questions covering all test topics: history, geography, government, rights, and responsibilities",
     },
-    {
-      icon: Clock,
-      title: "Flexible Learning",
-      description:
-        "Study at your own pace with mobile-friendly content accessible anywhere, anytime",
-    },
+
     {
       icon: Award,
       title: "Track Your Progress",
       description:
         "Monitor your learning progress and identify areas that need more attention",
     },
-    {
-      icon: Users,
-      title: "Community Support",
-      description:
-        "Join thousands of aspiring Canadians on their citizenship journey",
-    },
-    {
-      icon: Shield,
-      title: "Free & Accessible",
-      description:
-        "Complete access to all study materials and practice tests at no cost",
-    },
   ];
 
   const stats = [
-    { number: "50,000+", label: "Students Helped", icon: Users },
     { number: "95%", label: "Pass Rate", icon: TrendingUp },
     { number: "1,000+", label: "Practice Questions", icon: Target },
     { number: "7", label: "Study Chapters", icon: BookOpen },
@@ -274,7 +256,7 @@ export default function HomePage() {
                 className="bg-red-600 hover:bg-red-700 text-lg px-8 py-4"
                 onClick={() => handleStartQuiz("standard", "/quiz")}
               >
-                Start Studying Now
+                Take Standard Quiz
               </Button>
               <Button
                 size="lg"
@@ -287,13 +269,13 @@ export default function HomePage() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mt-16">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 mt-16">
               {stats.map((stat, index) => {
                 const IconComponent = stat.icon;
                 return (
                   <div key={index} className="text-center">
-                    <div className="flex justify-center mb-2">
-                      <IconComponent className="h-8 w-8 text-red-600" />
+                    <div className="flex justify-center">
+                      <IconComponent className="text-red-600" />
                     </div>
                     <div className="text-3xl font-bold text-gray-900">
                       {stat.number}
@@ -566,7 +548,7 @@ export default function HomePage() {
               <Button
                 size="lg"
                 className="bg-white text-red-600 hover:bg-gray-100 text-lg px-8 py-4"
-                onClick={() => handleStartQuiz("standard", "/quiz")}
+                onClick={() => router.push("/study-guide")}
               >
                 Start Studying Now
               </Button>
@@ -574,7 +556,7 @@ export default function HomePage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-white text-white hover:bg-white hover:text-red-600 text-lg px-6 py-4"
+                  className="bg-white text-red-600 hover:bg-gray-100 text-lg px-8 py-4"
                   onClick={() => handleStartQuiz("standard", "/quiz")}
                 >
                   Standard Quiz
@@ -582,7 +564,7 @@ export default function HomePage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-white text-white hover:bg-white hover:text-red-600 text-lg px-6 py-4"
+                  className="bg-white text-red-600 hover:bg-gray-100 text-lg px-8 py-4"
                   onClick={() => handleStartQuiz("timed", "/quiz/timed")}
                 >
                   Timed Quiz

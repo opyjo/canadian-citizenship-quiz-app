@@ -1,9 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -25,8 +28,69 @@ import {
   Timer,
   FileText,
 } from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import supabaseClient from "@/lib/supabase-client";
+import { checkAttemptLimits, type QuizMode } from "@/lib/quizLimits";
+import ConfirmationModal from "@/components/confirmation-modal";
 
 export default function HomePage() {
+  const router = useRouter();
+  const supabase = supabaseClient;
+
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    cancelText: string;
+    onConfirm: () => void;
+    onClose?: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    cancelText: "Cancel",
+    onConfirm: () => {},
+  });
+
+  const handleStartQuiz = async (quizMode: QuizMode, quizPath: string) => {
+    const result = await checkAttemptLimits(quizMode, supabase);
+
+    if (result.canAttempt) {
+      router.push(quizPath);
+    } else {
+      let confirmText = "OK";
+      let cancelText = "Cancel";
+      let onConfirmAction = () =>
+        setModalState({ ...modalState, isOpen: false });
+
+      if (!result.isLoggedIn) {
+        confirmText = "Sign Up";
+        onConfirmAction = () => router.push("/signup");
+        cancelText = "Later";
+      } else if (!result.isPaidUser) {
+        confirmText = "Upgrade Plan";
+        onConfirmAction = () => router.push("/pricing");
+        cancelText = "OK";
+      }
+
+      setModalState({
+        isOpen: true,
+        title: "Quiz Limit Reached",
+        message: result.message,
+        confirmText,
+        cancelText,
+        onConfirm: () => {
+          onConfirmAction();
+          setModalState({ ...modalState, isOpen: false });
+        },
+        onClose: () => setModalState({ ...modalState, isOpen: false }),
+      });
+    }
+  };
+
   const chapters = [
     {
       title: "Canadian History",
@@ -90,7 +154,8 @@ export default function HomePage() {
       description:
         "Take your time to answer questions at your own pace. Perfect for learning and reviewing concepts.",
       icon: FileText,
-      href: "/quiz/standard",
+      mode: "standard" as QuizMode,
+      path: "/quiz",
       features: [
         "No time limit",
         "Immediate feedback",
@@ -105,7 +170,8 @@ export default function HomePage() {
       description:
         "Simulate the real citizenship test with 20 questions in 30 minutes. Test your readiness!",
       icon: Timer,
-      href: "/quiz/timed",
+      mode: "timed" as QuizMode,
+      path: "/quiz/timed",
       features: [
         "30-minute time limit",
         "20 questions",
@@ -195,7 +261,7 @@ export default function HomePage() {
             </Badge>
             <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6">
               Prepare for Your Citizenship Test with
-              <span className="text-red-600">Confidence</span>
+              <span className="text-red-600"> Confidence</span>
             </h1>
             <p className="text-xl lg:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
               Comprehensive study guide to help you prepare for the citizenship
@@ -203,23 +269,21 @@ export default function HomePage() {
               one convenient resource.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Link href="/quiz">
-                <Button
-                  size="lg"
-                  className="bg-red-600 hover:bg-red-700 text-lg px-8 py-4"
-                >
-                  Start Studying Now
-                </Button>
-              </Link>
-              <Link href="/quiz/timed">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="text-lg px-8 py-4"
-                >
-                  Take Timed Quiz
-                </Button>
-              </Link>
+              <Button
+                size="lg"
+                className="bg-red-600 hover:bg-red-700 text-lg px-8 py-4"
+                onClick={() => handleStartQuiz("standard", "/quiz")}
+              >
+                Start Studying Now
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="text-lg px-8 py-4"
+                onClick={() => handleStartQuiz("timed", "/quiz/timed")}
+              >
+                Take Timed Quiz
+              </Button>
             </div>
 
             {/* Stats */}
@@ -284,18 +348,12 @@ export default function HomePage() {
                         </div>
                       ))}
                     </div>
-                    <Link
-                      href={
-                        quiz.href === "/quiz/standard" ? "/quiz" : quiz.href
-                      }
-                      className="block"
+                    <Button
+                      className={`w-full ${quiz.buttonColor} text-white text-lg py-3`}
+                      onClick={() => handleStartQuiz(quiz.mode, quiz.path)}
                     >
-                      <Button
-                        className={`w-full ${quiz.buttonColor} text-white text-lg py-3`}
-                      >
-                        Start {quiz.title}
-                      </Button>
-                    </Link>
+                      Start {quiz.title}
+                    </Button>
                   </CardContent>
                 </Card>
               );
@@ -505,33 +563,30 @@ export default function HomePage() {
               practice with our quiz system
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/quiz">
+              <Button
+                size="lg"
+                className="bg-white text-red-600 hover:bg-gray-100 text-lg px-8 py-4"
+                onClick={() => handleStartQuiz("standard", "/quiz")}
+              >
+                Start Studying Now
+              </Button>
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   size="lg"
-                  className="bg-white text-red-600 hover:bg-gray-100 text-lg px-8 py-4"
+                  variant="outline"
+                  className="border-white text-white hover:bg-white hover:text-red-600 text-lg px-6 py-4"
+                  onClick={() => handleStartQuiz("standard", "/quiz")}
                 >
-                  Start Studying Now
+                  Standard Quiz
                 </Button>
-              </Link>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Link href="/quiz">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="border-white text-white hover:bg-white hover:text-red-600 text-lg px-6 py-4"
-                  >
-                    Standard Quiz
-                  </Button>
-                </Link>
-                <Link href="/quiz/timed">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="border-white text-white hover:bg-white hover:text-red-600 text-lg px-6 py-4"
-                  >
-                    Timed Quiz
-                  </Button>
-                </Link>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-white text-white hover:bg-white hover:text-red-600 text-lg px-6 py-4"
+                  onClick={() => handleStartQuiz("timed", "/quiz/timed")}
+                >
+                  Timed Quiz
+                </Button>
               </div>
             </div>
           </div>
@@ -579,6 +634,21 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={modalState.isOpen}
+        title={modalState.title}
+        message={modalState.message}
+        confirmText={modalState.confirmText}
+        cancelText={modalState.cancelText}
+        onConfirm={modalState.onConfirm}
+        onClose={() =>
+          modalState.onClose
+            ? modalState.onClose()
+            : setModalState({ ...modalState, isOpen: false })
+        }
+      />
     </>
   );
 }

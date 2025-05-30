@@ -214,9 +214,6 @@ export default function PracticeQuizPage() {
       } catch (err: any) {
         console.error("Error fetching questions:", err);
         setError(err.message || "Failed to load practice questions");
-
-        // For demo purposes, load sample questions if Supabase is not set up
-        setQuestions(getSampleQuestions());
       } finally {
         setLoading(false);
         setStartTime(Date.now());
@@ -641,60 +638,4 @@ export default function PracticeQuizPage() {
       </div>
     </div>
   );
-}
-
-// Sample questions for demo purposes when Supabase is not set up
-function getSampleQuestions(): Question[] {
-  return [
-    {
-      id: 1,
-      question_text:
-        "When must a federal election be held according to legislation passed by parliament?",
-      option_a: "When the king wants to replace the prime minister",
-      option_b: "Within four years of the most recent election",
-      option_c: "Within 5 years of the last election",
-      option_d:
-        "The prime minister can call the election any time at his own will",
-      correct_option: "b",
-    },
-    {
-      id: 2,
-      question_text:
-        "Which of the following is the federal government responsible for?",
-      option_a: "Highways",
-      option_b: "Natural resources",
-      option_c: "Education",
-      option_d: "Interprovincial trade and communications",
-      correct_option: "d",
-    },
-    // Add more sample questions with explanations and categories
-    {
-      id: 3,
-      question_text:
-        "What was the name of the new country formed at confederation?",
-      option_a: "Britain",
-      option_b: "Canada",
-      option_c: "Canadian Confederation",
-      option_d: "Dominion of Canada",
-      correct_option: "d",
-    },
-    {
-      id: 4,
-      question_text: "Where do more than half of the people in Canada live?",
-      option_a: "Coastal Pacific",
-      option_b: "Atlantic Canada",
-      option_c: "Prairies",
-      option_d: "Central Canada",
-      correct_option: "d",
-    },
-    {
-      id: 5,
-      question_text: "Who brought Quebec into confederation?",
-      option_a: "Sir Lewis Hippoly La Fontaine",
-      option_b: "Sir George-Étienne Cartier",
-      option_c: "Sir Wilfried Laurier",
-      option_d: "Sir John Alexander Macdonald",
-      correct_option: "b",
-    },
-  ];
 }

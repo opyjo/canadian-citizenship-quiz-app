@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import supabaseClient from "@/lib/supabase-client";
 import { Button } from "@/components/ui/button";
@@ -26,13 +27,6 @@ import {
   XIcon,
   BookOpen,
   HelpCircle,
-  ChevronDown,
-  Mountain,
-  TreePine,
-  Building,
-  Grape,
-  MapPin,
-  Compass,
 } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -40,7 +34,6 @@ export default function UserNav() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDiscoverMenuOpen, setIsDiscoverMenuOpen] = useState(false);
   const router = useRouter();
   const supabase = supabaseClient;
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -107,45 +100,6 @@ export default function UserNav() {
     router.push(path);
     setIsMobileMenuOpen(false);
   };
-
-  const discoverCanadaItems = [
-    {
-      title: "Natural Wonders",
-      href: "/discover/natural-wonders",
-      icon: Mountain,
-      description: "Niagara Falls, Rocky Mountains, Northern Lights",
-    },
-    {
-      title: "National Parks",
-      href: "/discover/national-parks",
-      icon: TreePine,
-      description: "Banff, Jasper, Algonquin and more",
-    },
-    {
-      title: "National Historic Sites",
-      href: "/discover/historic-sites",
-      icon: Building,
-      description: "Fortress of Louisbourg, Plains of Abraham, UNESCO sites",
-    },
-    {
-      title: "Wine Regions",
-      href: "/discover/wine-regions",
-      icon: Grape,
-      description: "Niagara, Okanagan Valley, Nova Scotia vineyards",
-    },
-    {
-      title: "Places to Visit",
-      href: "/discover/places-to-visit",
-      icon: Compass,
-      description: "Parks, plazas, landmarks, and public spaces",
-    },
-    {
-      title: "Must-Visit Cities",
-      href: "/discover/cities",
-      icon: MapPin,
-      description: "Toronto, Montreal, Vancouver, Quebec City",
-    },
-  ];
 
   const renderAuthBlock = (isMobile: boolean) => {
     if (loading && isMobile)
@@ -275,11 +229,12 @@ export default function UserNav() {
         href="/"
         className="flex items-center gap-2 font-bold text-xl text-red-600 hover:text-red-700 transition-colors"
       >
-        <div className="h-6 w-6 bg-red-600 rounded-sm flex items-center justify-center">
-          <div className="h-4 w-4 bg-white rounded-sm flex items-center justify-center">
-            <div className="h-2 w-2 bg-red-600 rounded-full"></div>
-          </div>
-        </div>
+        <Image
+          src="/icon.svg"
+          alt="Canada Citizenship Guide Logo"
+          width={24}
+          height={24}
+        />
         <span className="hidden sm:inline">Canada Citizenship Guide</span>
       </Link>
 
@@ -308,53 +263,6 @@ export default function UserNav() {
           <BookOpen className="h-4 w-4" />
           Study Guide
         </Link>
-
-        {/* Discover Canada Dropdown */}
-        <DropdownMenu
-          open={isDiscoverMenuOpen}
-          onOpenChange={setIsDiscoverMenuOpen}
-        >
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="text-sm font-medium text-gray-600 hover:text-red-600 transition-colors flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50"
-            >
-              <Mountain className="h-4 w-4" />
-              Discover Canada
-              <ChevronDown className="h-3 w-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-96" align="start">
-            <DropdownMenuLabel className="text-red-600 font-semibold flex items-center gap-2">
-              <Mountain className="h-4 w-4" />
-              Explore Canada's Beauty
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <div className="grid grid-cols-2 gap-1 p-1">
-              {discoverCanadaItems.map((item) => {
-                const IconComponent = item.icon;
-                return (
-                  <DropdownMenuItem key={item.href} asChild>
-                    <Link
-                      href={item.href}
-                      className="flex items-start gap-3 p-3 cursor-pointer hover:bg-red-50 rounded-lg"
-                    >
-                      <IconComponent className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="font-medium text-gray-900 text-sm">
-                          {item.title}
-                        </span>
-                        <span className="text-xs text-gray-600 leading-tight">
-                          {item.description}
-                        </span>
-                      </div>
-                    </Link>
-                  </DropdownMenuItem>
-                );
-              })}
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
 
         <Link
           href="/faq"
@@ -410,11 +318,12 @@ export default function UserNav() {
         `}
       >
         <div className="flex items-center gap-2 mb-4 pb-4 border-b border-gray-200">
-          <div className="h-5 w-5 bg-red-600 rounded-sm flex items-center justify-center">
-            <div className="h-3 w-3 bg-white rounded-sm flex items-center justify-center">
-              <div className="h-1 w-1 bg-red-600 rounded-full"></div>
-            </div>
-          </div>
+          <Image
+            src="/icon.svg"
+            alt="Canada Citizenship Guide Logo"
+            width={20}
+            height={20}
+          />
           <span className="font-semibold text-gray-900">Navigation Menu</span>
         </div>
 
@@ -446,35 +355,6 @@ export default function UserNav() {
         >
           <BookOpen className="mr-3 h-4 w-4" /> Study Guide
         </Button>
-
-        {/* Mobile Discover Canada Section */}
-        <div className="border-t border-gray-200 pt-4 mt-4">
-          <div className="text-sm font-semibold text-red-600 px-2 py-1 mb-3 flex items-center gap-2">
-            <Mountain className="h-4 w-4" />
-            Discover Canada
-          </div>
-          {discoverCanadaItems.map((item) => {
-            const IconComponent = item.icon;
-            return (
-              <Button
-                key={item.href}
-                variant="ghost"
-                className="w-full justify-start h-auto p-3 hover:bg-red-50 transition-colors"
-                onClick={() => handleMobileLinkClick(item.href)}
-              >
-                <IconComponent className="mr-3 h-4 w-4 text-red-600 flex-shrink-0" />
-                <div className="flex flex-col items-start">
-                  <span className="text-sm font-medium text-gray-900">
-                    {item.title}
-                  </span>
-                  <span className="text-xs text-gray-600">
-                    {item.description}
-                  </span>
-                </div>
-              </Button>
-            );
-          })}
-        </div>
 
         <Button
           variant="ghost"

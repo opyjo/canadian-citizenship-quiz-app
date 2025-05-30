@@ -1,7 +1,7 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   FileText,
@@ -14,7 +14,7 @@ import {
   Phone,
   Globe,
   HelpCircle,
-} from "lucide-react"
+} from "lucide-react";
 
 export default function FAQPage() {
   const testFormatInfo = [
@@ -31,7 +31,10 @@ export default function FAQPage() {
     {
       title: "Passing Score",
       icon: CheckCircle,
-      details: ["Must answer 15 out of 20 questions correctly (75%)", "No partial credit for answers"],
+      details: [
+        "Must answer 15 out of 20 questions correctly (75%)",
+        "No partial credit for answers",
+      ],
     },
     {
       title: "Test Topics",
@@ -54,7 +57,7 @@ export default function FAQPage() {
         "Under 18 do not take the test",
       ],
     },
-  ]
+  ];
 
   const faqSections = [
     {
@@ -129,7 +132,8 @@ export default function FAQPage() {
             "If you don't pass the interview either, you may be given another opportunity to take the test or attend another interview. IRCC will provide specific instructions based on your situation.",
         },
         {
-          question: "How long after passing do I attend the citizenship ceremony?",
+          question:
+            "How long after passing do I attend the citizenship ceremony?",
           answer:
             "Citizenship ceremonies are typically scheduled within 3-6 months after passing your test, depending on your local office's schedule and availability.",
         },
@@ -140,7 +144,8 @@ export default function FAQPage() {
       icon: HelpCircle,
       questions: [
         {
-          question: "What if I have a disability that affects my ability to take the test?",
+          question:
+            "What if I have a disability that affects my ability to take the test?",
           answer:
             "IRCC provides accommodations for people with disabilities. Contact them when you apply to discuss your needs. Accommodations may include extra time, alternative formats, or oral testing.",
         },
@@ -161,16 +166,18 @@ export default function FAQPage() {
         },
       ],
     },
-  ]
+  ];
 
   const studyTips = [
     {
       tip: "Create a study schedule",
-      description: "Set aside regular study time each day, even if it's just 30 minutes",
+      description:
+        "Set aside regular study time each day, even if it's just 30 minutes",
     },
     {
       tip: "Take practice tests",
-      description: "Regular practice tests help identify weak areas and build confidence",
+      description:
+        "Regular practice tests help identify weak areas and build confidence",
     },
     {
       tip: "Focus on weak areas",
@@ -178,17 +185,20 @@ export default function FAQPage() {
     },
     {
       tip: "Study with others",
-      description: "Join study groups or discuss topics with family and friends",
+      description:
+        "Join study groups or discuss topics with family and friends",
     },
     {
       tip: "Use multiple resources",
-      description: "Combine our study guide with the official Discover Canada handbook",
+      description:
+        "Combine our study guide with the official Discover Canada handbook",
     },
     {
       tip: "Stay updated",
-      description: "Make sure you're studying the most current version of materials",
+      description:
+        "Make sure you're studying the most current version of materials",
     },
-  ]
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
@@ -201,22 +211,30 @@ export default function FAQPage() {
             </Button>
           </Link>
           <div className="text-center mb-8">
-            <Badge variant="secondary" className="mb-4 bg-blue-100 text-blue-800">
-              🇨🇦 Official Information
+            <Badge
+              variant="secondary"
+              className="mb-4 bg-blue-100 text-blue-800"
+            >
+              🇨🇦
             </Badge>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Canadian Citizenship Test FAQ</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+              Canadian Citizenship Test FAQ
+            </h1>
             <p className="text-xl text-gray-600">
-              Everything you need to know about the Canadian citizenship test format, requirements, and process
+              Everything you need to know about the Canadian citizenship test
+              format, requirements, and process
             </p>
           </div>
         </div>
 
         {/* Test Format Overview */}
         <section className="mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Test Format & Requirements</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+            Test Format & Requirements
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {testFormatInfo.map((info, index) => {
-              const IconComponent = info.icon
+              const IconComponent = info.icon;
               return (
                 <Card key={index} className="border-0 shadow-lg">
                   <CardHeader className="text-center">
@@ -228,7 +246,10 @@ export default function FAQPage() {
                   <CardContent>
                     <ul className="space-y-2">
                       {info.details.map((detail, idx) => (
-                        <li key={idx} className="text-sm text-gray-600 flex items-start gap-2">
+                        <li
+                          key={idx}
+                          className="text-sm text-gray-600 flex items-start gap-2"
+                        >
                           <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                           {detail}
                         </li>
@@ -236,28 +257,35 @@ export default function FAQPage() {
                     </ul>
                   </CardContent>
                 </Card>
-              )
+              );
             })}
           </div>
         </section>
 
         {/* FAQ Sections */}
         <section className="mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Frequently Asked Questions</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+            Frequently Asked Questions
+          </h2>
           <div className="space-y-8">
             {faqSections.map((section, sectionIndex) => {
-              const IconComponent = section.icon
+              const IconComponent = section.icon;
               return (
                 <div key={sectionIndex}>
                   <div className="flex items-center gap-3 mb-6">
                     <div className="p-2 bg-blue-100 rounded-lg">
                       <IconComponent className="h-6 w-6 text-blue-600" />
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900">{section.title}</h3>
+                    <h3 className="text-2xl font-bold text-gray-900">
+                      {section.title}
+                    </h3>
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {section.questions.map((faq, faqIndex) => (
-                      <Card key={faqIndex} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                      <Card
+                        key={faqIndex}
+                        className="border-0 shadow-sm hover:shadow-md transition-shadow"
+                      >
                         <CardHeader>
                           <CardTitle className="text-lg flex items-start gap-2">
                             <HelpCircle className="h-5 w-5 text-blue-600 mt-1 flex-shrink-0" />
@@ -271,14 +299,16 @@ export default function FAQPage() {
                     ))}
                   </div>
                 </div>
-              )
+              );
             })}
           </div>
         </section>
 
         {/* Study Tips */}
         <section className="mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Study Tips for Success</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+            Study Tips for Success
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {studyTips.map((tip, index) => (
               <Card key={index} className="border-0 shadow-sm bg-green-50">
@@ -286,7 +316,9 @@ export default function FAQPage() {
                   <div className="flex items-start gap-3">
                     <CheckCircle className="h-6 w-6 text-green-600 mt-1 flex-shrink-0" />
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-2">{tip.tip}</h4>
+                      <h4 className="font-semibold text-gray-900 mb-2">
+                        {tip.tip}
+                      </h4>
                       <p className="text-sm text-gray-600">{tip.description}</p>
                     </div>
                   </div>
@@ -317,45 +349,20 @@ export default function FAQPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                  Bring all required documents as specified in your notice to appear
+                  Bring all required documents as specified in your notice to
+                  appear
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                  Contact IRCC immediately if you cannot attend your scheduled test
+                  Contact IRCC immediately if you cannot attend your scheduled
+                  test
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                  You need to score 15 out of 20 questions correctly to pass (75%)
+                  You need to score 15 out of 20 questions correctly to pass
+                  (75%)
                 </li>
               </ul>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* Contact Information */}
-        <section className="mb-12">
-          <Card className="border-0 shadow-lg bg-blue-50">
-            <CardHeader>
-              <CardTitle className="text-center text-2xl text-blue-900">Need More Help?</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-                <div>
-                  <Globe className="h-8 w-8 text-blue-600 mx-auto mb-3" />
-                  <h4 className="font-semibold mb-2">IRCC Website</h4>
-                  <p className="text-sm text-gray-600">Visit canada.ca for official information</p>
-                </div>
-                <div>
-                  <Phone className="h-8 w-8 text-blue-600 mx-auto mb-3" />
-                  <h4 className="font-semibold mb-2">Call Centre</h4>
-                  <p className="text-sm text-gray-600">1-888-242-2100 (within Canada)</p>
-                </div>
-                <div>
-                  <MapPin className="h-8 w-8 text-blue-600 mx-auto mb-3" />
-                  <h4 className="font-semibold mb-2">Local Office</h4>
-                  <p className="text-sm text-gray-600">Contact your local IRCC office</p>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </section>
@@ -364,21 +371,27 @@ export default function FAQPage() {
         <section className="text-center">
           <Card className="border-0 shadow-lg bg-gradient-to-r from-red-600 to-blue-600 text-white">
             <CardContent className="p-8">
-              <h2 className="text-3xl font-bold mb-4">Ready to Start Studying?</h2>
+              <h2 className="text-3xl font-bold mb-4">
+                Ready to Start Studying?
+              </h2>
               <p className="text-xl mb-6 opacity-90">
-                Use our comprehensive study guide to prepare for your Canadian citizenship test
+                Use our comprehensive study guide to prepare for your Canadian
+                citizenship test
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href="/">
-                  <Button size="lg" className="bg-white text-red-600 hover:bg-gray-100">
+                <Link href="/study-guide  ">
+                  <Button
+                    size="lg"
+                    className="bg-white text-red-600 hover:bg-gray-100"
+                  >
                     Start Studying Now
                   </Button>
                 </Link>
-                <Link href="/practice-test">
+                <Link href="/practice">
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-white text-white hover:bg-white hover:text-red-600"
+                    className="bg-white text-red-600 hover:bg-gray-100"
                   >
                     Take Practice Test
                   </Button>
@@ -389,5 +402,5 @@ export default function FAQPage() {
         </section>
       </div>
     </div>
-  )
+  );
 }

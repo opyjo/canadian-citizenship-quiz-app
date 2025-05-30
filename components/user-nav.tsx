@@ -223,7 +223,7 @@ export default function UserNav() {
   };
 
   return (
-    <nav className="flex items-center justify-between gap-4 p-4 bg-white border-b border-gray-200 shadow-sm">
+    <nav className="flex items-center justify-between gap-4 p-4 bg-white border-b border-gray-200 shadow-sm relative">
       {/* Logo/Brand */}
       <Link
         href="/"
@@ -235,7 +235,7 @@ export default function UserNav() {
           width={24}
           height={24}
         />
-        <span className="hidden sm:inline">Canada Citizenship Guide</span>
+        <span className="inline">Canada Citizenship Guide</span>
       </Link>
 
       {/* Desktop Navigation Links */}

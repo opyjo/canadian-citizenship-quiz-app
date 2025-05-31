@@ -7,74 +7,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  BookOpen,
-  Users,
-  Building,
-  Map,
-  DollarSign,
-  Flag,
-  UserCheck,
-} from "lucide-react";
+
+import { chapters } from "@/app/config/homePageConfig";
 
 export default function HomePage() {
-  const chapters = [
-    {
-      title: "Canadian History",
-      description:
-        "Learn about Canada's rich history from Aboriginal peoples to modern times",
-      href: "/study/canadian-history",
-      icon: BookOpen,
-      color: "bg-red-50 border-red-200",
-    },
-    {
-      title: "Rights & Responsibilities",
-      description:
-        "Understand your rights and responsibilities as a Canadian citizen",
-      href: "/study/rights-responsibilities",
-      icon: Users,
-      color: "bg-blue-50 border-blue-200",
-    },
-    {
-      title: "Government Structure",
-      description:
-        "Explore how Canadians govern themselves and the democratic process",
-      href: "/study/government-structure",
-      icon: Building,
-      color: "bg-green-50 border-green-200",
-    },
-    {
-      title: "Geography",
-      description: "Discover Canada's regions, provinces, and territories",
-      href: "/study/geography",
-      icon: Map,
-      color: "bg-yellow-50 border-yellow-200",
-    },
-    {
-      title: "Economy",
-      description: "Learn about Canada's economy and trading relationships",
-      href: "/study/economy",
-      icon: DollarSign,
-      color: "bg-purple-50 border-purple-200",
-    },
-    {
-      title: "Symbols",
-      description:
-        "Understand Canadian symbols, traditions, and cultural heritage",
-      href: "/study/symbols",
-      icon: Flag,
-      color: "bg-orange-50 border-orange-200",
-    },
-    {
-      title: "Notable Names",
-      description:
-        "Important Canadians you should know for the citizenship test",
-      href: "/study/notable-names",
-      icon: UserCheck,
-      color: "bg-indigo-50 border-indigo-200",
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-white">
       <div className="container mx-auto px-4 py-8">

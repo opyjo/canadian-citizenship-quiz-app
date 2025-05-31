@@ -248,7 +248,7 @@ export default function QuizPage() {
 
   if (!isAccessChecked && loading) {
     return (
-      <div className="container flex items-center justify-center min-h-screen">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-red-600" />
           <p className="text-lg">Checking access...</p>
@@ -259,7 +259,7 @@ export default function QuizPage() {
 
   if (loading) {
     return (
-      <div className="container flex items-center justify-center min-h-screen">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-red-600" />
           <p className="text-lg">Loading questions...</p>
@@ -270,8 +270,8 @@ export default function QuizPage() {
 
   if (error) {
     return (
-      <div className="container flex items-center justify-center min-h-screen">
-        <Card className="w-full max-w-3xl">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
+        <Card className="w-full max-w-3xl text-center">
           <CardHeader>
             <CardTitle className="text-red-600">Error</CardTitle>
           </CardHeader>
@@ -286,10 +286,10 @@ export default function QuizPage() {
     );
   }
 
-  if (!currentQuestion && !loading && isAccessChecked) {
+  if (!currentQuestion && !loading && !error) {
     return (
-      <div className="container flex items-center justify-center min-h-screen">
-        <Card className="w-full max-w-3xl">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
+        <Card className="w-full max-w-3xl text-center">
           <CardHeader>
             <CardTitle>No Questions Available</CardTitle>
           </CardHeader>
@@ -319,21 +319,19 @@ export default function QuizPage() {
   }
 
   return (
-    <div className="container flex flex-col items-center justify-center min-h-screen py-12 px-4">
+    <div className="container mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
       <div className="max-w-3xl w-full space-y-6">
-        <div className="flex flex-col space-y-2">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-medium">
-              Question {currentQuestionIndex + 1} of {questions.length}
-            </h2>
-            <span className="text-sm text-muted-foreground">
-              {selectedAnswers[currentQuestionIndex]
-                ? "Answered"
-                : "Not answered"}
-            </span>
-          </div>
-          <Progress value={progress} className="h-2" />
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-medium">
+            Question {currentQuestionIndex + 1} of {questions.length}
+          </h2>
+          <span className="text-sm text-muted-foreground">
+            {selectedAnswers[currentQuestionIndex]
+              ? "Answered"
+              : "Not answered"}
+          </span>
         </div>
+        <Progress value={progress} className="h-2" />
 
         <Card className="w-full">
           <CardHeader>

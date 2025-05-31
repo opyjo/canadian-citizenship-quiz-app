@@ -376,7 +376,7 @@ export default function TimedQuizPage() {
   // Initial loading state for access check
   if (!isAccessChecked && loading) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-red-600" />
           <p className="text-lg">Checking access...</p>
@@ -385,9 +385,10 @@ export default function TimedQuizPage() {
     );
   }
 
+  // Main loading state for fetching questions after access check
   if (loading) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-red-600" />
           <p className="text-lg">Loading questions...</p>
@@ -398,7 +399,7 @@ export default function TimedQuizPage() {
 
   if (error) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <Card className="w-full max-w-3xl">
           <CardHeader>
             <CardTitle className="text-red-600">Error</CardTitle>
@@ -414,9 +415,10 @@ export default function TimedQuizPage() {
     );
   }
 
-  if (!currentQuestion) {
+  // Fallback if no questions are loaded and not in loading/error state
+  if (!currentQuestion && !loading && !error) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <Card className="w-full max-w-3xl">
           <CardHeader>
             <CardTitle>No Questions Available</CardTitle>
@@ -436,7 +438,7 @@ export default function TimedQuizPage() {
   }
 
   return (
-    <div className="container flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
+    <div className="container mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
       <div className="max-w-3xl w-full space-y-6">
         <div className="flex flex-col space-y-2">
           <div className="flex justify-between items-center">

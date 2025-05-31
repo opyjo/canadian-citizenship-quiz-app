@@ -484,7 +484,7 @@ function PracticeQuizContent() {
 
   if (!isAccessChecked && loading) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-red-600" />
           <p className="text-lg">Checking access...</p>
@@ -495,7 +495,7 @@ function PracticeQuizContent() {
 
   if (loading) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-red-600" />
           <p className="text-lg">Loading practice questions...</p>
@@ -506,7 +506,7 @@ function PracticeQuizContent() {
 
   if (error) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <Card className="w-full max-w-3xl">
           <CardHeader>
             <CardTitle
@@ -544,7 +544,7 @@ function PracticeQuizContent() {
 
   if (!currentQuestion && !loading && !error) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <Card className="w-full max-w-3xl">
           <CardHeader>
             <CardTitle>No Questions Available</CardTitle>
@@ -567,7 +567,7 @@ function PracticeQuizContent() {
   }
 
   return (
-    <div className="container flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
+    <div className="container mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
       <div className="max-w-3xl w-full space-y-6">
         <div className="flex flex-col space-y-2">
           <div className="flex justify-between items-center">
@@ -643,7 +643,7 @@ function PracticeQuizContent() {
 // Loading fallback component
 function PracticeQuizLoading() {
   return (
-    <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+    <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
       <div className="flex flex-col items-center space-y-4">
         <Loader2 className="h-12 w-12 animate-spin text-red-600" />
         <p className="text-lg">Loading practice quiz...</p>

@@ -100,7 +100,7 @@ export default function HomePage() {
               test. Everything you need to study for your citizenship exam in
               one convenient resource.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center mb-12">
               <Button
                 size="lg"
                 className="bg-red-600 hover:bg-red-700 text-lg px-8 py-4"
@@ -115,6 +115,21 @@ export default function HomePage() {
                 onClick={() => handleStartQuiz("timed", "/quiz/timed")}
               >
                 Take Timed Quiz
+              </Button>
+              <Button
+                size="lg"
+                className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-4"
+                onClick={() => handleStartQuiz("practice", "/practice")}
+              >
+                Practice Mode
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="text-lg px-8 py-4 border-blue-600 text-blue-600 hover:bg-blue-50"
+                onClick={() => router.push("/study-guide")}
+              >
+                View Study Guide
               </Button>
             </div>
 
@@ -418,6 +433,14 @@ export default function HomePage() {
                   onClick={() => handleStartQuiz("timed", "/quiz/timed")}
                 >
                   Timed Quiz
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-4"
+                  onClick={() => handleStartQuiz("practice", "/practice")}
+                >
+                  Practice Mode
                 </Button>
               </div>
             </div>

@@ -60,6 +60,15 @@ function PracticeQuizContent() {
     onConfirm: () => {},
   });
 
+  // New state for unauthenticated results
+  const [showUnauthenticatedResults, setShowUnauthenticatedResults] =
+    useState(false);
+  const [unauthenticatedScore, setUnauthenticatedScore] = useState<
+    number | null
+  >(null);
+  const [unauthenticatedTotalQuestions, setUnauthenticatedTotalQuestions] =
+    useState<number | null>(null);
+
   useEffect(() => {
     async function performAccessCheckAndFetchData() {
       // Perform access check first
@@ -281,17 +290,20 @@ function PracticeQuizContent() {
 
   const finishQuiz = async () => {
     console.log("[PracticeQuizPage] finishQuiz called");
-    let resultData;
+    let localResultData;
     try {
-      resultData = getResultData();
+      localResultData = getResultData(); // This contains score, totalQuestions etc. calculated locally
     } catch (e) {
       // Error already logged and setError called in getResultData
       return; // Stop execution if getResultData failed
     }
 
+    setError(null); // Clear previous errors
+    setLoading(true); // Show loading indicator
+
     const questionIds = questions.map((q) => q.id);
     const userAnswersForApi: Record<string, string> = {};
-    resultData.questions.forEach((q: any, index: number) => {
+    localResultData.questions.forEach((q: any, index: number) => {
       if (q.selected_option !== undefined) {
         userAnswersForApi[String(index)] = q.selected_option;
       }
@@ -300,24 +312,16 @@ function PracticeQuizContent() {
     const payload = {
       userAnswers: userAnswersForApi,
       questionIds: questionIds,
-      isTimed: false, // Practice quizzes are not timed in this context
-      timeTaken: resultData.timeTaken, // getResultData calculates this
+      isTimed: false,
+      timeTaken: localResultData.timeTaken,
       isPractice: true,
-      practiceType: practiceType, // From component state (e.g., "incorrect", "random")
-      category: null, // Category is no longer used for practice mode attempts
+      practiceType: practiceType,
+      category: null,
     };
-    console.log(
-      "[PracticeQuizPage] resultData prepared for submission:",
-      payload
-    );
 
     let attemptIdToRedirect: string | null = null;
 
     try {
-      // This API call is for both authenticated and unauthenticated users initially.
-      // The API route itself should handle auth and save differently if needed,
-      // or we rely on userId being null/present in the payload for the API to distinguish.
-      // For now, the API call structure is kept as it was.
       const response = await fetch("/api/quiz-attempt", {
         method: "POST",
         headers: {
@@ -326,33 +330,37 @@ function PracticeQuizContent() {
         body: JSON.stringify(payload),
       });
 
+      const resultFromApi = await response.json(); // API response
+
       if (!response.ok) {
-        const errorData = await response.json();
         throw new Error(
-          errorData.error || "Failed to save practice quiz attempt"
+          resultFromApi.error || "Failed to save practice quiz attempt"
         );
       }
 
-      const result = await response.json();
-      attemptIdToRedirect = result.attemptId; // Store attemptId for redirection
+      attemptIdToRedirect = resultFromApi.attemptId;
 
-      // If no attemptId is received, it's an issue, but we might still want to update local counts.
-      if (!attemptIdToRedirect) {
-        console.warn(
-          "[PracticeQuizPage] No attempt ID received from API for practice quiz, but proceeding with local/UI updates."
-        );
+      if (attemptIdToRedirect) {
+        // If attemptId is present, user was authenticated and attempt was saved.
+        // Redirect to the results page.
+        router.push(`/results/${attemptIdToRedirect}`);
+      } else {
+        // No attemptId means user is unauthenticated or API decided not to save.
+        // Use locally calculated score and total for display.
+        setUnauthenticatedScore(localResultData.score);
+        setUnauthenticatedTotalQuestions(localResultData.totalQuestions);
+        setShowUnauthenticatedResults(true);
       }
     } catch (err: any) {
       console.error("[PracticeQuizPage] Error submitting practice quiz:", err);
       setError(
         err.message || "Failed to submit practice quiz. Please try again."
       );
-      // Even if API submission fails, if it was an unauth user, we might still want to count the attempt locally.
-      // Or, decide not to count if API fails. For now, let's count it if an attempt was made.
+      setShowUnauthenticatedResults(false);
+    } finally {
+      setLoading(false);
     }
 
-    // Increment local count for unauthenticated users OR if userId was not set (should be equivalent)
-    // This should happen regardless of API success if an attempt was made by an unauth user.
     if (!userId) {
       console.log(
         "[PracticeQuizPage] User is not logged in. Incrementing local practice attempt count."
@@ -360,7 +368,6 @@ function PracticeQuizContent() {
       incrementLocalAttemptCount("practice");
     }
 
-    // Logic for updating user_incorrect_questions if user is logged in (remains unchanged)
     if (userId) {
       console.log(
         "[PracticeQuizPage] User is logged in. Processing practice results for user_incorrect_questions table.",
@@ -368,7 +375,7 @@ function PracticeQuizContent() {
       );
       try {
         // Logic for questions the user got wrong IN THIS SESSION
-        const newlyIncorrectQuestions = resultData.questions
+        const newlyIncorrectQuestions = localResultData.questions
           .filter((q: any) => !q.is_correct && q.selected_option !== undefined)
           .map((q: any) => ({
             user_id: userId,
@@ -407,7 +414,7 @@ function PracticeQuizContent() {
         // remove questions they got right from the user_incorrect_questions table.
         if (practiceType === "incorrect") {
           // Make sure practiceType reflects the mode
-          const correctlyAnsweredInThisSession = resultData.questions
+          const correctlyAnsweredInThisSession = localResultData.questions
             .filter((q: any) => q.is_correct && q.selected_option !== undefined)
             .map((q: any) => q.id);
 
@@ -435,35 +442,60 @@ function PracticeQuizContent() {
             }
           }
         }
-      } catch (error) {
+      } catch (errorLogging) {
         console.error(
           "[PracticeQuizPage] Error updating user_incorrect_questions table:",
-          error
+          errorLogging
         );
       }
     } else {
-      // This log was already here, confirming user is not logged in.
       console.log(
-        "[PracticeQuizPage] User is not logged in. Skipping save/update of user data (user_incorrect_questions)."
+        "[PracticeQuizPage] User not logged in. Skipping save/update of user data (user_incorrect_questions)."
       );
     }
-
-    // Finally, redirect if an attemptId was successfully obtained
-    if (attemptIdToRedirect) {
-      router.push(`/results/${attemptIdToRedirect}`);
-    } else if (!error) {
-      // If there was no attemptId but also no specific API submission error caught earlier,
-      // it implies a potential issue with the API not returning an ID.
-      // We might want to redirect to a generic page or show an inline message.
-      // For now, if no explicit error was set, and no ID, let's go to practice options.
-      // This might happen if the API call was successful (200 OK) but didn't return an attemptId.
-      console.warn(
-        "[PracticeQuizPage] No attemptId from API and no explicit error. Routing to practice options."
-      );
-      router.push("/practice");
-    }
-    // If 'error' state is set, the page will render the error message, so no explicit redirect here for that case.
+    // No explicit redirect here if unauthenticated or error, as those states render different UI.
   };
+
+  if (showUnauthenticatedResults) {
+    return (
+      <div className="container mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
+        <Card className="w-full max-w-md text-center">
+          <CardHeader>
+            <CardTitle>Practice Finished!</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {unauthenticatedScore !== null &&
+            unauthenticatedTotalQuestions !== null ? (
+              <p className="text-2xl">
+                You scored: {unauthenticatedScore} /{" "}
+                {unauthenticatedTotalQuestions}
+              </p>
+            ) : (
+              <p>Your score is being calculated...</p> // Should not happen if localResultData is always available
+            )}
+            <p className="text-sm text-muted-foreground">
+              As you are not logged in, your results are not saved.
+            </p>
+          </CardContent>
+          <CardFooter className="flex flex-col sm:flex-row gap-2">
+            <Button
+              onClick={() => router.push("/practice")}
+              className="w-full sm:w-auto"
+            >
+              Try Another Practice
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => router.push("/")}
+              className="w-full sm:w-auto"
+            >
+              Return Home
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   if (modalState.isOpen) {
     return (
@@ -482,9 +514,9 @@ function PracticeQuizContent() {
     );
   }
 
-  if (!isAccessChecked && loading) {
+  if (!isAccessChecked && loading && !showUnauthenticatedResults) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-red-600" />
           <p className="text-lg">Checking access...</p>
@@ -493,9 +525,9 @@ function PracticeQuizContent() {
     );
   }
 
-  if (loading) {
+  if (loading && !showUnauthenticatedResults) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-red-600" />
           <p className="text-lg">Loading practice questions...</p>
@@ -504,9 +536,9 @@ function PracticeQuizContent() {
     );
   }
 
-  if (error) {
+  if (error && !showUnauthenticatedResults) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <Card className="w-full max-w-3xl">
           <CardHeader>
             <CardTitle
@@ -542,9 +574,9 @@ function PracticeQuizContent() {
     );
   }
 
-  if (!currentQuestion && !loading && !error) {
+  if (!currentQuestion && !loading && !error && !showUnauthenticatedResults) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <Card className="w-full max-w-3xl">
           <CardHeader>
             <CardTitle>No Questions Available</CardTitle>
@@ -566,8 +598,11 @@ function PracticeQuizContent() {
     );
   }
 
+  // If quiz is finished via unauth path, but questions somehow still loaded, this will prevent quiz UI
+  if (showUnauthenticatedResults) return null;
+
   return (
-    <div className="container flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
+    <div className="container mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
       <div className="max-w-3xl w-full space-y-6">
         <div className="flex flex-col space-y-2">
           <div className="flex justify-between items-center">
@@ -643,7 +678,7 @@ function PracticeQuizContent() {
 // Loading fallback component
 function PracticeQuizLoading() {
   return (
-    <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+    <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
       <div className="flex flex-col items-center space-y-4">
         <Loader2 className="h-12 w-12 animate-spin text-red-600" />
         <p className="text-lg">Loading practice quiz...</p>

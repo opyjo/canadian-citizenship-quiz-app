@@ -62,6 +62,15 @@ export default function TimedQuizPage() {
     onConfirm: () => {},
   });
 
+  // New state for unauthenticated results
+  const [showUnauthenticatedResults, setShowUnauthenticatedResults] =
+    useState(false);
+  const [unauthenticatedScore, setUnauthenticatedScore] = useState<
+    number | null
+  >(null);
+  const [unauthenticatedTotalQuestions, setUnauthenticatedTotalQuestions] =
+    useState<number | null>(null);
+
   const TIME_LIMIT = 60 * 15; // 15 minutes in seconds
 
   const handleEndQuiz = useCallback(() => {
@@ -72,6 +81,9 @@ export default function TimedQuizPage() {
     if (quizFinished) return;
     setQuizFinished(true);
     setQuizActive(false);
+    setError(null); // Clear previous errors
+    setLoading(true); // Show loading indicator
+
     const timeTakenSeconds =
       startTime > 0
         ? Math.floor((Date.now() - startTime) / 1000)
@@ -101,26 +113,45 @@ export default function TimedQuizPage() {
         }),
       });
 
+      const result = await response.json(); // Always parse JSON
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save timed quiz attempt");
+        throw new Error(result.error || "Failed to save timed quiz attempt");
       }
 
-      const result = await response.json();
       attemptIdToRedirect = result.attemptId;
-      if (!attemptIdToRedirect) {
-        console.warn(
-          "[TimedQuizPage] No attempt ID received from API for timed quiz, but proceeding with local/UI updates."
-        );
+
+      if (attemptIdToRedirect) {
+        router.push(`/results/${attemptIdToRedirect}`);
+      } else {
+        // Handle unauthenticated or non-persisted attempt
+        if (
+          typeof result.score === "number" &&
+          typeof result.totalQuestions === "number"
+        ) {
+          setUnauthenticatedScore(result.score);
+          setUnauthenticatedTotalQuestions(result.totalQuestions);
+          setShowUnauthenticatedResults(true);
+        } else {
+          console.error(
+            "API did not return score/totalQuestions for unauthenticated timed attempt:",
+            result
+          );
+          setError(
+            "Quiz finished, but there was an issue displaying your score."
+          );
+        }
       }
     } catch (err: any) {
       console.error("Error submitting timed quiz:", err);
       setError(err.message || "Failed to submit timed quiz. Please try again.");
+      setShowUnauthenticatedResults(false);
+    } finally {
+      setLoading(false);
     }
 
-    // Increment local count for unauthenticated users
+    // Increment local count for unauthenticated users - this happens regardless of API success for unauth users
     if (!userId) {
-      // Check if userId is null/undefined
       console.log(
         "[TimedQuizPage] User is not logged in. Incrementing local timed attempt count."
       );
@@ -128,6 +159,8 @@ export default function TimedQuizPage() {
     }
 
     // Existing logic for saving incorrect questions if userId is present
+    // This should ideally only run if the main attempt submission was successful OR if it's an unauth user
+    // For simplicity, keeping it as is, but it might try to run even if API errored out for auth user.
     if (userId) {
       let newScore = 0;
       const incorrectQs: {
@@ -180,16 +213,11 @@ export default function TimedQuizPage() {
       );
     }
 
-    // Redirect logic
-    if (attemptIdToRedirect) {
-      router.push(`/results/${attemptIdToRedirect}`);
-    } else if (!error) {
-      console.warn(
-        "[TimedQuizPage] No attemptId from API and no explicit error. Routing to home."
-      );
-      router.push("/"); // Or perhaps /dashboard or /practice if more appropriate
-    }
     // If 'error' state is set, the page will render the error message.
+    // If showUnauthenticatedResults is true, that UI will be shown.
+    // If attemptIdToRedirect is set, navigation will occur.
+    // If none of the above and no error, it implies an unhandled case (e.g. API ok but no attemptId and no score)
+    // which is covered by the setError in the catch or the specific else block.
   }, [
     quizFinished,
     setQuizActive,
@@ -204,15 +232,20 @@ export default function TimedQuizPage() {
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (quizActive && timeRemaining > 0) {
+    if (quizActive && timeRemaining > 0 && !showUnauthenticatedResults) {
+      // Pause timer if showing results
       timer = setInterval(() => {
         setTimeRemaining((prevTime) => prevTime - 1);
       }, 1000);
-    } else if (timeRemaining === 0 && quizActive) {
+    } else if (
+      timeRemaining === 0 &&
+      quizActive &&
+      !showUnauthenticatedResults
+    ) {
       finishQuiz();
     }
     return () => clearInterval(timer);
-  }, [quizActive, timeRemaining, finishQuiz]);
+  }, [quizActive, timeRemaining, finishQuiz, showUnauthenticatedResults]);
 
   const currentQuestion = questions[currentQuestionIndex];
   const progress =
@@ -355,6 +388,47 @@ export default function TimedQuizPage() {
     performAccessCheckAndFetchData();
   }, [router]); // Simplified dependencies, supabaseClient is stable, searchParams not used here
 
+  if (showUnauthenticatedResults) {
+    return (
+      <div className="container mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
+        <Card className="w-full max-w-md text-center">
+          <CardHeader>
+            <CardTitle>Timed Quiz Finished!</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {unauthenticatedScore !== null &&
+            unauthenticatedTotalQuestions !== null ? (
+              <p className="text-2xl">
+                You scored: {unauthenticatedScore} /{" "}
+                {unauthenticatedTotalQuestions}
+              </p>
+            ) : (
+              <p>Your score is being calculated...</p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              As you are not logged in, your results are not saved.
+            </p>
+          </CardContent>
+          <CardFooter className="flex flex-col sm:flex-row gap-2">
+            <Button
+              onClick={() => window.location.reload()}
+              className="w-full sm:w-auto"
+            >
+              Try Another Timed Quiz
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => router.push("/")}
+              className="w-full sm:w-auto"
+            >
+              Return Home
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
   // Conditional rendering for the limit modal
   if (modalState.isOpen) {
     return (
@@ -376,7 +450,7 @@ export default function TimedQuizPage() {
   // Initial loading state for access check
   if (!isAccessChecked && loading) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-red-600" />
           <p className="text-lg">Checking access...</p>
@@ -385,9 +459,11 @@ export default function TimedQuizPage() {
     );
   }
 
-  if (loading) {
+  // Main loading state for fetching questions after access check
+  if (loading && !showUnauthenticatedResults) {
+    // Don't show loading if showing results
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-red-600" />
           <p className="text-lg">Loading questions...</p>
@@ -396,9 +472,10 @@ export default function TimedQuizPage() {
     );
   }
 
-  if (error) {
+  if (error && !showUnauthenticatedResults) {
+    // Don't show error if showing results, or if error is for results itself
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <Card className="w-full max-w-3xl">
           <CardHeader>
             <CardTitle className="text-red-600">Error</CardTitle>
@@ -414,9 +491,10 @@ export default function TimedQuizPage() {
     );
   }
 
-  if (!currentQuestion) {
+  // Fallback if no questions are loaded and not in loading/error state
+  if (!currentQuestion && !loading && !error && !showUnauthenticatedResults) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <Card className="w-full max-w-3xl">
           <CardHeader>
             <CardTitle>No Questions Available</CardTitle>
@@ -435,8 +513,11 @@ export default function TimedQuizPage() {
     );
   }
 
+  // If quiz is finished via unauth path, but questions somehow still loaded, this will prevent quiz UI
+  if (showUnauthenticatedResults) return null;
+
   return (
-    <div className="container flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
+    <div className="container mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
       <div className="max-w-3xl w-full space-y-6">
         <div className="flex flex-col space-y-2">
           <div className="flex justify-between items-center">

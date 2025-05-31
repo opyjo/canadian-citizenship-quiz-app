@@ -132,50 +132,65 @@ export async function POST(request: Request) {
     // but if fetching questions fails, `calculatedScore` remains 0 as initialized.
   }
 
-  const attemptDataToInsert = {
-    user_answers: userAnswers,
-    question_ids: questionIds,
-    is_timed: isTimed || false,
-    time_taken_seconds: timeTaken,
-    is_practice: isPractice || false,
-    practice_type: practiceType,
-    user_id: userId,
-    quiz_type: determinedQuizType,
-    score: calculatedScore, // Use the calculated score
-    total_questions_in_attempt: totalQuestions,
-  };
-  console.log(
-    "API Route: Data to insert:",
-    JSON.stringify(attemptDataToInsert, null, 2)
-  );
+  if (userId) {
+    // User is authenticated, proceed to store attempt and update counts
+    const attemptDataToInsert = {
+      user_answers: userAnswers,
+      question_ids: questionIds,
+      is_timed: isTimed || false,
+      time_taken_seconds: timeTaken,
+      is_practice: isPractice || false,
+      practice_type: practiceType,
+      user_id: userId, // Authenticated user's ID
+      quiz_type: determinedQuizType,
+      score: calculatedScore,
+      total_questions_in_attempt: totalQuestions,
+    };
+    console.log(
+      "API Route: Authenticated user. Data to insert:",
+      JSON.stringify(attemptDataToInsert, null, 2)
+    );
 
-  try {
-    const { data: insertData, error: insertError } = await supabase
-      .from("quiz_attempts")
-      .insert([attemptDataToInsert])
-      .select("id")
-      .single();
+    try {
+      const { data: insertData, error: insertError } = await supabase
+        .from("quiz_attempts")
+        .insert([attemptDataToInsert])
+        .select("id")
+        .single();
 
-    if (insertError) {
-      console.error(
-        "API Route: Supabase error inserting quiz attempt:",
-        insertError
+      if (insertError) {
+        console.error(
+          "API Route: Supabase error inserting quiz attempt for authenticated user:",
+          insertError
+        );
+        return NextResponse.json(
+          {
+            error: insertError.message || "Failed to save quiz attempt",
+            score: calculatedScore,
+            attemptId: null,
+          },
+          { status: 500 }
+        );
+      }
+      if (!insertData || !insertData.id) {
+        console.error(
+          "API Route: Failed to save quiz attempt or retrieve ID for authenticated user."
+        );
+        return NextResponse.json(
+          {
+            error: "Failed to save quiz attempt and retrieve ID",
+            score: calculatedScore,
+            attemptId: null,
+          },
+          { status: 500 }
+        );
+      }
+      console.log(
+        "API Route: Successfully inserted attempt for authenticated user, ID:",
+        insertData.id
       );
-      return NextResponse.json(
-        { error: insertError.message || "Failed to save quiz attempt" },
-        { status: 500 }
-      );
-    }
-    if (!insertData) {
-      return NextResponse.json(
-        { error: "Failed to save quiz attempt and retrieve ID" },
-        { status: 500 }
-      );
-    }
-    console.log("API Route: Successfully inserted attempt, ID:", insertData.id);
 
-    // Increment freemium attempt count if user is logged in
-    if (userId) {
+      // Increment freemium attempt count for the logged-in user
       let quizModeForFreemium: "practice" | "standard" | "timed";
       if (isPractice) {
         quizModeForFreemium = "practice";
@@ -197,28 +212,55 @@ export async function POST(request: Request) {
       );
 
       if (rpcError) {
-        // Log the error but don't let it fail the entire request,
-        // as the main quiz attempt was already saved.
         console.error(
           `API Route: Supabase RPC error incrementing freemium attempts for user ${userId}, mode ${quizModeForFreemium}:`,
           rpcError
         );
+        // Log error but proceed, as the main attempt was saved.
       } else {
         console.log(
           `API Route: Successfully incremented freemium count for user ${userId}, mode ${quizModeForFreemium}`
         );
       }
-    }
 
-    return NextResponse.json({ attemptId: insertData.id }, { status: 200 });
-  } catch (err: any) {
-    console.error(
-      "API Route: Outer error processing quiz attempt POST request:",
-      err
+      return NextResponse.json(
+        { attemptId: insertData.id, score: calculatedScore },
+        { status: 200 }
+      );
+    } catch (e: any) {
+      // Catch any unexpected error during the authenticated user's DB operations
+      console.error(
+        "API Route: Unexpected error processing attempt for authenticated user:",
+        e.message
+      );
+      return NextResponse.json(
+        {
+          error: "An unexpected error occurred while saving your attempt.",
+          score: calculatedScore,
+          attemptId: null,
+        },
+        { status: 500 }
+      );
+    }
+  } else {
+    // User is not authenticated. Do not store the attempt in the database.
+    // The client-side limit tracking (localStorage) will still apply for unauthenticated users.
+    console.log(
+      "API Route: Unauthenticated user. Attempt not stored. Score:",
+      calculatedScore,
+      "Quiz type:",
+      determinedQuizType
     );
     return NextResponse.json(
-      { error: err.message || "Internal Server Error" },
-      { status: 500 }
+      {
+        message: "Quiz processed. Attempt not stored for unauthenticated user.",
+        score: calculatedScore,
+        attemptId: null, // No ID as it wasn't stored
+        // You can pass back other non-sensitive details if the client needs them to display temporary results
+        quizType: determinedQuizType,
+        totalQuestions: totalQuestions,
+      },
+      { status: 200 } // Indicate successful processing, even if not stored
     );
   }
 }

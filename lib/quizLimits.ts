@@ -12,8 +12,8 @@ interface AttemptCounts {
 }
 
 export const FREE_TIER_LIMITS: Readonly<AttemptCounts> = {
-  practice: 5, // Example: 5 free practice quizzes
-  standard: 2, // Example: 2 free standard quizzes
+  practice: 1, // Example: 5 free practice quizzes
+  standard: 1, // Example: 2 free standard quizzes
   timed: 1, // Example: 1 free timed quiz
 };
 

@@ -161,7 +161,7 @@ export default function PracticePage() {
 
   if (loading) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-red-600" />
           <p className="text-lg">Loading practice options...</p>
@@ -171,7 +171,7 @@ export default function PracticePage() {
   }
 
   return (
-    <div className="container py-8 px-4">
+    <div className="container mx-auto py-8 px-4">
       <div className="max-w-6xl mx-auto space-y-8">
         <div>
           <h1 className="text-3xl font-bold">Practice Mode</h1>

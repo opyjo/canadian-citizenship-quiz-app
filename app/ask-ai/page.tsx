@@ -18,8 +18,7 @@ interface Message {
   id: string;
   role: "user" | "ai";
   content: string;
-  type?: "contextual_answer" | "needs_web_search" | "web_answer" | "error";
-  originalQuestionForWebSearch?: string; // Store the question if web search is offered
+  type?: "contextual_answer" | "web_answer" | "error";
 }
 
 export default function AiQaChat() {
@@ -27,67 +26,50 @@ export default function AiQaChat() {
     {
       id: uuidv4(),
       role: "ai",
-      content: "Hello! Ask me questions about the 'Discover Canada' guide.",
+      content:
+        "Hello! I'm here to help you study for the Canadian citizenship test. Ask me any questions about the 'Discover Canada' guide.",
+      type: "contextual_answer",
     },
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [hasUserInteracted, setHasUserInteracted] = useState(false); // Track if user has sent a message
-  const messagesEndRef = useRef<null | HTMLDivElement>(null);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    // Only scroll if the user has interacted (sent a message)
     if (hasUserInteracted && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({
         behavior: "smooth",
-        block: "nearest", // Use "nearest" instead of default "start" to prevent excessive page scrolling
+        block: "nearest",
         inline: "nearest",
       });
     }
   };
 
-  useEffect(scrollToBottom, [messages, hasUserInteracted]);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, hasUserInteracted]);
 
-  const fetchAIResponse = async (
-    currentQuestion: string,
-    searchMode: "context" | "web",
-    isWebSearchContinuation = false,
-    originalMessageIdToUpdate?: string // Added to target the message for web search update
-  ) => {
+  const fetchAIResponse = async (question: string) => {
     setIsLoading(true);
-    const aiLoadingMessageId = uuidv4(); // ID for the AI loading message or final AI response
+    const aiLoadingMessageId = uuidv4();
 
-    if (!isWebSearchContinuation) {
-      // Add a temporary loading message for AI for a new question
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: aiLoadingMessageId,
-          role: "ai",
-          content: "Thinking...",
-          type: "contextual_answer",
-        },
-      ]);
-    } else if (originalMessageIdToUpdate) {
-      // If it's a web search continuation, update the existing "needs_web_search" message to show loading
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) =>
-          msg.id === originalMessageIdToUpdate
-            ? {
-                ...msg,
-                content: "Searching the web...",
-                type: "contextual_answer",
-              } // Change type to avoid re-showing button
-            : msg
-        )
-      );
-    }
+    // Add a temporary loading message
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: aiLoadingMessageId,
+        role: "ai",
+        content: "Thinking...",
+        type: "contextual_answer",
+      },
+    ]);
 
     try {
       const response = await fetch("/api/ask-discover-canada", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: currentQuestion, searchMode }),
+        body: JSON.stringify({ question }),
       });
 
       if (!response.ok) {
@@ -106,77 +88,30 @@ export default function AiQaChat() {
 
       const data = await response.json();
 
-      if (isWebSearchContinuation && originalMessageIdToUpdate) {
-        // Update the message that initially offered the web search
-        setMessages((prevMessages) =>
-          prevMessages.map((msg) =>
-            msg.id === originalMessageIdToUpdate
-              ? {
-                  id: msg.id,
-                  role: "ai",
-                  content: data.content,
-                  type: data.type,
-                  originalQuestionForWebSearch: undefined,
-                }
-              : msg
-          )
-        );
-      } else {
-        // Update the placeholder AI message for a new question, or add if it wasn't a continuation
-        setMessages((prevMessages) =>
-          prevMessages.map((msg) => {
-            if (msg.id === aiLoadingMessageId) {
-              // This ID was for the initial loading message
-              if (data.type === "needs_web_search") {
-                return {
-                  id: msg.id,
-                  role: "ai",
-                  content: data.message,
-                  type: "needs_web_search",
-                  originalQuestionForWebSearch: currentQuestion,
-                };
-              } else if (
-                data.type === "contextual_answer" ||
-                data.type === "web_answer"
-              ) {
-                return {
-                  id: msg.id,
-                  role: "ai",
-                  content: data.content,
-                  type: data.type,
-                };
+      // Update the loading message with the actual response
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.id === aiLoadingMessageId
+            ? {
+                id: msg.id,
+                role: "ai",
+                content: data.content,
+                type: data.type,
               }
-            }
-            return msg;
-          })
-        );
-      }
+            : msg
+        )
+      );
     } catch (err) {
       const errorContent =
         err instanceof Error ? err.message : "An unknown error occurred.";
-      if (isWebSearchContinuation && originalMessageIdToUpdate) {
-        setMessages((prevMessages) =>
-          prevMessages.map((msg) =>
-            msg.id === originalMessageIdToUpdate
-              ? {
-                  ...msg,
-                  role: "ai",
-                  content: errorContent,
-                  type: "error",
-                  originalQuestionForWebSearch: undefined,
-                }
-              : msg
-          )
-        );
-      } else {
-        setMessages((prevMessages) =>
-          prevMessages.map((msg) =>
-            msg.id === aiLoadingMessageId // Target the initial loading message ID for error update
-              ? { id: msg.id, role: "ai", content: errorContent, type: "error" }
-              : msg
-          )
-        );
-      }
+
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.id === aiLoadingMessageId
+            ? { id: msg.id, role: "ai", content: errorContent, type: "error" }
+            : msg
+        )
+      );
     } finally {
       setIsLoading(false);
     }
@@ -197,16 +132,7 @@ export default function AiQaChat() {
       { id: uuidv4(), role: "user", content: question },
     ]);
     setInputValue("");
-    await fetchAIResponse(question, "context");
-  };
-
-  const handleSearchWeb = async (
-    originalQuestion: string,
-    messageIdToUpdate: string
-  ) => {
-    if (!originalQuestion) return;
-    // No need to set loading message here, fetchAIResponse will handle it based on originalMessageIdToUpdate
-    await fetchAIResponse(originalQuestion, "web", true, messageIdToUpdate);
+    await fetchAIResponse(question);
   };
 
   return (
@@ -258,22 +184,6 @@ export default function AiQaChat() {
                   {msg.content}
                 </span>{" "}
                 {/* Added break-words */}
-                {msg.type === "needs_web_search" &&
-                  msg.originalQuestionForWebSearch && (
-                    <Button
-                      onClick={() =>
-                        handleSearchWeb(
-                          msg.originalQuestionForWebSearch!,
-                          msg.id
-                        )
-                      }
-                      disabled={isLoading} // Disable button while any loading is happening
-                      className="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white text-sm py-1 px-2"
-                      size="sm"
-                    >
-                      <Search className="mr-1 h-3 w-3" /> Search the Web
-                    </Button>
-                  )}
               </div>
             </div>
           ))}

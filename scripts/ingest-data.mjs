@@ -1,6 +1,9 @@
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" }); // Load .env.local
+
 import { createClient } from "@supabase/supabase-js";
 import { OpenAIEmbeddings } from "@langchain/openai";
-import { PDFLoader } from "langchain/document_loaders/fs/pdf";
+import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
 import fs from "fs"; // For checking file existence
@@ -28,6 +31,12 @@ const embeddings = new OpenAIEmbeddings({
   modelName: "text-embedding-ada-002",
 });
 
+// Function to sanitize text, removing null characters
+function sanitizeText(text) {
+  if (!text) return "";
+  return text.replace(/\u0000/g, "").replace(/\x00/g, "");
+}
+
 async function runIngestion() {
   console.log("Starting PDF ingestion process...");
 
@@ -43,13 +52,19 @@ async function runIngestion() {
     return;
   }
 
-  // 2. Chunk the Text
-  console.log("Chunking documents...");
+  // Sanitize loaded documents before splitting
+  const sanitizedDocs = docs.map((doc) => ({
+    ...doc,
+    pageContent: sanitizeText(doc.pageContent),
+  }));
+
+  // 2. Chunk the Text using sanitizedDocs
+  console.log("Chunking sanitized documents...");
   const textSplitter = new RecursiveCharacterTextSplitter({
     chunkSize: 1000,
     chunkOverlap: 200,
   });
-  const chunks = await textSplitter.splitDocuments(docs);
+  const chunks = await textSplitter.splitDocuments(sanitizedDocs);
   console.log(`Created ${chunks.length} text chunks from the PDF.`);
   if (chunks.length === 0) {
     console.error("No chunks created. Check PDF content or splitter settings.");

@@ -11,7 +11,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star } from "lucide-react";
+import {
+  Star,
+  Sparkles,
+  BookOpen,
+  ListChecks,
+  Users,
+  Smartphone,
+  TrendingUp,
+  MessageCircleQuestion,
+} from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import supabaseClient from "@/lib/supabase-client";
@@ -100,21 +109,22 @@ export default function HomePage() {
               test. Everything you need to study for your citizenship exam in
               one convenient resource.
             </p>
-            <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center mb-12">
+            <div className="mt-8 flex flex-col sm:flex-row sm:justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4">
               <Button
+                asChild
                 size="lg"
-                className="bg-red-600 hover:bg-red-700 text-lg px-8 py-4"
-                onClick={() => handleStartQuiz("standard", "/quiz")}
+                className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
               >
-                Take Standard Quiz
+                <Link href="/quiz">Start a Quiz</Link>
               </Button>
               <Button
+                asChild
                 size="lg"
-                variant="outline"
-                className="text-lg px-8 py-4"
-                onClick={() => handleStartQuiz("timed", "/quiz/timed")}
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
               >
-                Take Timed Quiz
+                <Link href="/ask-ai">
+                  <Sparkles className="mr-2 h-5 w-5" /> Ask AI Assistant
+                </Link>
               </Button>
               <Button
                 size="lg"

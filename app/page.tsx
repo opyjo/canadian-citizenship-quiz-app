@@ -110,13 +110,23 @@ export default function HomePage() {
               one convenient resource.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row sm:justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4">
-              <Button
-                asChild
-                size="lg"
-                className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
-              >
-                <Link href="/quiz">Start a Quiz</Link>
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  size="lg"
+                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+                  onClick={() => handleStartQuiz("standard", "/quiz")}
+                >
+                  Standard Quiz
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50"
+                  onClick={() => handleStartQuiz("timed", "/quiz/timed")}
+                >
+                  Timed Quiz
+                </Button>
+              </div>
               <Button
                 asChild
                 size="lg"

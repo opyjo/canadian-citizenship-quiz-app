@@ -35,26 +35,68 @@ const formatAIResponse = (content: string, type?: string) => {
   const paragraphs = content.split("\n\n").filter((p) => p.trim());
 
   return paragraphs.map((paragraph, index) => {
+    // Handle numbered lists (1., 2., etc.)
+    if (/^\d+\./.test(paragraph.trim())) {
+      const lines = paragraph.split("\n");
+      return (
+        <div key={index} className="space-y-3 my-4">
+          {lines.map((line, lineIndex) => {
+            if (/^\d+\./.test(line.trim())) {
+              const match = line.match(/^(\d+\.)\s*(.*)$/);
+              if (match) {
+                const [, number, text] = match;
+                // Parse bold text in the content
+                const formattedText = formatInlineText(text);
+                return (
+                  <div key={lineIndex} className="flex items-start space-x-3">
+                    <span className="flex-shrink-0 w-6 h-6 bg-red-100 text-red-700 rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                      {number.replace(".", "")}
+                    </span>
+                    <div className="flex-1 text-sm leading-relaxed">
+                      {formattedText}
+                    </div>
+                  </div>
+                );
+              }
+            }
+            return line.trim() ? (
+              <p
+                key={lineIndex}
+                className="text-sm leading-relaxed ml-9 text-gray-600"
+              >
+                {formatInlineText(line)}
+              </p>
+            ) : null;
+          })}
+        </div>
+      );
+    }
+
     // Handle bullet points
     if (paragraph.includes("•") || paragraph.includes("-")) {
       const lines = paragraph.split("\n");
       return (
-        <div key={index} className="space-y-1">
+        <div key={index} className="space-y-2 my-4">
           {lines.map((line, lineIndex) => {
             if (line.trim().startsWith("•") || line.trim().startsWith("-")) {
+              const cleanLine = line.replace(/^[•-]\s*/, "");
               return (
-                <div
-                  key={lineIndex}
-                  className="flex items-start space-x-2 text-sm leading-relaxed"
-                >
-                  <span className="text-red-500 font-bold mt-0.5">•</span>
-                  <span>{line.replace(/^[•-]\s*/, "")}</span>
+                <div key={lineIndex} className="flex items-start space-x-3">
+                  <span className="text-red-500 font-bold mt-1 flex-shrink-0">
+                    •
+                  </span>
+                  <span className="text-sm leading-relaxed flex-1">
+                    {formatInlineText(cleanLine)}
+                  </span>
                 </div>
               );
             }
             return line.trim() ? (
-              <p key={lineIndex} className="text-sm leading-relaxed mb-2">
-                {line}
+              <p
+                key={lineIndex}
+                className="text-sm leading-relaxed ml-6 text-gray-600"
+              >
+                {formatInlineText(line)}
               </p>
             ) : null;
           })}
@@ -64,11 +106,62 @@ const formatAIResponse = (content: string, type?: string) => {
 
     // Handle regular paragraphs
     return (
-      <p key={index} className="text-sm leading-relaxed mb-3 last:mb-0">
-        {paragraph}
+      <p key={index} className="text-sm leading-relaxed mb-4 last:mb-0">
+        {formatInlineText(paragraph)}
       </p>
     );
   });
+};
+
+// Helper function to format inline text (bold, italics, etc.)
+const formatInlineText = (text: string) => {
+  // Split by bold markers (**text**)
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+
+  return parts.map((part, index) => {
+    // Handle bold text
+    if (part.startsWith("**") && part.endsWith("**")) {
+      const boldText = part.slice(2, -2);
+      return (
+        <strong key={index} className="font-semibold text-gray-900">
+          {boldText}
+        </strong>
+      );
+    }
+
+    // Handle italic text (*text*)
+    if (part.startsWith("*") && part.endsWith("*") && !part.startsWith("**")) {
+      const italicText = part.slice(1, -1);
+      return (
+        <em key={index} className="italic text-gray-700">
+          {italicText}
+        </em>
+      );
+    }
+
+    // Handle regular text, but also look for special patterns
+    return formatSpecialPatterns(part, index);
+  });
+};
+
+// Helper function to format special patterns like notes, disclaimers, etc.
+const formatSpecialPatterns = (text: string, key: number) => {
+  // Handle notes and disclaimers (lines starting with *Note:)
+  if (text.includes("*Note:")) {
+    return (
+      <span
+        key={key}
+        className="block mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-md"
+      >
+        <span className="text-blue-800 text-sm italic">
+          {text.replace("*Note:", "📝 Note:")}
+        </span>
+      </span>
+    );
+  }
+
+  // Regular text
+  return <span key={key}>{text}</span>;
 };
 
 export default function AiQaChat() {

@@ -133,14 +133,6 @@ export default function RootLayout({
       <body
         className={`${inter.className} min-h-screen bg-background antialiased`}
       >
-        {/* Skip to main content for accessibility */}
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-red-600 text-white px-4 py-2 rounded z-50"
-        >
-          Skip to main content
-        </a>
-
         <UserNav />
 
         <main id="main-content" className="flex-1">

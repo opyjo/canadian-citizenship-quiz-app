@@ -95,14 +95,6 @@ export default function HomePage() {
 
   return (
     <>
-      {/* Skip Link for Keyboard Users */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 z-50 bg-red-600 text-white px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-      >
-        Skip to main content
-      </a>
-
       {/* Hero Section */}
       <section
         className="bg-gradient-to-br from-red-50 via-white to-blue-50 py-16 lg:py-24"

@@ -32,13 +32,21 @@ export default function AiQaChat() {
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false); // Track if user has sent a message
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Only scroll if the user has interacted (sent a message)
+    if (hasUserInteracted && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest", // Use "nearest" instead of default "start" to prevent excessive page scrolling
+        inline: "nearest",
+      });
+    }
   };
 
-  useEffect(scrollToBottom, [messages]);
+  useEffect(scrollToBottom, [messages, hasUserInteracted]);
 
   const fetchAIResponse = async (
     currentQuestion: string,
@@ -178,6 +186,11 @@ export default function AiQaChat() {
     e.preventDefault();
     const question = inputValue.trim();
     if (!question) return;
+
+    // Set that user has interacted, enabling auto-scroll for subsequent messages
+    if (!hasUserInteracted) {
+      setHasUserInteracted(true);
+    }
 
     setMessages((prev) => [
       ...prev,

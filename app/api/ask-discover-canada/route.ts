@@ -22,9 +22,11 @@ const vectorStore = new SupabaseVectorStore(embeddings, {
   queryName: "match_documents",
 });
 
+const ANSWER_NOT_FOUND_MARKER = "[[ANSWER_NOT_FOUND_IN_CONTEXT]]";
+
 export async function POST(req: Request) {
   try {
-    const { question, searchMode } = await req.json();
+    const { question, searchMode = "context" } = await req.json();
 
     if (!question) {
       return NextResponse.json(
@@ -90,25 +92,27 @@ export async function POST(req: Request) {
         });
       }
 
-      // Special marker for the LLM to output if the answer isn't in the provided context
-      const ANSWER_NOT_FOUND_MARKER = "[[ANSWER_NOT_FOUND_IN_CONTEXT]]";
+      const systemPrompt = `You are a helpful assistant answering questions about Canadian citizenship based on the "Discover Canada" study guide.
+
+IMPORTANT: Only use the provided context to answer questions. If the context contains relevant information that can help answer the question, provide a helpful response using that information.
+
+You have TWO options:
+1. If the context contains relevant information: Provide a helpful answer using that information. You may mention if the context doesn't provide complete details, but still give what information is available.
+2. If the context contains absolutely no relevant information: Output ONLY this exact phrase: "${ANSWER_NOT_FOUND_MARKER}"
+
+NEVER mix a substantive answer with the special marker phrase. Choose one or the other.
+
+Context from the Discover Canada guide:
+${retrievedContext}`;
 
       const messages: CoreMessage[] = [
         {
           role: "system",
-          content: `You are an AI assistant helping users study for the Canadian citizenship test.
-Your primary goal is to answer questions based *only* on the provided excerpts from the "Discover Canada" study guide.
-Do NOT use any external knowledge or search the web in this mode.
-If the answer is not clearly found in the provided excerpts, you MUST output ONLY the exact phrase: ${ANSWER_NOT_FOUND_MARKER}
-Do not add any other words, explanations, or formatting around this phrase if the answer is not found.`,
+          content: systemPrompt,
         },
         {
           role: "user",
-          content: `Based *only* on the following excerpts from the "Discover Canada" guide:
----
-${retrievedContext}
----
-User's Question: ${question}
+          content: `User's Question: ${question}
 
 Please provide your answer. If the answer is not in the excerpts, remember the specific instruction.`,
         },

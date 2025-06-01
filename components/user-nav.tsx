@@ -27,6 +27,8 @@ import {
   XIcon,
   BookOpen,
   HelpCircle,
+  Bot,
+  Map,
 } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -265,6 +267,22 @@ export default function UserNav() {
         </Link>
 
         <Link
+          href="/map"
+          className="text-sm font-medium text-gray-600 hover:text-red-600 transition-colors flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50"
+        >
+          <Map className="h-4 w-4" />
+          Canada Map
+        </Link>
+
+        <Link
+          href="/ask-ai"
+          className="text-sm font-medium text-gray-600 hover:text-red-600 transition-colors flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50"
+        >
+          <Bot className="h-4 w-4" />
+          Ask AI
+        </Link>
+
+        <Link
           href="/faq"
           className="text-sm font-medium text-gray-600 hover:text-red-600 transition-colors flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50"
         >
@@ -354,6 +372,22 @@ export default function UserNav() {
           onClick={() => handleMobileLinkClick("/study-guide")}
         >
           <BookOpen className="mr-3 h-4 w-4" /> Study Guide
+        </Button>
+
+        <Button
+          variant="ghost"
+          className="w-full justify-start hover:bg-red-50 transition-colors"
+          onClick={() => handleMobileLinkClick("/map")}
+        >
+          <Map className="mr-3 h-4 w-4" /> Canada Map
+        </Button>
+
+        <Button
+          variant="ghost"
+          className="w-full justify-start hover:bg-red-50 transition-colors"
+          onClick={() => handleMobileLinkClick("/ask-ai")}
+        >
+          <Bot className="mr-3 h-4 w-4" /> Ask AI
         </Button>
 
         <Button

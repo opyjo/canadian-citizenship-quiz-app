@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import type React from "react";
 import { Inter } from "next/font/google";
 import UserNav from "@/components/user-nav";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Bot } from "lucide-react";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -130,19 +133,37 @@ export default function RootLayout({
       <body
         className={`${inter.className} min-h-screen bg-background antialiased`}
       >
-        {/* Skip to main content for accessibility */}
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-red-600 text-white px-4 py-2 rounded z-50"
-        >
-          Skip to main content
-        </a>
-
         <UserNav />
 
         <main id="main-content" className="flex-1">
           {children}
         </main>
+
+        {/* Global Floating Chatbot - Available on all pages */}
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="relative">
+            {/* Subtle background glow */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 opacity-20 animate-pulse"></div>
+
+            {/* Main chatbot button */}
+            <Button
+              size="lg"
+              className="relative bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-xl hover:shadow-2xl transition-all duration-200 focus:ring-4 focus:ring-purple-500 focus:ring-offset-2 rounded-full w-16 h-16 p-0 transform hover:scale-105"
+              asChild
+              aria-label="Ask AI Assistant - Get help with citizenship questions"
+            >
+              <Link href="/ask-ai" className="flex items-center justify-center">
+                <Bot
+                  className="h-7 w-7 transition-all duration-200"
+                  aria-hidden="true"
+                />
+              </Link>
+            </Button>
+
+            {/* Small notification indicator */}
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white shadow-sm"></div>
+          </div>
+        </div>
 
         <footer className="bg-gray-900 text-white py-12">
           <div className="container mx-auto px-4">

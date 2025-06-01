@@ -45,6 +45,15 @@ export default function QuizPage() {
     useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
+  // New state for unauthenticated results
+  const [showUnauthenticatedResults, setShowUnauthenticatedResults] =
+    useState(false);
+  const [unauthenticatedScore, setUnauthenticatedScore] = useState<
+    number | null
+  >(null);
+  const [unauthenticatedTotalQuestions, setUnauthenticatedTotalQuestions] =
+    useState<number | null>(null);
+
   const [isAccessChecked, setIsAccessChecked] = useState(false);
   const [limitModalState, setLimitModalState] = useState<{
     isOpen: boolean;
@@ -188,6 +197,9 @@ export default function QuizPage() {
       incrementLocalAttemptCount("standard");
     }
 
+    setError(null); // Clear previous errors
+    setLoading(true); // Show loading indicator
+
     const questionIds = questions.map((q) => q.id);
     const userAnswersForApi: Record<string, string> = {};
     for (const key in selectedAnswers) {
@@ -210,22 +222,41 @@ export default function QuizPage() {
         }),
       });
 
+      const result = await response.json(); // Always parse JSON
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save quiz attempt");
+        throw new Error(result.error || "Failed to save quiz attempt");
       }
 
-      const result = await response.json();
       const attemptId = result.attemptId;
 
       if (attemptId) {
         router.push(`/results/${attemptId}`);
       } else {
-        throw new Error("No attempt ID received from API");
+        // Handle unauthenticated or non-persisted attempt
+        if (
+          typeof result.score === "number" &&
+          typeof result.totalQuestions === "number"
+        ) {
+          setUnauthenticatedScore(result.score);
+          setUnauthenticatedTotalQuestions(result.totalQuestions);
+          setShowUnauthenticatedResults(true);
+        } else {
+          console.error(
+            "API did not return score/totalQuestions for unauthenticated standard attempt:",
+            result
+          );
+          setError(
+            "Quiz finished, but there was an issue displaying your score."
+          );
+        }
       }
     } catch (err: any) {
       console.error("Error submitting quiz:", err);
       setError(err.message || "Failed to submit quiz. Please try again.");
+      setShowUnauthenticatedResults(false);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -246,6 +277,47 @@ export default function QuizPage() {
     );
   }
 
+  if (showUnauthenticatedResults) {
+    return (
+      <div className="container mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
+        <Card className="w-full max-w-md text-center">
+          <CardHeader>
+            <CardTitle>Quiz Finished!</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {unauthenticatedScore !== null &&
+            unauthenticatedTotalQuestions !== null ? (
+              <p className="text-2xl">
+                You scored: {unauthenticatedScore} /{" "}
+                {unauthenticatedTotalQuestions}
+              </p>
+            ) : (
+              <p>Your score is being calculated...</p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              As you are not logged in, your results are not saved.
+            </p>
+          </CardContent>
+          <CardFooter className="flex flex-col sm:flex-row gap-2">
+            <Button
+              onClick={() => window.location.reload()}
+              className="w-full sm:w-auto"
+            >
+              Try Another Quiz
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => router.push("/")}
+              className="w-full sm:w-auto"
+            >
+              Return Home
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
   if (!isAccessChecked && loading) {
     return (
       <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -257,7 +329,7 @@ export default function QuizPage() {
     );
   }
 
-  if (loading) {
+  if (loading && !showUnauthenticatedResults) {
     return (
       <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">
@@ -268,7 +340,7 @@ export default function QuizPage() {
     );
   }
 
-  if (error) {
+  if (error && !showUnauthenticatedResults) {
     return (
       <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <Card className="w-full max-w-3xl text-center">
@@ -286,7 +358,7 @@ export default function QuizPage() {
     );
   }
 
-  if (!currentQuestion && !loading && !error) {
+  if (!currentQuestion && !loading && !error && !showUnauthenticatedResults) {
     return (
       <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <Card className="w-full max-w-3xl text-center">
@@ -306,6 +378,8 @@ export default function QuizPage() {
       </div>
     );
   }
+
+  if (showUnauthenticatedResults) return null;
 
   if (!currentQuestion) {
     return (

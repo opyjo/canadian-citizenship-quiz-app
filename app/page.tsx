@@ -20,6 +20,7 @@ import {
   Smartphone,
   TrendingUp,
   MessageCircleQuestion,
+  Map,
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -134,6 +135,16 @@ export default function HomePage() {
               >
                 <Link href="/ask-ai">
                   <Sparkles className="mr-2 h-5 w-5" /> Ask AI Assistant
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="w-full sm:w-auto border-green-600 text-green-600 hover:bg-green-50"
+              >
+                <Link href="/map">
+                  <Map className="mr-2 h-5 w-5" /> Explore Canada Map
                 </Link>
               </Button>
               <Button

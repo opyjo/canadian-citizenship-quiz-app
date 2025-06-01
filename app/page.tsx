@@ -119,160 +119,53 @@ export default function HomePage() {
               Prepare for Your Citizenship Test with
               <span className="text-red-600"> Confidence</span>
             </h1>
-            <p className="text-xl lg:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Comprehensive study guide to help you prepare for the citizenship
-              test. Everything you need to study for your citizenship exam in
-              one convenient resource.
+            <p className="text-xl lg:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto">
+              Master your citizenship journey with our complete 3-step system:
+              <strong> Study comprehensive materials</strong>,
+              <strong> practice unlimited questions</strong>, and
+              <strong> test yourself with realistic simulations</strong>.
+              Everything you need to pass your citizenship exam.
             </p>
-            <div className="mt-12" id="main-content">
-              {/* User Journey Cards */}
-              <div
-                className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto"
-                role="region"
-                aria-labelledby="journey-heading"
+
+            {/* Primary Action Buttons */}
+            <div
+              className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
+              id="main-content"
+            >
+              <Button
+                size="lg"
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xl px-12 py-6 shadow-xl hover:shadow-2xl transition-all focus:ring-4 focus:ring-blue-500 focus:ring-offset-2 transform hover:scale-105"
+                asChild
               >
-                <h2 id="journey-heading" className="sr-only">
-                  Choose Your Learning Path
-                </h2>
+                <Link href="/study-guide" aria-describedby="primary-study-desc">
+                  <BookOpen className="mr-3 h-6 w-6" aria-hidden="true" />
+                  Start Studying Now
+                </Link>
+              </Button>
+              <div id="primary-study-desc" className="sr-only">
+                Access comprehensive study materials covering all citizenship
+                test topics
+              </div>
 
-                {/* Quiz Path */}
-                <Card className="border-2 border-red-200 hover:border-red-400 transition-colors bg-red-50/50 focus-within:ring-2 focus-within:ring-red-500 focus-within:ring-offset-2">
-                  <CardHeader className="text-center pb-4">
-                    <div className="mx-auto mb-3 p-3 bg-red-100 rounded-full w-fit">
-                      <ListChecks
-                        className="h-8 w-8 text-red-600"
-                        aria-hidden="true"
-                      />
-                    </div>
-                    <CardTitle className="text-xl text-red-800">
-                      Test Yourself
-                    </CardTitle>
-                    <CardDescription className="text-red-600">
-                      Ready to practice? Take our citizenship quizzes
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <Button
-                      className="w-full bg-red-600 hover:bg-red-700 text-white focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                      onClick={() => handleStartQuiz("standard", "/quiz")}
-                      aria-describedby="standard-quiz-desc"
-                    >
-                      Standard Quiz
-                    </Button>
-                    <div id="standard-quiz-desc" className="sr-only">
-                      Take an untimed practice quiz with instant feedback
-                    </div>
-                    <Button
-                      variant="outline"
-                      className="w-full border-red-600 text-red-600 hover:bg-red-50 focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                      onClick={() => handleStartQuiz("timed", "/quiz/timed")}
-                      aria-describedby="timed-quiz-desc"
-                    >
-                      <span aria-hidden="true">⏱️</span> Timed Quiz
-                    </Button>
-                    <div id="timed-quiz-desc" className="sr-only">
-                      Take a 30-minute timed quiz simulating the real test
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Study Path */}
-                <Card className="border-2 border-blue-200 hover:border-blue-400 transition-colors bg-blue-50/50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2">
-                  <CardHeader className="text-center pb-4">
-                    <div className="mx-auto mb-3 p-3 bg-blue-100 rounded-full w-fit">
-                      <BookOpen
-                        className="h-8 w-8 text-blue-600"
-                        aria-hidden="true"
-                      />
-                    </div>
-                    <CardTitle className="text-xl text-blue-800">
-                      Learn First
-                    </CardTitle>
-                    <CardDescription className="text-blue-600">
-                      New to the test? Start with our comprehensive guide
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <Button
-                      asChild
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                    >
-                      <Link
-                        href="/study-guide"
-                        aria-describedby="study-guide-desc"
-                      >
-                        Study Guide
-                      </Link>
-                    </Button>
-                    <div id="study-guide-desc" className="sr-only">
-                      Access comprehensive study materials covering all test
-                      topics
-                    </div>
-                    <Button
-                      asChild
-                      variant="outline"
-                      className="w-full border-blue-600 text-blue-600 hover:bg-blue-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                    >
-                      <Link href="/ask-ai" aria-describedby="ai-assistant-desc">
-                        <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
-                        Ask AI Assistant
-                      </Link>
-                    </Button>
-                    <div id="ai-assistant-desc" className="sr-only">
-                      Get personalized help from our AI-powered study assistant
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Explore Path */}
-                <Card className="border-2 border-green-200 hover:border-green-400 transition-colors bg-green-50/50 focus-within:ring-2 focus-within:ring-green-500 focus-within:ring-offset-2">
-                  <CardHeader className="text-center pb-4">
-                    <div className="mx-auto mb-3 p-3 bg-green-100 rounded-full w-fit">
-                      <Map
-                        className="h-8 w-8 text-green-600"
-                        aria-hidden="true"
-                      />
-                    </div>
-                    <CardTitle className="text-xl text-green-800">
-                      Explore Canada
-                    </CardTitle>
-                    <CardDescription className="text-green-600">
-                      Discover Canadian culture, geography, and heritage
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <Button
-                      asChild
-                      className="w-full bg-green-600 hover:bg-green-700 text-white focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                    >
-                      <Link href="/map" aria-describedby="interactive-map-desc">
-                        Interactive Map
-                      </Link>
-                    </Button>
-                    <div id="interactive-map-desc" className="sr-only">
-                      Explore an interactive map of Canada with cultural and
-                      geographic information
-                    </div>
-                    <Button
-                      variant="outline"
-                      className="w-full border-green-600 text-green-600 hover:bg-green-50 focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                      onClick={() => handleStartQuiz("practice", "/practice")}
-                      aria-describedby="practice-mode-desc"
-                    >
-                      <Users className="mr-2 h-4 w-4" aria-hidden="true" />
-                      Practice Mode
-                    </Button>
-                    <div id="practice-mode-desc" className="sr-only">
-                      Practice with unlimited questions in a relaxed environment
-                    </div>
-                  </CardContent>
-                </Card>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-2 border-green-600 text-green-600 hover:bg-green-600 hover:text-white text-xl px-12 py-6 shadow-xl hover:shadow-2xl transition-all focus:ring-4 focus:ring-green-500 focus:ring-offset-2 transform hover:scale-105"
+                onClick={() => handleStartQuiz("practice", "/practice")}
+                aria-describedby="primary-practice-desc"
+              >
+                <Users className="mr-3 h-6 w-6" aria-hidden="true" />
+                Practice Mode
+              </Button>
+              <div id="primary-practice-desc" className="sr-only">
+                Practice with unlimited questions in a relaxed, pressure-free
+                environment
               </div>
             </div>
 
             {/* Stats */}
             <section
-              className="grid grid-cols-2 lg:grid-cols-3 gap-6 mt-16"
+              className="grid grid-cols-2 lg:grid-cols-3 gap-6"
               aria-labelledby="stats-heading"
             >
               <h2 id="stats-heading" className="sr-only">
@@ -303,388 +196,381 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Quiz Types Section */}
-      <section
-        className="py-16 lg:py-24 bg-gradient-to-br from-gray-50 to-blue-50"
-        aria-labelledby="quiz-types-heading"
-      >
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center mb-16">
-            <Badge variant="secondary" className="mb-4 bg-red-100 text-red-800">
-              <span aria-hidden="true">🎯</span> Quiz Practice System
-            </Badge>
-            <h2
-              id="quiz-types-heading"
-              className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6"
-            >
-              Master the Citizenship Test with Targeted Practice
-            </h2>
-            <p className="text-xl text-gray-600 mb-8">
-              Choose your learning style: Practice at your own pace or simulate
-              the real test experience
-            </p>
+      {/* Prominent Study & Practice Section */}
+      <section className="py-20 lg:py-32 bg-gradient-to-br from-blue-50 via-white to-green-50 relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0 bg-blue-100/30 bg-opacity-20 bg-gradient-to-r from-transparent via-blue-200 to-transparent"></div>
+        </div>
 
-            {/* Quick Stats */}
-            <div
-              className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 max-w-2xl mx-auto"
-              role="region"
-              aria-label="Quiz system statistics"
-            >
-              <div className="text-center p-4 bg-white/70 rounded-lg">
-                <div
-                  className="text-2xl font-bold text-blue-600"
-                  aria-label="Over 500 practice questions available"
-                >
-                  500+
-                </div>
-                <div className="text-sm text-gray-600">Practice Questions</div>
-              </div>
-              <div className="text-center p-4 bg-white/70 rounded-lg">
-                <div
-                  className="text-2xl font-bold text-green-600"
-                  aria-label="85 percent success rate"
-                >
-                  85%
-                </div>
-                <div className="text-sm text-gray-600">Success Rate</div>
-              </div>
-              <div className="text-center p-4 bg-white/70 rounded-lg">
-                <div
-                  className="text-2xl font-bold text-purple-600"
-                  aria-label="20 questions per real test"
-                >
-                  20
-                </div>
-                <div className="text-sm text-gray-600">Real Test Questions</div>
-              </div>
-              <div className="text-center p-4 bg-white/70 rounded-lg">
-                <div
-                  className="text-2xl font-bold text-orange-600"
-                  aria-label="30 minute test duration"
-                >
-                  30min
-                </div>
-                <div className="text-sm text-gray-600">Test Duration</div>
-              </div>
+        <div className="container mx-auto px-4 relative">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-16">
+              <Badge
+                variant="secondary"
+                className="mb-6 bg-blue-100 text-blue-800 border-blue-200 text-lg px-6 py-2"
+              >
+                <span aria-hidden="true">🎓</span> Core Learning Features
+              </Badge>
+              <h2 className="text-4xl lg:text-5xl font-bold mb-6 text-gray-900">
+                Master Your Citizenship Journey
+              </h2>
+              <p className="text-xl lg:text-2xl text-gray-600 max-w-3xl mx-auto">
+                Three powerful ways to prepare: comprehensive study materials,
+                unlimited practice questions, and realistic test simulations
+              </p>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-            {/* Standard Quiz Card */}
-            <Card className="border-2 border-blue-200 hover:border-blue-400 transition-all duration-300 hover:shadow-2xl bg-gradient-to-br from-white to-blue-50/30 relative overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2">
-              {/* Background Pattern */}
-              <div
-                className="absolute top-0 right-0 w-32 h-32 bg-blue-100 rounded-full -translate-y-16 translate-x-16 opacity-30"
-                aria-hidden="true"
-              ></div>
-
-              <CardHeader className="text-center pb-6 relative">
-                <div className="mx-auto mb-4 p-4 bg-blue-100 rounded-full w-fit shadow-sm">
-                  <BookOpen
-                    className="h-12 w-12 text-blue-600"
-                    aria-hidden="true"
-                  />
-                </div>
-                <Badge
-                  variant="secondary"
-                  className="mb-3 bg-blue-100 text-blue-800"
-                >
-                  <span aria-hidden="true">👨‍🎓</span> Perfect for Learning
-                </Badge>
-                <CardTitle className="text-3xl mb-3 text-blue-900">
-                  Standard Quiz
-                </CardTitle>
-                <CardDescription className="text-gray-600 text-lg">
-                  Take your time to learn and understand concepts with detailed
-                  explanations
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-6">
-                {/* Key Features */}
-                <div
-                  className="space-y-4"
-                  role="list"
-                  aria-label="Standard quiz features"
-                >
-                  <div
-                    className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg"
-                    role="listitem"
-                  >
-                    <div
-                      className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center"
-                      aria-hidden="true"
-                    >
-                      <span className="text-white text-sm">∞</span>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Study Guide Feature */}
+              <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 overflow-hidden">
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-3 bg-blue-600 rounded-full shadow-lg">
+                      <BookOpen
+                        className="h-8 w-8 text-white"
+                        aria-hidden="true"
+                      />
                     </div>
                     <div>
-                      <div className="font-semibold text-blue-900">
-                        No Time Pressure
-                      </div>
-                      <div className="text-sm text-blue-700">
-                        Answer at your own comfortable pace
-                      </div>
+                      <Badge
+                        variant="secondary"
+                        className="mb-1 bg-blue-100 text-blue-800 text-xs"
+                      >
+                        <span aria-hidden="true">📖</span> Step 1
+                      </Badge>
+                      <h3 className="text-2xl font-bold text-blue-900">
+                        Study Guide
+                      </h3>
                     </div>
                   </div>
 
-                  <div
-                    className="flex items-center gap-3 p-3 bg-green-50 rounded-lg"
-                    role="listitem"
+                  <p className="text-blue-800 mb-6 leading-relaxed">
+                    Complete curriculum covering Canadian history, geography,
+                    government, laws, and cultural heritage.
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    <div className="text-center p-3 bg-white/70 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600">
+                        15+
+                      </div>
+                      <div className="text-xs text-blue-700">Chapters</div>
+                    </div>
+                    <div className="text-center p-3 bg-white/70 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">
+                        100%
+                      </div>
+                      <div className="text-xs text-green-700">Coverage</div>
+                    </div>
+                  </div>
+
+                  <Button
+                    asChild
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 shadow-lg hover:shadow-xl transition-all focus:ring-4 focus:ring-blue-500 focus:ring-offset-2"
                   >
-                    <div
-                      className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center"
-                      aria-hidden="true"
-                    >
-                      <span className="text-white text-sm">💡</span>
+                    <Link href="/study-guide">
+                      <BookOpen className="mr-2 h-5 w-5" aria-hidden="true" />
+                      Start Studying
+                    </Link>
+                  </Button>
+                </div>
+              </Card>
+
+              {/* Practice Mode Feature */}
+              <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 overflow-hidden">
+                <div className="bg-gradient-to-br from-green-50 to-green-100 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-3 bg-green-600 rounded-full shadow-lg">
+                      <Users
+                        className="h-8 w-8 text-white"
+                        aria-hidden="true"
+                      />
                     </div>
                     <div>
-                      <div className="font-semibold text-green-900">
-                        Instant Feedback
-                      </div>
-                      <div className="text-sm text-green-700">
-                        Learn from detailed explanations immediately
-                      </div>
+                      <Badge
+                        variant="secondary"
+                        className="mb-1 bg-green-100 text-green-800 text-xs"
+                      >
+                        <span aria-hidden="true">🎯</span> Step 2
+                      </Badge>
+                      <h3 className="text-2xl font-bold text-green-900">
+                        Practice Mode
+                      </h3>
                     </div>
                   </div>
 
-                  <div
-                    className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg"
-                    role="listitem"
+                  <p className="text-green-800 mb-6 leading-relaxed">
+                    Practice with unlimited questions in a pressure-free
+                    environment to build confidence.
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    <div className="text-center p-3 bg-white/70 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">∞</div>
+                      <div className="text-xs text-green-700">Questions</div>
+                    </div>
+                    <div className="text-center p-3 bg-white/70 rounded-lg">
+                      <div className="text-2xl font-bold text-purple-600">
+                        0
+                      </div>
+                      <div className="text-xs text-purple-700">Pressure</div>
+                    </div>
+                  </div>
+
+                  <Button
+                    className="w-full bg-green-600 hover:bg-green-700 text-white py-4 shadow-lg hover:shadow-xl transition-all focus:ring-4 focus:ring-green-500 focus:ring-offset-2"
+                    onClick={() => handleStartQuiz("practice", "/practice")}
                   >
-                    <div
-                      className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center"
-                      aria-hidden="true"
-                    >
-                      <span className="text-white text-sm">↩️</span>
+                    <Users className="mr-2 h-5 w-5" aria-hidden="true" />
+                    Start Practicing
+                  </Button>
+                </div>
+              </Card>
+
+              {/* Quiz Simulations Feature */}
+              <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 overflow-hidden">
+                <div className="bg-gradient-to-br from-red-50 to-red-100 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-3 bg-red-600 rounded-full shadow-lg">
+                      <TrendingUp
+                        className="h-8 w-8 text-white"
+                        aria-hidden="true"
+                      />
                     </div>
                     <div>
-                      <div className="font-semibold text-purple-900">
-                        Review & Retry
-                      </div>
-                      <div className="text-sm text-purple-700">
-                        Go back and review any question
-                      </div>
+                      <Badge
+                        variant="secondary"
+                        className="mb-1 bg-red-100 text-red-800 text-xs"
+                      >
+                        <span aria-hidden="true">⚡</span> Step 3
+                      </Badge>
+                      <h3 className="text-2xl font-bold text-red-900">
+                        Quiz Simulations
+                      </h3>
                     </div>
                   </div>
-                </div>
 
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                  <div className="text-sm font-semibold text-blue-800 mb-2">
-                    <span aria-hidden="true">💪</span> Best for:
+                  <p className="text-red-800 mb-6 leading-relaxed">
+                    Test your knowledge with realistic citizenship test
+                    simulations and timed challenges.
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    <div className="text-center p-3 bg-white/70 rounded-lg">
+                      <div className="text-2xl font-bold text-red-600">20</div>
+                      <div className="text-xs text-red-700">Questions</div>
+                    </div>
+                    <div className="text-center p-3 bg-white/70 rounded-lg">
+                      <div className="text-2xl font-bold text-orange-600">
+                        30
+                      </div>
+                      <div className="text-xs text-orange-700">Minutes</div>
+                    </div>
                   </div>
-                  <div className="text-sm text-blue-700">
-                    First-time test takers, concept learning, building
-                    confidence
+
+                  <div className="space-y-2">
+                    <Button
+                      className="w-full bg-red-600 hover:bg-red-700 text-white py-3 shadow-lg hover:shadow-xl transition-all focus:ring-4 focus:ring-red-500 focus:ring-offset-2"
+                      onClick={() => handleStartQuiz("standard", "/quiz")}
+                    >
+                      <ListChecks className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Standard Quiz
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full border-red-600 text-red-600 hover:bg-red-50 py-3 focus:ring-4 focus:ring-red-500 focus:ring-offset-2"
+                      onClick={() => handleStartQuiz("timed", "/quiz/timed")}
+                    >
+                      <span aria-hidden="true">⏱️</span> Timed Quiz
+                    </Button>
                   </div>
                 </div>
+              </Card>
+            </div>
 
+            {/* Quick Access Bar */}
+            <div className="mt-16 text-center">
+              <div className="inline-flex items-center gap-6 bg-white/80 backdrop-blur-md rounded-full px-8 py-4 border border-gray-200 shadow-lg">
+                <span className="text-gray-700 font-semibold">
+                  Quick Start:
+                </span>
                 <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white text-lg py-4 shadow-lg hover:shadow-xl transition-all focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  variant="outline"
+                  size="sm"
+                  className="bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-all"
+                  asChild
+                >
+                  <Link href="/study-guide">Study Guide</Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-green-50 border-green-200 text-green-600 hover:bg-green-100 hover:text-green-700 transition-all"
+                  onClick={() => handleStartQuiz("practice", "/practice")}
+                >
+                  Practice
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:text-red-700 transition-all"
                   onClick={() => handleStartQuiz("standard", "/quiz")}
-                  aria-describedby="standard-quiz-full-desc"
                 >
-                  <BookOpen className="mr-2 h-5 w-5" aria-hidden="true" />
-                  Start Learning Quiz
+                  Quiz
                 </Button>
-                <div id="standard-quiz-full-desc" className="sr-only">
-                  Start the standard quiz with unlimited time, instant feedback,
-                  and ability to review questions
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Timed Quiz Card */}
-            <Card className="border-2 border-red-200 hover:border-red-400 transition-all duration-300 hover:shadow-2xl bg-gradient-to-br from-white to-red-50/30 relative overflow-hidden focus-within:ring-2 focus-within:ring-red-500 focus-within:ring-offset-2">
-              {/* Background Pattern */}
-              <div
-                className="absolute top-0 right-0 w-32 h-32 bg-red-100 rounded-full -translate-y-16 translate-x-16 opacity-30"
-                aria-hidden="true"
-              ></div>
-
-              <CardHeader className="text-center pb-6 relative">
-                <div className="mx-auto mb-4 p-4 bg-red-100 rounded-full w-fit shadow-sm">
-                  <TrendingUp
-                    className="h-12 w-12 text-red-600"
-                    aria-hidden="true"
-                  />
-                </div>
-                <Badge
-                  variant="secondary"
-                  className="mb-3 bg-red-100 text-red-800"
-                >
-                  <span aria-hidden="true">⚡</span> Real Test Simulation
-                </Badge>
-                <CardTitle className="text-3xl mb-3 text-red-900">
-                  Timed Quiz
-                </CardTitle>
-                <CardDescription className="text-gray-600 text-lg">
-                  Experience the real citizenship test with time pressure and
-                  authentic conditions
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-6">
-                {/* Key Features */}
-                <div
-                  className="space-y-4"
-                  role="list"
-                  aria-label="Timed quiz features"
-                >
-                  <div
-                    className="flex items-center gap-3 p-3 bg-red-50 rounded-lg"
-                    role="listitem"
-                  >
-                    <div
-                      className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center"
-                      aria-hidden="true"
-                    >
-                      <span className="text-white text-sm">⏱️</span>
-                    </div>
-                    <div>
-                      <div className="font-semibold text-red-900">
-                        30-Minute Timer
-                      </div>
-                      <div className="text-sm text-red-700">
-                        Matches real citizenship test conditions
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg"
-                    role="listitem"
-                  >
-                    <div
-                      className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center"
-                      aria-hidden="true"
-                    >
-                      <span className="text-white text-sm">20</span>
-                    </div>
-                    <div>
-                      <div className="font-semibold text-orange-900">
-                        20 Questions
-                      </div>
-                      <div className="text-sm text-orange-700">
-                        Same format as the official test
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg"
-                    role="listitem"
-                  >
-                    <div
-                      className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center"
-                      aria-hidden="true"
-                    >
-                      <span className="text-white text-sm">🎯</span>
-                    </div>
-                    <div>
-                      <div className="font-semibold text-yellow-900">
-                        Final Score
-                      </div>
-                      <div className="text-sm text-yellow-700">
-                        See your results at the end
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                  <div className="text-sm font-semibold text-red-800 mb-2">
-                    <span aria-hidden="true">🚀</span> Best for:
-                  </div>
-                  <div className="text-sm text-red-700">
-                    Test readiness assessment, final preparation, confidence
-                    building
-                  </div>
-                </div>
-
-                <Button
-                  className="w-full bg-red-600 hover:bg-red-700 text-white text-lg py-4 shadow-lg hover:shadow-xl transition-all focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                  onClick={() => handleStartQuiz("timed", "/quiz/timed")}
-                  aria-describedby="timed-quiz-full-desc"
-                >
-                  <TrendingUp className="mr-2 h-5 w-5" aria-hidden="true" />
-                  Start Test Simulation
-                </Button>
-                <div id="timed-quiz-full-desc" className="sr-only">
-                  Start the timed quiz with 30-minute limit, 20 questions,
-                  simulating real test conditions
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Bottom Section */}
-          <div className="text-center mt-16">
-            <div className="max-w-2xl mx-auto mb-8 p-6 bg-white/80 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                <span aria-hidden="true">📚</span> Study Strategy Recommendation
-              </h3>
-              <ol className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm list-none">
-                <li className="flex items-center gap-2">
-                  <span
-                    className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold"
-                    aria-hidden="true"
-                  >
-                    1
-                  </span>
-                  <span className="text-gray-700">
-                    Start with Standard Quiz
-                  </span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span
-                    className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold"
-                    aria-hidden="true"
-                  >
-                    2
-                  </span>
-                  <span className="text-gray-700">Study weak areas</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span
-                    className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold"
-                    aria-hidden="true"
-                  >
-                    3
-                  </span>
-                  <span className="text-gray-700">Take Timed Quiz</span>
-                </li>
-              </ol>
+              </div>
             </div>
-
-            <nav
-              className="flex flex-col sm:flex-row justify-center items-center gap-4"
-              aria-label="Additional resources"
-            >
-              <Link href="/faq">
-                <Button
-                  variant="outline"
-                  className="text-gray-600 hover:text-red-600 hover:border-red-600 focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                >
-                  <MessageCircleQuestion
-                    className="mr-2 h-4 w-4"
-                    aria-hidden="true"
-                  />
-                  Learn About Test Format
-                </Button>
-              </Link>
-              <Link href="/study-guide">
-                <Button
-                  variant="outline"
-                  className="text-blue-600 hover:text-blue-700 hover:border-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                >
-                  <BookOpen className="mr-2 h-4 w-4" aria-hidden="true" />
-                  Study Guide First
-                </Button>
-              </Link>
-            </nav>
           </div>
         </div>
       </section>
+
+      {/* Secondary Journey Cards */}
+      <section
+        className="py-16 lg:py-24 bg-gray-50"
+        aria-labelledby="journey-heading"
+      >
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center mb-16">
+            <h2
+              id="journey-heading"
+              className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4"
+            >
+              Additional Learning Resources
+            </h2>
+            <p className="text-xl text-gray-600">
+              Explore more ways to prepare and test your knowledge
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {/* Quiz Path */}
+            <Card className="border-2 border-red-200 hover:border-red-400 transition-colors bg-white focus-within:ring-2 focus-within:ring-red-500 focus-within:ring-offset-2">
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto mb-3 p-3 bg-red-100 rounded-full w-fit">
+                  <ListChecks
+                    className="h-8 w-8 text-red-600"
+                    aria-hidden="true"
+                  />
+                </div>
+                <CardTitle className="text-xl text-red-800">
+                  Test Yourself
+                </CardTitle>
+                <CardDescription className="text-red-600">
+                  Take timed quizzes to simulate the real test experience
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  className="w-full bg-red-600 hover:bg-red-700 text-white focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                  onClick={() => handleStartQuiz("standard", "/quiz")}
+                  aria-describedby="standard-quiz-desc"
+                >
+                  Standard Quiz
+                </Button>
+                <div id="standard-quiz-desc" className="sr-only">
+                  Take an untimed practice quiz with instant feedback
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full border-red-600 text-red-600 hover:bg-red-50 focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                  onClick={() => handleStartQuiz("timed", "/quiz/timed")}
+                  aria-describedby="timed-quiz-desc"
+                >
+                  <span aria-hidden="true">⏱️</span> Timed Quiz
+                </Button>
+                <div id="timed-quiz-desc" className="sr-only">
+                  Take a 30-minute timed quiz simulating the real test
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* AI Assistant Path */}
+            <Card className="border-2 border-blue-200 hover:border-blue-400 transition-colors bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2">
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto mb-3 p-3 bg-blue-100 rounded-full w-fit">
+                  <Sparkles
+                    className="h-8 w-8 text-blue-600"
+                    aria-hidden="true"
+                  />
+                </div>
+                <CardTitle className="text-xl text-blue-800">
+                  AI Assistant
+                </CardTitle>
+                <CardDescription className="text-blue-600">
+                  Get personalized help and answers to your questions
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  asChild
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  <Link href="/ask-ai" aria-describedby="ai-assistant-desc">
+                    <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
+                    Ask AI Assistant
+                  </Link>
+                </Button>
+                <div id="ai-assistant-desc" className="sr-only">
+                  Get personalized help from our AI-powered study assistant
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Explore Path */}
+            <Card className="border-2 border-green-200 hover:border-green-400 transition-colors bg-white focus-within:ring-2 focus-within:ring-green-500 focus-within:ring-offset-2">
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto mb-3 p-3 bg-green-100 rounded-full w-fit">
+                  <Map className="h-8 w-8 text-green-600" aria-hidden="true" />
+                </div>
+                <CardTitle className="text-xl text-green-800">
+                  Explore Canada
+                </CardTitle>
+                <CardDescription className="text-green-600">
+                  Discover Canadian culture, geography, and heritage
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  asChild
+                  className="w-full bg-green-600 hover:bg-green-700 text-white focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                >
+                  <Link href="/map" aria-describedby="interactive-map-desc">
+                    Interactive Map
+                  </Link>
+                </Button>
+                <div id="interactive-map-desc" className="sr-only">
+                  Explore an interactive map of Canada with cultural and
+                  geographic information
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Floating Quick Access */}
+      <div className="fixed bottom-6 right-6 z-40 hidden lg:block">
+        <div className="flex flex-col gap-3">
+          <Button
+            size="lg"
+            className="bg-blue-600 hover:bg-blue-700 text-white shadow-2xl hover:shadow-3xl transition-all focus:ring-4 focus:ring-blue-500 focus:ring-offset-2 rounded-full px-6 py-4"
+            asChild
+          >
+            <Link href="/study-guide" aria-label="Quick access to study guide">
+              <BookOpen className="h-6 w-6" aria-hidden="true" />
+            </Link>
+          </Button>
+          <Button
+            size="lg"
+            className="bg-green-600 hover:bg-green-700 text-white shadow-2xl hover:shadow-3xl transition-all focus:ring-4 focus:ring-green-500 focus:ring-offset-2 rounded-full px-6 py-4"
+            onClick={() => handleStartQuiz("practice", "/practice")}
+            aria-label="Quick access to practice mode"
+          >
+            <Users className="h-6 w-6" aria-hidden="true" />
+          </Button>
+        </div>
+      </div>
 
       {/* Features Section */}
       <section className="py-16 lg:py-24 bg-gray-50">

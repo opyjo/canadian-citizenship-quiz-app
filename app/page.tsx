@@ -110,58 +110,103 @@ export default function HomePage() {
               test. Everything you need to study for your citizenship exam in
               one convenient resource.
             </p>
-            <div className="mt-8 flex flex-col sm:flex-row sm:justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
-                  onClick={() => handleStartQuiz("standard", "/quiz")}
-                >
-                  Standard Quiz
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50"
-                  onClick={() => handleStartQuiz("timed", "/quiz/timed")}
-                >
-                  Timed Quiz
-                </Button>
+            <div className="mt-12">
+              {/* User Journey Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                {/* Quiz Path */}
+                <Card className="border-2 border-red-200 hover:border-red-400 transition-colors bg-red-50/50">
+                  <CardHeader className="text-center pb-4">
+                    <div className="mx-auto mb-3 p-3 bg-red-100 rounded-full w-fit">
+                      <ListChecks className="h-8 w-8 text-red-600" />
+                    </div>
+                    <CardTitle className="text-xl text-red-800">
+                      Test Yourself
+                    </CardTitle>
+                    <CardDescription className="text-red-600">
+                      Ready to practice? Take our citizenship quizzes
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Button
+                      className="w-full bg-red-600 hover:bg-red-700 text-white"
+                      onClick={() => handleStartQuiz("standard", "/quiz")}
+                    >
+                      Standard Quiz
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full border-red-600 text-red-600 hover:bg-red-50"
+                      onClick={() => handleStartQuiz("timed", "/quiz/timed")}
+                    >
+                      ⏱️ Timed Quiz
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Study Path */}
+                <Card className="border-2 border-blue-200 hover:border-blue-400 transition-colors bg-blue-50/50">
+                  <CardHeader className="text-center pb-4">
+                    <div className="mx-auto mb-3 p-3 bg-blue-100 rounded-full w-fit">
+                      <BookOpen className="h-8 w-8 text-blue-600" />
+                    </div>
+                    <CardTitle className="text-xl text-blue-800">
+                      Learn First
+                    </CardTitle>
+                    <CardDescription className="text-blue-600">
+                      New to the test? Start with our comprehensive guide
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Button
+                      asChild
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Link href="/study-guide">Study Guide</Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="w-full border-blue-600 text-blue-600 hover:bg-blue-50"
+                    >
+                      <Link href="/ask-ai">
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Ask AI Assistant
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Explore Path */}
+                <Card className="border-2 border-green-200 hover:border-green-400 transition-colors bg-green-50/50">
+                  <CardHeader className="text-center pb-4">
+                    <div className="mx-auto mb-3 p-3 bg-green-100 rounded-full w-fit">
+                      <Map className="h-8 w-8 text-green-600" />
+                    </div>
+                    <CardTitle className="text-xl text-green-800">
+                      Explore Canada
+                    </CardTitle>
+                    <CardDescription className="text-green-600">
+                      Discover Canadian culture, geography, and heritage
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Button
+                      asChild
+                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <Link href="/map">Interactive Map</Link>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full border-green-600 text-green-600 hover:bg-green-50"
+                      onClick={() => handleStartQuiz("practice", "/practice")}
+                    >
+                      <Users className="mr-2 h-4 w-4" />
+                      Practice Mode
+                    </Button>
+                  </CardContent>
+                </Card>
               </div>
-              <Button
-                asChild
-                size="lg"
-                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <Link href="/ask-ai">
-                  <Sparkles className="mr-2 h-5 w-5" /> Ask AI Assistant
-                </Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="w-full sm:w-auto border-green-600 text-green-600 hover:bg-green-50"
-              >
-                <Link href="/map">
-                  <Map className="mr-2 h-5 w-5" /> Explore Canada Map
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-4"
-                onClick={() => handleStartQuiz("practice", "/practice")}
-              >
-                Practice Mode
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="text-lg px-8 py-4 border-blue-600 text-blue-600 hover:bg-blue-50"
-                onClick={() => router.push("/study-guide")}
-              >
-                View Study Guide
-              </Button>
             </div>
 
             {/* Stats */}

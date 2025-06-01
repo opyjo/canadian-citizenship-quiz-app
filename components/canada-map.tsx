@@ -7,12 +7,20 @@ import {
   Geography,
   ZoomableGroup,
 } from "react-simple-maps";
-import { Info, Users, MapPin } from "lucide-react";
+import {
+  Info,
+  Users,
+  MapPin,
+  Globe,
+  Music,
+  Calendar,
+  UtensilsCrossed,
+} from "lucide-react";
 
 // GeoJSON URL for Canadian provinces and territories
 const GEO_URL = "/canada-provinces.json";
 
-// Enhanced data for provinces and territories with citizenship test relevant information
+// Enhanced data for provinces and territories with cultural information
 const PROVINCE_TERRITORY_DATA: Record<
   string,
   {
@@ -23,6 +31,11 @@ const PROVINCE_TERRITORY_DATA: Record<
     capital: string;
     keyFacts: string[];
     population: string;
+    indigenousTerritories: string[];
+    languages: string[];
+    festivals: string[];
+    traditionalFoods: string[];
+    culturalHighlights: string[];
   }
 > = {
   Alberta: {
@@ -34,6 +47,29 @@ const PROVINCE_TERRITORY_DATA: Record<
     capital: "Edmonton",
     keyFacts: ["Oil and gas industry", "Calgary Stampede", "Canadian Rockies"],
     population: "4.6 million",
+    indigenousTerritories: [
+      "Treaty 6",
+      "Treaty 7",
+      "Treaty 8",
+      "Métis Settlements",
+    ],
+    languages: ["English", "French", "Cree", "Blackfoot", "German", "Tagalog"],
+    festivals: [
+      "Calgary Stampede",
+      "Edmonton Folk Music Festival",
+      "Heritage Festival",
+    ],
+    traditionalFoods: [
+      "Alberta beef",
+      "Saskatoon berry pie",
+      "Bison",
+      "Wild rice",
+    ],
+    culturalHighlights: [
+      "Cowboy culture",
+      "Indigenous powwows",
+      "Métis fiddle music",
+    ],
   },
   "British Columbia": {
     name: "British Columbia",
@@ -44,6 +80,36 @@ const PROVINCE_TERRITORY_DATA: Record<
     capital: "Victoria",
     keyFacts: ["Pacific gateway", "Film industry", "Coastal rainforests"],
     population: "5.2 million",
+    indigenousTerritories: [
+      "Coast Salish",
+      "Haida",
+      "Nuu-chah-nulth",
+      "Tsilhqot'in",
+    ],
+    languages: [
+      "English",
+      "Mandarin",
+      "Cantonese",
+      "Punjabi",
+      "Korean",
+      "Indigenous languages",
+    ],
+    festivals: [
+      "Vancouver International Film Festival",
+      "PNE",
+      "Celebration of Light",
+    ],
+    traditionalFoods: [
+      "Pacific salmon",
+      "Spot prawns",
+      "Nanaimo bars",
+      "Cedar plank fish",
+    ],
+    culturalHighlights: [
+      "Totem poles",
+      "Asian cultural influence",
+      "West Coast Indigenous art",
+    ],
   },
   Manitoba: {
     name: "Manitoba",
@@ -54,6 +120,21 @@ const PROVINCE_TERRITORY_DATA: Record<
     capital: "Winnipeg",
     keyFacts: ["Polar bears in Churchill", "Red River", "Wheat farming"],
     population: "1.4 million",
+    indigenousTerritories: [
+      "Treaty 1",
+      "Treaty 2",
+      "Treaty 3",
+      "Treaty 4",
+      "Treaty 5",
+    ],
+    languages: ["English", "French", "Cree", "Ojibwe", "Tagalog", "German"],
+    festivals: ["Winnipeg Folk Festival", "Festival du Voyageur", "Folklorama"],
+    traditionalFoods: ["Wild rice", "Bannock", "Pickerel", "Honey cake"],
+    culturalHighlights: [
+      "Métis culture",
+      "Ukrainian heritage",
+      "Indigenous storytelling",
+    ],
   },
   "New Brunswick": {
     name: "New Brunswick",
@@ -64,6 +145,19 @@ const PROVINCE_TERRITORY_DATA: Record<
     capital: "Fredericton",
     keyFacts: ["Officially bilingual", "Bay of Fundy tides", "Covered bridges"],
     population: "789,000",
+    indigenousTerritories: ["Mi'kmaq", "Maliseet", "Passamaquoddy"],
+    languages: ["English", "French", "Mi'kmaq"],
+    festivals: [
+      "Harvest Jazz & Blues Festival",
+      "Acadian Festival",
+      "Lobster Festival",
+    ],
+    traditionalFoods: ["Lobster rolls", "Fiddleheads", "Dulse", "Rappie pie"],
+    culturalHighlights: [
+      "Acadian culture",
+      "Maritime music",
+      "Celtic traditions",
+    ],
   },
   "Newfoundland and Labrador": {
     name: "Newfoundland and Labrador",
@@ -74,6 +168,11 @@ const PROVINCE_TERRITORY_DATA: Record<
     capital: "St. John's",
     keyFacts: ["Joined Canada in 1949", "Viking settlement", "Iceberg Alley"],
     population: "521,000",
+    indigenousTerritories: ["Innu", "Mi'kmaq", "Inuit", "Beothuk (extinct)"],
+    languages: ["English", "French", "Inuktitut", "Innu-aimun"],
+    festivals: ["St. John's Regatta", "Folk Festival", "Iceberg Festival"],
+    traditionalFoods: ["Cod", "Seal flipper pie", "Bakeapple", "Jiggs dinner"],
+    culturalHighlights: ["Outport culture", "Irish traditions", "Inuit art"],
   },
   "Nova Scotia": {
     name: "Nova Scotia",
@@ -88,6 +187,19 @@ const PROVINCE_TERRITORY_DATA: Record<
       "Lobster fishing",
     ],
     population: "992,000",
+    indigenousTerritories: ["Mi'kmaq"],
+    languages: ["English", "French", "Mi'kmaq", "Arabic"],
+    festivals: [
+      "Halifax Jazz Festival",
+      "Celtic Colours",
+      "Apple Blossom Festival",
+    ],
+    traditionalFoods: ["Lobster", "Scallops", "Blueberries", "Solomon Gundy"],
+    culturalHighlights: [
+      "Celtic heritage",
+      "Maritime traditions",
+      "African Nova Scotian culture",
+    ],
   },
   Ontario: {
     name: "Ontario",
@@ -98,6 +210,24 @@ const PROVINCE_TERRITORY_DATA: Record<
     capital: "Toronto",
     keyFacts: ["National capital Ottawa", "Niagara Falls", "CN Tower"],
     population: "15.6 million",
+    indigenousTerritories: ["Haudenosaunee", "Anishinaabe", "Huron-Wendat"],
+    languages: ["English", "French", "Mandarin", "Italian", "Punjabi", "Urdu"],
+    festivals: [
+      "Toronto International Film Festival",
+      "Caribana",
+      "Winterlude",
+    ],
+    traditionalFoods: [
+      "Butter tarts",
+      "Peameal bacon",
+      "Ice wine",
+      "Maple syrup",
+    ],
+    culturalHighlights: [
+      "Multicultural mosaic",
+      "Indigenous powwows",
+      "Francophone communities",
+    ],
   },
   "Prince Edward Island": {
     name: "Prince Edward Island",
@@ -112,6 +242,24 @@ const PROVINCE_TERRITORY_DATA: Record<
       "Potato farming",
     ],
     population: "164,000",
+    indigenousTerritories: ["Mi'kmaq"],
+    languages: ["English", "French", "Mi'kmaq"],
+    festivals: [
+      "Anne of Green Gables Festival",
+      "PEI Jazz Festival",
+      "Potato Blossom Festival",
+    ],
+    traditionalFoods: [
+      "PEI potatoes",
+      "Mussels",
+      "Malpeque oysters",
+      "Cow's ice cream",
+    ],
+    culturalHighlights: [
+      "Anne of Green Gables heritage",
+      "Acadian culture",
+      "Celtic music",
+    ],
   },
   Quebec: {
     name: "Quebec",
@@ -122,6 +270,21 @@ const PROVINCE_TERRITORY_DATA: Record<
     capital: "Quebec City",
     keyFacts: ["French majority", "Quebec City walls", "Maple syrup"],
     population: "8.6 million",
+    indigenousTerritories: [
+      "Cree",
+      "Inuit",
+      "Mohawk",
+      "Huron-Wendat",
+      "Mi'kmaq",
+    ],
+    languages: ["French", "English", "Cree", "Inuktitut", "Arabic"],
+    festivals: ["Carnaval de Québec", "Festival d'été", "Just for Laughs"],
+    traditionalFoods: ["Poutine", "Tourtière", "Maple syrup", "Tarte au sucre"],
+    culturalHighlights: [
+      "French-Canadian culture",
+      "Indigenous traditions",
+      "Joual dialect",
+    ],
   },
   Saskatchewan: {
     name: "Saskatchewan",
@@ -132,6 +295,20 @@ const PROVINCE_TERRITORY_DATA: Record<
     capital: "Regina",
     keyFacts: ["Wheat province", "RCMP training depot", "Potash mining"],
     population: "1.2 million",
+    indigenousTerritories: ["Treaty 4", "Treaty 6", "Treaty 8", "Treaty 10"],
+    languages: ["English", "Cree", "French", "German", "Ukrainian"],
+    festivals: ["Saskatchewan Jazz Festival", "Folkfest", "Mosaic Festival"],
+    traditionalFoods: [
+      "Saskatoon berries",
+      "Bannock",
+      "Wild game",
+      "Pierogies",
+    ],
+    culturalHighlights: [
+      "Prairie culture",
+      "Ukrainian heritage",
+      "Indigenous ceremonies",
+    ],
   },
   "Northwest Territories": {
     name: "Northwest Territories",
@@ -142,6 +319,26 @@ const PROVINCE_TERRITORY_DATA: Record<
     capital: "Yellowknife",
     keyFacts: ["Aurora borealis", "Diamond mines", "Midnight sun"],
     population: "45,000",
+    indigenousTerritories: ["Dene", "Métis", "Inuvialuit"],
+    languages: [
+      "English",
+      "French",
+      "Chipewyan",
+      "Dogrib",
+      "Gwich'in",
+      "Inuvialuktun",
+    ],
+    festivals: [
+      "Yellowknife Folk on the Rocks",
+      "Caribou Carnival",
+      "Long John Jamboree",
+    ],
+    traditionalFoods: ["Caribou", "Arctic char", "Cloudberries", "Bannock"],
+    culturalHighlights: [
+      "Dene traditions",
+      "Diamond cutting",
+      "Northern lights ceremonies",
+    ],
   },
   Nunavut: {
     name: "Nunavut",
@@ -152,6 +349,15 @@ const PROVINCE_TERRITORY_DATA: Record<
     capital: "Iqaluit",
     keyFacts: ["Newest territory", "Inuit majority", "Arctic archipelago"],
     population: "40,000",
+    indigenousTerritories: ["Inuit"],
+    languages: ["Inuktitut", "English", "French", "Inuinnaqtun"],
+    festivals: ["Toonik Tyme", "Alianait Festival", "Nunavut Day"],
+    traditionalFoods: ["Seal", "Arctic char", "Caribou", "Muktuk"],
+    culturalHighlights: [
+      "Inuit throat singing",
+      "Soapstone carving",
+      "Traditional hunting",
+    ],
   },
   "Yukon Territory": {
     name: "Yukon",
@@ -162,6 +368,23 @@ const PROVINCE_TERRITORY_DATA: Record<
     capital: "Whitehorse",
     keyFacts: ["Klondike Gold Rush", "Mount Logan", "Midnight sun"],
     population: "43,000",
+    indigenousTerritories: [
+      "Champagne and Aishihik",
+      "Tr'ondëk Hwëch'in",
+      "Vuntut Gwitchin",
+    ],
+    languages: ["English", "French", "Gwich'in", "Han", "Northern Tutchone"],
+    festivals: [
+      "Yukon Sourdough Rendezvous",
+      "Dawson City Music Festival",
+      "Adäka Festival",
+    ],
+    traditionalFoods: ["Salmon", "Moose", "Wild berries", "Sourdough bread"],
+    culturalHighlights: [
+      "Gold Rush heritage",
+      "First Nations traditions",
+      "Midnight sun festivals",
+    ],
   },
 };
 
@@ -270,6 +493,7 @@ const CanadaMap: React.FC = () => {
     x: number;
     y: number;
   }>({ x: 0, y: 0 });
+  const [activeTab, setActiveTab] = useState<"general" | "cultural">("general");
 
   const handleMouseEnter = (
     geo: any,
@@ -414,9 +638,9 @@ const CanadaMap: React.FC = () => {
         </div>
       )}
 
-      {/* Region Info Panel */}
+      {/* Enhanced Region Info Panel with Cultural Information */}
       {selectedRegion && (
-        <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm p-6 shadow-xl rounded-lg z-10 border border-gray-200 max-w-sm">
+        <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm p-6 shadow-xl rounded-lg z-10 border border-gray-200 max-w-md max-h-[80vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <MapPin className="h-5 w-5 text-red-600" />
@@ -434,35 +658,175 @@ const CanadaMap: React.FC = () => {
           </div>
 
           {selectedRegionInfo ? (
-            <div className="space-y-3 text-sm">
-              <div>
-                <span className="font-semibold text-gray-700">Capital:</span>{" "}
-                {selectedRegionInfo.capital}
-              </div>
-              <div>
-                <span className="font-semibold text-gray-700">Population:</span>{" "}
-                {selectedRegionInfo.population}
-              </div>
-              <div>
-                <span className="font-semibold text-gray-700">Density:</span>{" "}
-                {selectedRegionInfo.populationDensity} people/km²
-              </div>
-              <div>
-                <p className="text-gray-600 leading-relaxed">
-                  {selectedRegionInfo.description}
-                </p>
+            <div className="space-y-4">
+              {/* Tab Navigation */}
+              <div className="flex border-b border-gray-200">
+                <button
+                  onClick={() => setActiveTab("general")}
+                  className={`flex-1 py-2 px-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === "general"
+                      ? "border-red-600 text-red-600"
+                      : "border-transparent text-gray-600 hover:text-gray-800"
+                  }`}
+                >
+                  General Info
+                </button>
+                <button
+                  onClick={() => setActiveTab("cultural")}
+                  className={`flex-1 py-2 px-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === "cultural"
+                      ? "border-red-600 text-red-600"
+                      : "border-transparent text-gray-600 hover:text-gray-800"
+                  }`}
+                >
+                  Cultural Heritage
+                </button>
               </div>
 
-              <div>
-                <span className="font-semibold text-gray-700 block mb-2">
-                  Key Facts:
-                </span>
-                <ul className="list-disc list-inside space-y-1 text-gray-600">
-                  {selectedRegionInfo.keyFacts.map((fact, index) => (
-                    <li key={index}>{fact}</li>
-                  ))}
-                </ul>
-              </div>
+              {/* General Information Tab */}
+              {activeTab === "general" && (
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <span className="font-semibold text-gray-700">
+                      Capital:
+                    </span>{" "}
+                    {selectedRegionInfo.capital}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-700">
+                      Population:
+                    </span>{" "}
+                    {selectedRegionInfo.population}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-700">
+                      Density:
+                    </span>{" "}
+                    {selectedRegionInfo.populationDensity} people/km²
+                  </div>
+                  <div>
+                    <p className="text-gray-600 leading-relaxed">
+                      {selectedRegionInfo.description}
+                    </p>
+                  </div>
+
+                  <div>
+                    <span className="font-semibold text-gray-700 block mb-2">
+                      Key Facts:
+                    </span>
+                    <ul className="list-disc list-inside space-y-1 text-gray-600">
+                      {selectedRegionInfo.keyFacts.map((fact, index) => (
+                        <li key={index}>{fact}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* Cultural Information Tab */}
+              {activeTab === "cultural" && (
+                <div className="space-y-4 text-sm">
+                  {/* Indigenous Territories */}
+                  <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Globe className="h-4 w-4 text-amber-600" />
+                      <span className="font-semibold text-amber-800">
+                        Indigenous Territories:
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedRegionInfo.indigenousTerritories.map(
+                        (territory, index) => (
+                          <span
+                            key={index}
+                            className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded"
+                          >
+                            {territory}
+                          </span>
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Languages */}
+                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Globe className="h-4 w-4 text-blue-600" />
+                      <span className="font-semibold text-blue-800">
+                        Languages Spoken:
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedRegionInfo.languages.map((language, index) => (
+                        <span
+                          key={index}
+                          className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded"
+                        >
+                          {language}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Festivals & Events */}
+                  <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Calendar className="h-4 w-4 text-purple-600" />
+                      <span className="font-semibold text-purple-800">
+                        Cultural Festivals:
+                      </span>
+                    </div>
+                    <ul className="space-y-1">
+                      {selectedRegionInfo.festivals.map((festival, index) => (
+                        <li key={index} className="text-xs text-purple-700">
+                          • {festival}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Traditional Foods */}
+                  <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <UtensilsCrossed className="h-4 w-4 text-green-600" />
+                      <span className="font-semibold text-green-800">
+                        Traditional Foods:
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedRegionInfo.traditionalFoods.map(
+                        (food, index) => (
+                          <span
+                            key={index}
+                            className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded"
+                          >
+                            {food}
+                          </span>
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Cultural Highlights */}
+                  <div className="bg-rose-50 p-3 rounded-lg border border-rose-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Music className="h-4 w-4 text-rose-600" />
+                      <span className="font-semibold text-rose-800">
+                        Cultural Highlights:
+                      </span>
+                    </div>
+                    <ul className="space-y-1">
+                      {selectedRegionInfo.culturalHighlights.map(
+                        (highlight, index) => (
+                          <li key={index} className="text-xs text-rose-700">
+                            • {highlight}
+                          </li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-3 text-sm">
@@ -494,6 +858,7 @@ const CanadaMap: React.FC = () => {
         <ul className="text-xs text-gray-600 space-y-1">
           <li>• Hover to see region names</li>
           <li>• Click to view detailed info</li>
+          <li>• Switch tabs for cultural data</li>
           <li>• Scroll to zoom in/out</li>
           <li>• Drag to pan the map</li>
         </ul>

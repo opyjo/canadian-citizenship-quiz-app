@@ -21,6 +21,7 @@ import {
   TrendingUp,
   MessageCircleQuestion,
   Map,
+  Bot,
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -128,38 +129,42 @@ export default function HomePage() {
             </p>
 
             {/* Primary Action Buttons */}
-            <div
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
-              id="main-content"
-            >
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-8">
               <Button
                 size="lg"
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xl px-12 py-6 shadow-xl hover:shadow-2xl transition-all focus:ring-4 focus:ring-blue-500 focus:ring-offset-2 transform hover:scale-105"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                 asChild
               >
-                <Link href="/study-guide" aria-describedby="primary-study-desc">
-                  <BookOpen className="mr-3 h-6 w-6" aria-hidden="true" />
+                <Link
+                  href="/study-guide"
+                  aria-describedby="study-guide-description"
+                >
                   Start Studying Now
                 </Link>
               </Button>
-              <div id="primary-study-desc" className="sr-only">
-                Access comprehensive study materials covering all citizenship
-                test topics
-              </div>
-
               <Button
                 size="lg"
                 variant="outline"
-                className="border-2 border-green-600 text-green-600 hover:bg-green-600 hover:text-white text-xl px-12 py-6 shadow-xl hover:shadow-2xl transition-all focus:ring-4 focus:ring-green-500 focus:ring-offset-2 transform hover:scale-105"
-                onClick={() => handleStartQuiz("practice", "/practice")}
-                aria-describedby="primary-practice-desc"
+                className="border-green-600 text-green-700 hover:bg-green-600 hover:text-white px-8 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                asChild
               >
-                <Users className="mr-3 h-6 w-6" aria-hidden="true" />
-                Practice Mode
+                <Link
+                  href="/practice"
+                  aria-describedby="practice-mode-description"
+                >
+                  Practice Mode
+                </Link>
               </Button>
-              <div id="primary-practice-desc" className="sr-only">
-                Practice with unlimited questions in a relaxed, pressure-free
-                environment
+            </div>
+
+            {/* AI Assistant Introduction */}
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-full px-4 py-2 text-sm text-purple-700">
+                <Bot className="h-4 w-4" />
+                <span>
+                  💡 <strong>New:</strong> Get instant help with our AI
+                  assistant - look for the purple button!
+                </span>
               </div>
             </div>
 
@@ -548,29 +553,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* Floating Quick Access */}
-      <div className="fixed bottom-6 right-6 z-40 hidden lg:block">
-        <div className="flex flex-col gap-3">
-          <Button
-            size="lg"
-            className="bg-blue-600 hover:bg-blue-700 text-white shadow-2xl hover:shadow-3xl transition-all focus:ring-4 focus:ring-blue-500 focus:ring-offset-2 rounded-full px-6 py-4"
-            asChild
-          >
-            <Link href="/study-guide" aria-label="Quick access to study guide">
-              <BookOpen className="h-6 w-6" aria-hidden="true" />
-            </Link>
-          </Button>
-          <Button
-            size="lg"
-            className="bg-green-600 hover:bg-green-700 text-white shadow-2xl hover:shadow-3xl transition-all focus:ring-4 focus:ring-green-500 focus:ring-offset-2 rounded-full px-6 py-4"
-            onClick={() => handleStartQuiz("practice", "/practice")}
-            aria-label="Quick access to practice mode"
-          >
-            <Users className="h-6 w-6" aria-hidden="true" />
-          </Button>
-        </div>
-      </div>
 
       {/* Features Section */}
       <section className="py-16 lg:py-24 bg-gray-50">

@@ -22,6 +22,8 @@ import {
   MessageCircleQuestion,
   Map,
   Bot,
+  ChevronDown,
+  Clock,
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -121,32 +123,60 @@ export default function HomePage() {
             </p>
 
             {/* Primary Action Buttons */}
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-8">
-              <Button
-                size="lg"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-                asChild
-              >
-                <Link
-                  href="/study-guide"
-                  aria-describedby="study-guide-description"
+            <div className="flex flex-col gap-6 mb-8">
+              {/* Main Learning Actions */}
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+                <Button
+                  size="lg"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                  asChild
                 >
-                  Start Studying Now
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-green-600 text-green-700 hover:bg-green-600 hover:text-white px-8 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-                asChild
-              >
-                <Link
-                  href="/practice"
-                  aria-describedby="practice-mode-description"
+                  <Link
+                    href="/study"
+                    aria-describedby="study-guide-description"
+                  >
+                    Start Studying Now
+                  </Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-green-600 text-green-700 hover:bg-green-600 hover:text-white px-8 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                  asChild
                 >
-                  Practice Mode
-                </Link>
-              </Button>
+                  <Link
+                    href="/practice"
+                    aria-describedby="practice-mode-description"
+                  >
+                    Practice Mode
+                  </Link>
+                </Button>
+              </div>
+
+              {/* Quiz Options */}
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
+                <span className="text-gray-600 font-medium text-sm">
+                  Ready to test? →
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white px-6 py-2 font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105"
+                    onClick={() => handleStartQuiz("standard", "/quiz")}
+                  >
+                    <ListChecks className="mr-2 h-4 w-4" aria-hidden="true" />
+                    Standard Quiz
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white px-6 py-2 font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105"
+                    onClick={() => handleStartQuiz("timed", "/quiz/timed")}
+                  >
+                    <Clock className="mr-2 h-4 w-4" aria-hidden="true" />
+                    Timed Quiz
+                  </Button>
+                </div>
+              </div>
             </div>
 
             {/* AI Assistant Introduction */}
@@ -440,48 +470,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            {/* Quiz Path */}
-            <Card className="border-2 border-red-200 hover:border-red-400 transition-colors bg-white focus-within:ring-2 focus-within:ring-red-500 focus-within:ring-offset-2">
-              <CardHeader className="text-center pb-4">
-                <div className="mx-auto mb-3 p-3 bg-red-100 rounded-full w-fit">
-                  <ListChecks
-                    className="h-8 w-8 text-red-600"
-                    aria-hidden="true"
-                  />
-                </div>
-                <CardTitle className="text-xl text-red-800">
-                  Test Yourself
-                </CardTitle>
-                <CardDescription className="text-red-600">
-                  Take timed quizzes to simulate the real test experience
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  className="w-full bg-red-600 hover:bg-red-700 text-white focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                  onClick={() => handleStartQuiz("standard", "/quiz")}
-                  aria-describedby="standard-quiz-desc"
-                >
-                  Standard Quiz
-                </Button>
-                <div id="standard-quiz-desc" className="sr-only">
-                  Take an untimed practice quiz with instant feedback
-                </div>
-                <Button
-                  variant="outline"
-                  className="w-full border-red-600 text-red-600 hover:bg-red-50 focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                  onClick={() => handleStartQuiz("timed", "/quiz/timed")}
-                  aria-describedby="timed-quiz-desc"
-                >
-                  <span aria-hidden="true">⏱️</span> Timed Quiz
-                </Button>
-                <div id="timed-quiz-desc" className="sr-only">
-                  Take a 30-minute timed quiz simulating the real test
-                </div>
-              </CardContent>
-            </Card>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {/* AI Assistant Path */}
             <Card className="border-2 border-blue-200 hover:border-blue-400 transition-colors bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2">
               <CardHeader className="text-center pb-4">

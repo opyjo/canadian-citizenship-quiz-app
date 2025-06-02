@@ -11,15 +11,16 @@ export default function MapPage() {
             Interactive Map of Canada
           </h1>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Explore Canada's provinces and territories. Hover over any region to
-            see details about its geography, population density, and key
-            characteristics. Use your mouse wheel to zoom and drag to pan the
-            map.
+            Explore Canada's provinces and territories. Tap or click any region
+            to see details about its geography, population density, and key
+            characteristics. Use pinch-to-zoom or your mouse wheel to zoom, and
+            drag to pan the map.
           </p>
         </header>
 
         <main className="w-full max-w-7xl mx-auto bg-white shadow-2xl rounded-lg overflow-hidden border border-gray-200">
-          <div className="aspect-[4/3] sm:aspect-[16/9] md:aspect-[2/1] lg:aspect-[8/4.5] min-h-[500px]">
+          {/* The aspect ratio container helps maintain map proportions */}
+          <div className="aspect-[4/3] sm:aspect-[16/9] md:aspect-[2/1] lg:aspect-[8/4.5] min-h-[500px] sm:min-h-[600px]">
             <CanadaMap />
           </div>
         </main>

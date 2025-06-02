@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import type React from "react";
+import { useState, useEffect } from "react";
 import {
   ComposableMap,
   Geographies,
@@ -15,12 +16,13 @@ import {
   Music,
   Calendar,
   UtensilsCrossed,
+  X,
 } from "lucide-react";
 
 // GeoJSON URL for Canadian provinces and territories
-const GEO_URL = "/canada-provinces.json";
+const GEO_URL = "/canada-provinces.json"; // Make sure this file exists in your /public folder
 
-// Enhanced data for provinces and territories with cultural information
+// Enhanced data for provinces and territories (remains the same as provided)
 const PROVINCE_TERRITORY_DATA: Record<
   string,
   {
@@ -360,7 +362,7 @@ const PROVINCE_TERRITORY_DATA: Record<
     ],
   },
   "Yukon Territory": {
-    name: "Yukon",
+    name: "Yukon", // Matched to "Yukon Territory" in mapRegionName
     description:
       "A territory in northwestern Canada, known for the Klondike Gold Rush and mountainous terrain. Midnight sun land.",
     populationDensity: 0.09,
@@ -389,44 +391,49 @@ const PROVINCE_TERRITORY_DATA: Record<
 };
 
 const getDensityColor = (density: number | undefined): string => {
-  if (density === undefined) return "#CCCCCC";
+  if (density === undefined) return "#CCCCCC"; // neutral-300
   if (density > 20) return "#dc2626"; // red-600
-  if (density > 15) return "#ea580c"; // orange-600
-  if (density > 10) return "#d97706"; // amber-600
-  if (density > 5) return "#ca8a04"; // yellow-600
-  if (density > 2) return "#65a30d"; // lime-600
-  if (density > 1) return "#16a34a"; // green-600
-  if (density > 0) return "#059669"; // emerald-600
-  return "#0891b2"; // cyan-600
+  if (density > 15) return "#f97316"; // orange-500
+  if (density > 10) return "#f59e0b"; // amber-500
+  if (density > 5) return "#eab308"; // yellow-500
+  if (density > 2) return "#84cc16"; // lime-500
+  if (density > 1) return "#22c55e"; // green-500
+  if (density > 0) return "#10b981"; // emerald-500
+  return "#06b6d4"; // cyan-500
 };
 
 const Legend: React.FC = () => {
   const densityLevels = [
-    { color: "#dc2626", label: ">20 people/km²", range: "Very High" },
-    { color: "#ea580c", label: "15-20", range: "High" },
-    { color: "#d97706", label: "10-15", range: "Moderate-High" },
-    { color: "#ca8a04", label: "5-10", range: "Moderate" },
-    { color: "#65a30d", label: "2-5", range: "Low-Moderate" },
-    { color: "#16a34a", label: "1-2", range: "Low" },
-    { color: "#059669", label: "0-1", range: "Very Low" },
-    { color: "#0891b2", label: "<1", range: "Sparse" },
+    { color: "#dc2626", label: ">20 p/km²", range: "Very High" },
+    { color: "#f97316", label: "15-20", range: "High" },
+    { color: "#f59e0b", label: "10-15", range: "Mod-High" },
+    { color: "#eab308", label: "5-10", range: "Moderate" },
+    { color: "#84cc16", label: "2-5", range: "Low-Mod" },
+    { color: "#22c55e", label: "1-2", range: "Low" },
+    { color: "#10b981", label: "0-1", range: "Very Low" },
+    { color: "#06b6d4", label: "<1", range: "Sparse" },
     { color: "#CCCCCC", label: "No Data", range: "N/A" },
   ].reverse();
 
   return (
-    <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm p-4 shadow-lg rounded-lg text-xs z-10 border border-gray-200 max-w-48">
-      <div className="flex items-center gap-2 mb-3">
-        <Users className="h-4 w-4 text-gray-600" />
-        <h4 className="font-semibold text-gray-700">Population Density</h4>
+    <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 bg-white/80 backdrop-blur-sm p-2 sm:p-3 shadow-lg rounded-lg text-xs z-10 border border-gray-200 max-w-[120px] sm:max-w-40">
+      <div className="flex items-center gap-1 sm:gap-2 mb-1.5 sm:mb-2">
+        <Users className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600 flex-shrink-0" />
+        <h4 className="font-semibold text-gray-700 text-[10px] sm:text-xs leading-tight">
+          Population Density
+        </h4>
       </div>
-      <div className="space-y-1">
+      <div className="space-y-0.5">
         {densityLevels.map((level) => (
-          <div key={level.label} className="flex items-center gap-2">
+          <div key={level.label} className="flex items-center gap-1 sm:gap-1.5">
             <span
               style={{ backgroundColor: level.color }}
-              className="w-3 h-3 rounded-sm border border-gray-300 flex-shrink-0"
+              className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-sm border border-gray-300 flex-shrink-0"
             />
-            <span className="text-gray-600 text-xs">{level.label}</span>
+            <span className="text-gray-600 text-[10px] sm:text-xs leading-tight truncate">
+              <span className="hidden sm:inline">{level.label}</span>
+              <span className="sm:hidden">{level.range}</span>
+            </span>
           </div>
         ))}
       </div>
@@ -434,9 +441,30 @@ const Legend: React.FC = () => {
   );
 };
 
-// Enhanced region name extraction function
+const Instructions: React.FC = () => {
+  return (
+    <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-white/80 backdrop-blur-sm p-2 sm:p-3 shadow-lg rounded-lg z-10 border border-gray-200 max-w-[120px] sm:max-w-xs">
+      <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-1.5">
+        <Info className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 flex-shrink-0" />
+        <h4 className="font-semibold text-gray-700 text-[10px] sm:text-xs">
+          How to use
+        </h4>
+      </div>
+      <ul className="text-[10px] sm:text-xs text-gray-600 space-y-0.5 leading-tight">
+        <li className="sm:hidden">• Tap regions for info</li>
+        <li className="hidden sm:block">• Click regions for details</li>
+        <li className="sm:hidden">• Switch tabs for culture</li>
+        <li className="hidden sm:block">• Switch tabs for cultural data</li>
+        <li className="sm:hidden">• Pinch to zoom</li>
+        <li className="hidden sm:block">• Scroll wheel to zoom</li>
+        <li className="sm:hidden">• Drag to pan</li>
+        <li className="hidden sm:block">• Drag to pan map</li>
+      </ul>
+    </div>
+  );
+};
+
 const getRegionName = (geoProperties: any): string => {
-  // Try various property name variations commonly found in GeoJSON data
   const possibleNames = [
     geoProperties.name,
     geoProperties.NAME,
@@ -454,23 +482,15 @@ const getRegionName = (geoProperties: any): string => {
     geoProperties.region,
   ].filter(Boolean);
 
-  // Return the first valid name found
   for (const name of possibleNames) {
-    if (typeof name === "string" && name.trim()) {
-      return name.trim();
-    }
+    if (typeof name === "string" && name.trim()) return name.trim();
   }
-
-  // If no standard name found, return a fallback
   return Object.keys(geoProperties)[0] || "Unknown Region";
 };
 
-// Name mapping function to handle variations between GeoJSON and our data keys
 const mapRegionName = (geoJsonName: string): string => {
   const nameMapping: Record<string, string> = {
-    // Handle common variations
-    "Yukon Territory": "Yukon Territory",
-    Yukon: "Yukon Territory",
+    Yukon: "Yukon Territory", // Match GeoJSON "Yukon" to "Yukon Territory" in data
     "Northwest Territories": "Northwest Territories",
     NWT: "Northwest Territories",
     NL: "Newfoundland and Labrador",
@@ -480,52 +500,21 @@ const mapRegionName = (geoJsonName: string): string => {
     "N.B.": "New Brunswick",
     "B.C.": "British Columbia",
     BC: "British Columbia",
-    // Add more mappings as needed
   };
-
   return nameMapping[geoJsonName] || geoJsonName;
 };
 
 const CanadaMap: React.FC = () => {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
-  const [tooltipContent, setTooltipContent] = useState<string>("");
-  const [tooltipPosition, setTooltipPosition] = useState<{
-    x: number;
-    y: number;
-  }>({ x: 0, y: 0 });
   const [activeTab, setActiveTab] = useState<"general" | "cultural">("general");
+  const [isMobileView, setIsMobileView] = useState(false);
 
-  const handleMouseEnter = (
-    geo: any,
-    event: React.MouseEvent<SVGPathElement>
-  ) => {
-    const rawRegionName = getRegionName(geo.properties);
-    const regionName = mapRegionName(rawRegionName);
-    const regionInfo = PROVINCE_TERRITORY_DATA[regionName];
-
-    if (regionInfo) {
-      setTooltipContent(`${regionInfo.name} (${regionInfo.id})`);
-    } else {
-      setTooltipContent(rawRegionName || "Unknown region");
-      // Debug logging to help identify missing regions
-      console.log(
-        "Region not found in data:",
-        regionName,
-        "Raw name:",
-        rawRegionName,
-        "Properties:",
-        geo.properties
-      );
-    }
-  };
-
-  const handleMouseMove = (event: React.MouseEvent<SVGPathElement>) => {
-    setTooltipPosition({ x: event.clientX, y: event.clientY });
-  };
-
-  const handleMouseLeave = () => {
-    setTooltipContent("");
-  };
+  useEffect(() => {
+    const checkMobile = () => setIsMobileView(window.innerWidth < 640); // Tailwind 'sm' breakpoint
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const handleRegionClick = (geo: any) => {
     const rawRegionName = getRegionName(geo.properties);
@@ -534,15 +523,17 @@ const CanadaMap: React.FC = () => {
 
     if (regionInfo) {
       setSelectedRegion(regionName);
+      setActiveTab("general"); // Reset to general tab on new selection
     } else {
-      // Debug logging for troubleshooting
-      console.log("Clicked region not found:", regionName);
-      console.log("Raw region name:", rawRegionName);
-      console.log("Available properties:", geo.properties);
-      console.log("Available regions:", Object.keys(PROVINCE_TERRITORY_DATA));
-
-      // Still allow selection for debugging purposes
-      setSelectedRegion(rawRegionName);
+      console.warn(
+        "Clicked region not found in data:",
+        regionName,
+        "(Raw: ",
+        rawRegionName,
+        ") Props:",
+        geo.properties
+      );
+      setSelectedRegion(rawRegionName); // Still select to show debug info
     }
   };
 
@@ -551,19 +542,19 @@ const CanadaMap: React.FC = () => {
     : null;
 
   return (
-    <div className="w-full h-full relative bg-gradient-to-b from-blue-50 to-blue-100">
+    <div className="w-full h-full relative bg-gradient-to-b from-blue-100 to-sky-200">
       <ComposableMap
         projection="geoAzimuthalEqualArea"
         projectionConfig={{
           rotate: [100, -60, 0],
-          scale: 700,
+          scale: 600, // Slightly smaller scale for better fit
         }}
         width={800}
         height={600}
         style={{ width: "100%", height: "100%" }}
-        aria-label="Interactive map of Canada showing provinces and territories"
+        aria-label="Interactive map of Canada"
       >
-        <ZoomableGroup center={[-95, 65]} zoom={1} minZoom={0.5} maxZoom={8}>
+        <ZoomableGroup center={[-95, 65]} zoom={1} minZoom={0.5} maxZoom={10}>
           <Geographies geography={GEO_URL}>
             {({ geographies }) =>
               geographies.map((geo) => {
@@ -576,30 +567,28 @@ const CanadaMap: React.FC = () => {
                   <Geography
                     key={geo.rsmKey}
                     geography={geo}
-                    onMouseEnter={(event) => handleMouseEnter(geo, event)}
-                    onMouseMove={handleMouseMove}
-                    onMouseLeave={handleMouseLeave}
                     onClick={() => handleRegionClick(geo)}
                     style={{
                       default: {
                         fill: isSelected
-                          ? "#fbbf24"
+                          ? "#fbbf24" // amber-400
                           : getDensityColor(regionInfo?.populationDensity),
-                        stroke: "#1e293b",
-                        strokeWidth: isSelected ? 2 : 0.5,
+                        stroke: isSelected ? "#020617" : "#4b5563", // slate-950 : gray-600
+                        strokeWidth: isSelected ? 1.5 : 0.3, // Thinner default stroke
                         outline: "none",
+                        transition: "fill 0.2s, stroke-width 0.2s",
                       },
                       hover: {
-                        fill: "#fbbf24",
-                        stroke: "#1e293b",
-                        strokeWidth: 1.5,
+                        fill: "#fcd34d", // amber-300
+                        stroke: "#020617", // slate-950
+                        strokeWidth: 1,
                         outline: "none",
                         cursor: "pointer",
                       },
                       pressed: {
-                        fill: "#f59e0b",
-                        stroke: "#1e293b",
-                        strokeWidth: 2,
+                        fill: "#f59e0b", // amber-500
+                        stroke: "#020617", // slate-950
+                        strokeWidth: 1.5,
                         outline: "none",
                       },
                     }}
@@ -614,255 +603,252 @@ const CanadaMap: React.FC = () => {
         </ZoomableGroup>
       </ComposableMap>
 
-      {/* Tooltip */}
-      {tooltipContent && (
+      {/* Backdrop for mobile when panel is open */}
+      {selectedRegion && isMobileView && (
         <div
-          style={{
-            position: "fixed",
-            top: tooltipPosition.y + 15,
-            left: tooltipPosition.x + 15,
-            background: "rgba(255, 255, 255, 0.95)",
-            padding: "8px 12px",
-            border: "1px solid #e2e8f0",
-            borderRadius: "8px",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-            pointerEvents: "none",
-            zIndex: 1000,
-            fontSize: "0.875rem",
-            color: "#1e293b",
-            fontWeight: "500",
-            backdropFilter: "blur(4px)",
-          }}
-        >
-          {tooltipContent}
-        </div>
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-20 sm:hidden"
+          onClick={() => setSelectedRegion(null)}
+          aria-hidden="true"
+        />
       )}
 
-      {/* Enhanced Region Info Panel with Cultural Information */}
+      {/* Enhanced Region Info Panel - Mobile Responsive */}
       {selectedRegion && (
-        <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm p-6 shadow-xl rounded-lg z-10 border border-gray-200 max-w-md max-h-[80vh] overflow-y-auto">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-red-600" />
-              <h3 className="text-lg font-bold text-gray-900">
+        <div
+          className={`
+            fixed sm:absolute 
+            bottom-0 left-0 right-0 sm:left-4 sm:top-4 sm:bottom-auto sm:right-auto
+            bg-white/95 backdrop-blur-md shadow-2xl sm:shadow-xl 
+            border-t sm:border border-gray-200
+            rounded-t-2xl sm:rounded-lg 
+            z-30 
+            transition-transform duration-300 ease-out
+            w-full sm:max-w-md 
+            ${
+              selectedRegion && isMobileView
+                ? "translate-y-0"
+                : isMobileView
+                ? "translate-y-full"
+                : ""
+            }
+            ${
+              selectedRegion && !isMobileView
+                ? "opacity-100 scale-100"
+                : !isMobileView
+                ? "opacity-0 scale-95"
+                : ""
+            }
+            max-h-[80vh] sm:max-h-[calc(100vh-5rem)] flex flex-col
+          `}
+        >
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <MapPin className="h-5 w-5 text-red-600 flex-shrink-0" />
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 truncate">
                 {selectedRegionInfo?.name || selectedRegion}
               </h3>
             </div>
             <button
               onClick={() => setSelectedRegion(null)}
-              className="text-gray-400 hover:text-gray-600 text-xl"
+              className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors"
               aria-label="Close region details"
             >
-              ×
+              <X size={20} />
             </button>
           </div>
 
           {selectedRegionInfo ? (
-            <div className="space-y-4">
-              {/* Tab Navigation */}
-              <div className="flex border-b border-gray-200">
-                <button
-                  onClick={() => setActiveTab("general")}
-                  className={`flex-1 py-2 px-3 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === "general"
-                      ? "border-red-600 text-red-600"
-                      : "border-transparent text-gray-600 hover:text-gray-800"
-                  }`}
-                >
-                  General Info
-                </button>
-                <button
-                  onClick={() => setActiveTab("cultural")}
-                  className={`flex-1 py-2 px-3 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === "cultural"
-                      ? "border-red-600 text-red-600"
-                      : "border-transparent text-gray-600 hover:text-gray-800"
-                  }`}
-                >
-                  Cultural Heritage
-                </button>
+            <>
+              <div className="p-1 sm:p-2 bg-gray-100 flex-shrink-0">
+                <div className="grid grid-cols-2 gap-1">
+                  <button
+                    onClick={() => setActiveTab("general")}
+                    className={`py-2.5 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center text-center ${
+                      activeTab === "general"
+                        ? "bg-white text-red-600 shadow-sm"
+                        : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+                    }`}
+                  >
+                    General Info
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("cultural")}
+                    className={`py-2.5 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center text-center ${
+                      activeTab === "cultural"
+                        ? "bg-white text-red-600 shadow-sm"
+                        : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+                    }`}
+                  >
+                    Cultural Heritage
+                  </button>
+                </div>
               </div>
 
-              {/* General Information Tab */}
-              {activeTab === "general" && (
-                <div className="space-y-3 text-sm">
-                  <div>
-                    <span className="font-semibold text-gray-700">
-                      Capital:
-                    </span>{" "}
-                    {selectedRegionInfo.capital}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-700">
-                      Population:
-                    </span>{" "}
-                    {selectedRegionInfo.population}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-700">
-                      Density:
-                    </span>{" "}
-                    {selectedRegionInfo.populationDensity} people/km²
-                  </div>
-                  <div>
-                    <p className="text-gray-600 leading-relaxed">
-                      {selectedRegionInfo.description}
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-semibold text-gray-700 block mb-2">
-                      Key Facts:
-                    </span>
-                    <ul className="list-disc list-inside space-y-1 text-gray-600">
-                      {selectedRegionInfo.keyFacts.map((fact, index) => (
-                        <li key={index}>{fact}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
-
-              {/* Cultural Information Tab */}
-              {activeTab === "cultural" && (
-                <div className="space-y-4 text-sm">
-                  {/* Indigenous Territories */}
-                  <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Globe className="h-4 w-4 text-amber-600" />
-                      <span className="font-semibold text-amber-800">
-                        Indigenous Territories:
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedRegionInfo.indigenousTerritories.map(
-                        (territory, index) => (
-                          <span
-                            key={index}
-                            className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded"
-                          >
-                            {territory}
-                          </span>
-                        )
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Languages */}
-                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Globe className="h-4 w-4 text-blue-600" />
-                      <span className="font-semibold text-blue-800">
-                        Languages Spoken:
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedRegionInfo.languages.map((language, index) => (
-                        <span
-                          key={index}
-                          className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded"
+              <div className="overflow-y-auto p-4 space-y-4 flex-grow">
+                {/* General Information Tab */}
+                {activeTab === "general" && (
+                  <div className="space-y-3 text-sm animate-in fade-in-50 duration-300">
+                    <div className="grid grid-cols-1 gap-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      {[
+                        { label: "Capital", value: selectedRegionInfo.capital },
+                        {
+                          label: "Population",
+                          value: selectedRegionInfo.population,
+                        },
+                        {
+                          label: "Density",
+                          value: `${selectedRegionInfo.populationDensity} p/km²`,
+                        },
+                      ].map((item) => (
+                        <div
+                          key={item.label}
+                          className="flex justify-between items-center text-xs sm:text-sm"
                         >
-                          {language}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Festivals & Events */}
-                  <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Calendar className="h-4 w-4 text-purple-600" />
-                      <span className="font-semibold text-purple-800">
-                        Cultural Festivals:
-                      </span>
-                    </div>
-                    <ul className="space-y-1">
-                      {selectedRegionInfo.festivals.map((festival, index) => (
-                        <li key={index} className="text-xs text-purple-700">
-                          • {festival}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Traditional Foods */}
-                  <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <UtensilsCrossed className="h-4 w-4 text-green-600" />
-                      <span className="font-semibold text-green-800">
-                        Traditional Foods:
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedRegionInfo.traditionalFoods.map(
-                        (food, index) => (
-                          <span
-                            key={index}
-                            className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded"
-                          >
-                            {food}
+                          <span className="font-semibold text-gray-700">
+                            {item.label}:
                           </span>
-                        )
-                      )}
+                          <span className="text-gray-900 font-medium text-right">
+                            {item.value}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  </div>
 
-                  {/* Cultural Highlights */}
-                  <div className="bg-rose-50 p-3 rounded-lg border border-rose-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Music className="h-4 w-4 text-rose-600" />
-                      <span className="font-semibold text-rose-800">
-                        Cultural Highlights:
-                      </span>
+                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                      <h4 className="font-semibold text-gray-900 mb-1.5 text-xs sm:text-sm">
+                        About {selectedRegionInfo.name}
+                      </h4>
+                      <p className="text-gray-700 leading-relaxed text-xs sm:text-sm">
+                        {selectedRegionInfo.description}
+                      </p>
                     </div>
-                    <ul className="space-y-1">
-                      {selectedRegionInfo.culturalHighlights.map(
-                        (highlight, index) => (
-                          <li key={index} className="text-xs text-rose-700">
-                            • {highlight}
+
+                    <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                      <h4 className="font-semibold text-gray-900 mb-1.5 text-xs sm:text-sm">
+                        Key Facts
+                      </h4>
+                      <ul className="space-y-1.5 text-xs sm:text-sm">
+                        {selectedRegionInfo.keyFacts.map((fact, index) => (
+                          <li
+                            key={index}
+                            className="flex items-start gap-2 text-gray-700"
+                          >
+                            <span className="text-green-600 font-bold mt-0.5">
+                              •
+                            </span>
+                            <span>{fact}</span>
                           </li>
-                        )
-                      )}
-                    </ul>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-3 text-sm">
-              <div className="text-gray-600">
-                <p className="mb-3">
-                  This region was detected but detailed information is not
-                  available in our database.
-                </p>
-                <p className="text-xs bg-yellow-50 p-2 rounded">
-                  <strong>Debug Info:</strong> Region name detected as "
-                  {selectedRegion}"
-                </p>
+                )}
+
+                {/* Cultural Information Tab */}
+                {activeTab === "cultural" && (
+                  <div className="space-y-3 text-sm animate-in fade-in-50 duration-300">
+                    {[
+                      {
+                        icon: Globe,
+                        color: "amber",
+                        title: "Indigenous Territories",
+                        data: selectedRegionInfo.indigenousTerritories,
+                        type: "tags",
+                      },
+                      {
+                        icon: Globe,
+                        color: "blue",
+                        title: "Languages Spoken",
+                        data: selectedRegionInfo.languages,
+                        type: "tags",
+                      },
+                      {
+                        icon: Calendar,
+                        color: "purple",
+                        title: "Cultural Festivals",
+                        data: selectedRegionInfo.festivals,
+                        type: "list",
+                      },
+                      {
+                        icon: UtensilsCrossed,
+                        color: "green",
+                        title: "Traditional Foods",
+                        data: selectedRegionInfo.traditionalFoods,
+                        type: "tags",
+                      },
+                      {
+                        icon: Music,
+                        color: "rose",
+                        title: "Cultural Highlights",
+                        data: selectedRegionInfo.culturalHighlights,
+                        type: "list",
+                      },
+                    ].map((section) => (
+                      <div
+                        key={section.title}
+                        className={`bg-${section.color}-50 p-3 rounded-lg border border-${section.color}-200`}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <section.icon
+                            className={`h-4 w-4 text-${section.color}-600 flex-shrink-0`}
+                          />
+                          <h4
+                            className={`font-semibold text-${section.color}-900 text-xs sm:text-sm`}
+                          >
+                            {section.title}
+                          </h4>
+                        </div>
+                        {section.type === "tags" ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {section.data.map((item, index) => (
+                              <span
+                                key={index}
+                                className={`text-[10px] sm:text-xs bg-${section.color}-100 text-${section.color}-800 px-2 py-0.5 rounded-full`}
+                              >
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <ul className="space-y-1.5 text-xs sm:text-sm">
+                            {section.data.map((item, index) => (
+                              <li
+                                key={index}
+                                className={`flex items-start gap-2 text-${section.color}-700`}
+                              >
+                                <span
+                                  className={`text-${section.color}-500 font-bold mt-0.5`}
+                                >
+                                  •
+                                </span>
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+            </>
+          ) : (
+            <div className="p-4 space-y-3 text-sm text-center">
+              <p className="text-gray-600">
+                Detailed information for "{selectedRegion}" is not available.
+              </p>
+              <p className="text-xs bg-yellow-100 text-yellow-700 p-2 rounded border border-yellow-200">
+                <strong>Debug Info:</strong> Region name detected as "
+                {selectedRegion}". Check `PROVINCE_TERRITORY_DATA` and
+                `mapRegionName` function.
+              </p>
             </div>
           )}
         </div>
       )}
 
       <Legend />
-
-      {/* Instructions */}
-      <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm p-3 shadow-lg rounded-lg z-10 border border-gray-200 max-w-xs">
-        <div className="flex items-center gap-2 mb-2">
-          <Info className="h-4 w-4 text-blue-600" />
-          <span className="font-semibold text-gray-700 text-sm">
-            How to use
-          </span>
-        </div>
-        <ul className="text-xs text-gray-600 space-y-1">
-          <li>• Hover to see region names</li>
-          <li>• Click to view detailed info</li>
-          <li>• Switch tabs for cultural data</li>
-          <li>• Scroll to zoom in/out</li>
-          <li>• Drag to pan the map</li>
-        </ul>
-      </div>
+      <Instructions />
     </div>
   );
 };

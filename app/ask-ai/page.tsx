@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   BookOpen,
   Globe,
+  Send,
 } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 
@@ -481,7 +482,7 @@ export default function AiQaChat() {
                         <span className="font-medium hidden sm:inline">
                           Send
                         </span>
-                        <div className="w-0 h-0 border-l-3 sm:border-l-4 border-l-white border-t-1.5 sm:border-t-2 border-t-transparent border-b-1.5 sm:border-b-2 border-b-transparent"></div>
+                        <Send className="h-4 w-4" />
                       </div>
                     )}
                   </Button>

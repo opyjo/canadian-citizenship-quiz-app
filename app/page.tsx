@@ -132,7 +132,7 @@ export default function HomePage() {
                   asChild
                 >
                   <Link
-                    href="/study"
+                    href="/study-guide"
                     aria-describedby="study-guide-description"
                   >
                     Start Studying Now

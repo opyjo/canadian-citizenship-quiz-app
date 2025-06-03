@@ -416,21 +416,21 @@ const Legend: React.FC = () => {
   ].reverse();
 
   return (
-    <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 bg-white/80 backdrop-blur-sm p-2 sm:p-3 shadow-lg rounded-lg text-xs z-10 border border-gray-200 max-w-[120px] sm:max-w-40">
-      <div className="flex items-center gap-1 sm:gap-2 mb-1.5 sm:mb-2">
+    <div className="absolute bottom-2 left-2 right-2 sm:bottom-4 sm:left-4 sm:right-4 bg-white/80 backdrop-blur-sm p-2 sm:p-3 shadow-lg rounded-lg text-xs z-10 border border-gray-200">
+      <div className="flex items-center justify-center gap-1 sm:gap-2 mb-2">
         <Users className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600 flex-shrink-0" />
         <h4 className="font-semibold text-gray-700 text-[10px] sm:text-xs leading-tight">
           Population Density
         </h4>
       </div>
-      <div className="space-y-0.5">
+      <div className="flex flex-wrap justify-center gap-1 sm:gap-2">
         {densityLevels.map((level) => (
-          <div key={level.label} className="flex items-center gap-1 sm:gap-1.5">
+          <div key={level.label} className="flex items-center gap-1">
             <span
               style={{ backgroundColor: level.color }}
               className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-sm border border-gray-300 flex-shrink-0"
             />
-            <span className="text-gray-600 text-[10px] sm:text-xs leading-tight truncate">
+            <span className="text-gray-600 text-[8px] sm:text-[10px] leading-tight whitespace-nowrap">
               <span className="hidden sm:inline">{level.label}</span>
               <span className="sm:hidden">{level.range}</span>
             </span>
@@ -541,20 +541,35 @@ const CanadaMap: React.FC = () => {
     ? PROVINCE_TERRITORY_DATA[selectedRegion]
     : null;
 
+  // Responsive map configuration
+  const mapConfig = {
+    // Mobile gets portrait aspect ratio with larger scale
+    scale: isMobileView ? 500 : 650,
+    center: isMobileView ? [-95, 62] : [-95, 65], // Better centering for mobile
+    zoom: isMobileView ? 0.9 : 1,
+    width: 800,
+    height: 600,
+  };
+
   return (
     <div className="w-full h-full relative bg-gradient-to-b from-blue-100 to-sky-200">
       <ComposableMap
         projection="geoAzimuthalEqualArea"
         projectionConfig={{
           rotate: [100, -60, 0],
-          scale: 600, // Slightly smaller scale for better fit
+          scale: mapConfig.scale,
         }}
-        width={800}
-        height={600}
+        width={mapConfig.width}
+        height={mapConfig.height}
         style={{ width: "100%", height: "100%" }}
         aria-label="Interactive map of Canada"
       >
-        <ZoomableGroup center={[-95, 65]} zoom={1} minZoom={0.5} maxZoom={10}>
+        <ZoomableGroup
+          center={mapConfig.center as [number, number]}
+          zoom={mapConfig.zoom}
+          minZoom={0.3}
+          maxZoom={10}
+        >
           <Geographies geography={GEO_URL}>
             {({ geographies }) =>
               geographies.map((geo) => {

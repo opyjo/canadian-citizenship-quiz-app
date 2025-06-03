@@ -7,6 +7,7 @@ import {
   Geographies,
   Geography,
   ZoomableGroup,
+  Marker,
 } from "react-simple-maps";
 import {
   Info,
@@ -17,10 +18,232 @@ import {
   Calendar,
   UtensilsCrossed,
   X,
+  Building2,
 } from "lucide-react";
 
 // GeoJSON URL for Canadian provinces and territories
 const GEO_URL = "/canada-provinces.json"; // Make sure this file exists in your /public folder
+
+// Major Canadian cities data
+const MAJOR_CITIES = [
+  // Ontario
+  {
+    name: "Toronto",
+    province: "ON",
+    coordinates: [-79.3832, 43.6532],
+    population: "2.93M",
+    type: "major",
+  },
+  {
+    name: "Ottawa",
+    province: "ON",
+    coordinates: [-75.6972, 45.4215],
+    population: "994K",
+    type: "capital",
+  },
+  {
+    name: "Hamilton",
+    province: "ON",
+    coordinates: [-79.8711, 43.2557],
+    population: "537K",
+    type: "major",
+  },
+  {
+    name: "London",
+    province: "ON",
+    coordinates: [-81.2497, 42.9849],
+    population: "383K",
+    type: "city",
+  },
+
+  // Quebec
+  {
+    name: "Montreal",
+    province: "QC",
+    coordinates: [-73.5673, 45.5017],
+    population: "1.78M",
+    type: "major",
+  },
+  {
+    name: "Quebec City",
+    province: "QC",
+    coordinates: [-71.2082, 46.8139],
+    population: "542K",
+    type: "capital",
+  },
+  {
+    name: "Laval",
+    province: "QC",
+    coordinates: [-73.6927, 45.6066],
+    population: "422K",
+    type: "city",
+  },
+
+  // British Columbia
+  {
+    name: "Vancouver",
+    province: "BC",
+    coordinates: [-123.1207, 49.2827],
+    population: "675K",
+    type: "major",
+  },
+  {
+    name: "Victoria",
+    province: "BC",
+    coordinates: [-123.3656, 48.4284],
+    population: "85K",
+    type: "capital",
+  },
+  {
+    name: "Surrey",
+    province: "BC",
+    coordinates: [-122.8447, 49.1913],
+    population: "518K",
+    type: "city",
+  },
+  {
+    name: "Burnaby",
+    province: "BC",
+    coordinates: [-122.9577, 49.2488],
+    population: "233K",
+    type: "city",
+  },
+
+  // Alberta
+  {
+    name: "Calgary",
+    province: "AB",
+    coordinates: [-114.0719, 51.0447],
+    population: "1.34M",
+    type: "major",
+  },
+  {
+    name: "Edmonton",
+    province: "AB",
+    coordinates: [-113.4909, 53.5461],
+    population: "981K",
+    type: "capital",
+  },
+  {
+    name: "Red Deer",
+    province: "AB",
+    coordinates: [-113.811, 52.2681],
+    population: "101K",
+    type: "city",
+  },
+
+  // Manitoba
+  {
+    name: "Winnipeg",
+    province: "MB",
+    coordinates: [-97.1384, 49.8951],
+    population: "749K",
+    type: "capital",
+  },
+  {
+    name: "Brandon",
+    province: "MB",
+    coordinates: [-99.9531, 49.8429],
+    population: "51K",
+    type: "city",
+  },
+
+  // Saskatchewan
+  {
+    name: "Saskatoon",
+    province: "SK",
+    coordinates: [-106.67, 52.1579],
+    population: "317K",
+    type: "major",
+  },
+  {
+    name: "Regina",
+    province: "SK",
+    coordinates: [-104.6178, 50.4452],
+    population: "230K",
+    type: "capital",
+  },
+
+  // Nova Scotia
+  {
+    name: "Halifax",
+    province: "NS",
+    coordinates: [-63.5752, 44.6488],
+    population: "439K",
+    type: "capital",
+  },
+  {
+    name: "Sydney",
+    province: "NS",
+    coordinates: [-60.1947, 46.1368],
+    population: "30K",
+    type: "city",
+  },
+
+  // New Brunswick
+  {
+    name: "Fredericton",
+    province: "NB",
+    coordinates: [-66.6431, 45.9636],
+    population: "63K",
+    type: "capital",
+  },
+  {
+    name: "Saint John",
+    province: "NB",
+    coordinates: [-66.0628, 45.2733],
+    population: "67K",
+    type: "city",
+  },
+  {
+    name: "Moncton",
+    province: "NB",
+    coordinates: [-64.7731, 46.0878],
+    population: "79K",
+    type: "city",
+  },
+
+  // Newfoundland and Labrador
+  {
+    name: "St. John's",
+    province: "NL",
+    coordinates: [-52.7126, 47.5615],
+    population: "114K",
+    type: "capital",
+  },
+
+  // Prince Edward Island
+  {
+    name: "Charlottetown",
+    province: "PE",
+    coordinates: [-63.1311, 46.2382],
+    population: "38K",
+    type: "capital",
+  },
+
+  // Territories
+  {
+    name: "Yellowknife",
+    province: "NT",
+    coordinates: [-114.3717, 62.454],
+    population: "20K",
+    type: "capital",
+  },
+  {
+    name: "Whitehorse",
+    province: "YT",
+    coordinates: [-135.0568, 60.7212],
+    population: "28K",
+    type: "capital",
+  },
+  {
+    name: "Iqaluit",
+    province: "NU",
+    coordinates: [-68.517, 63.7467],
+    population: "8K",
+    type: "capital",
+  },
+];
 
 // Enhanced data for provinces and territories (remains the same as provided)
 const PROVINCE_TERRITORY_DATA: Record<
@@ -506,6 +729,9 @@ const mapRegionName = (geoJsonName: string): string => {
 
 const CanadaMap: React.FC = () => {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const [selectedCity, setSelectedCity] = useState<
+    (typeof MAJOR_CITIES)[0] | null
+  >(null);
   const [activeTab, setActiveTab] = useState<"general" | "cultural">("general");
   const [isMobileView, setIsMobileView] = useState(false);
 
@@ -523,6 +749,7 @@ const CanadaMap: React.FC = () => {
 
     if (regionInfo) {
       setSelectedRegion(regionName);
+      setSelectedCity(null); // Clear city selection when selecting region
       setActiveTab("general"); // Reset to general tab on new selection
     } else {
       console.warn(
@@ -534,7 +761,13 @@ const CanadaMap: React.FC = () => {
         geo.properties
       );
       setSelectedRegion(rawRegionName); // Still select to show debug info
+      setSelectedCity(null);
     }
+  };
+
+  const handleCityClick = (city: (typeof MAJOR_CITIES)[0]) => {
+    setSelectedCity(city);
+    setSelectedRegion(null); // Clear region selection when selecting city
   };
 
   const selectedRegionInfo = selectedRegion
@@ -549,6 +782,27 @@ const CanadaMap: React.FC = () => {
     zoom: isMobileView ? 0.9 : 1,
     width: 800,
     height: 600,
+  };
+
+  // Get city marker size and visibility based on zoom and mobile
+  const getCityMarkerProps = (city: (typeof MAJOR_CITIES)[0]) => {
+    const baseSize = isMobileView ? 6 : 4;
+    let size = baseSize;
+    let visible = true;
+
+    // Adjust size based on city type
+    if (city.type === "major") {
+      size = baseSize + 2;
+    } else if (city.type === "capital") {
+      size = baseSize + 1;
+    } else {
+      // Hide smaller cities on mobile when zoomed out
+      if (isMobileView && mapConfig.zoom < 1.5) {
+        visible = false;
+      }
+    }
+
+    return { size, visible };
   };
 
   return (
@@ -615,14 +869,74 @@ const CanadaMap: React.FC = () => {
               })
             }
           </Geographies>
+
+          {/* City Markers */}
+          {MAJOR_CITIES.map((city) => {
+            const { size, visible } = getCityMarkerProps(city);
+            const isSelected = selectedCity?.name === city.name;
+
+            if (!visible) return null;
+
+            return (
+              <Marker
+                key={city.name}
+                coordinates={city.coordinates as [number, number]}
+                onClick={() => handleCityClick(city)}
+              >
+                <circle
+                  r={size}
+                  fill={
+                    isSelected
+                      ? "#ef4444" // red-500 for selected
+                      : city.type === "major"
+                      ? "#dc2626" // red-600 for major cities
+                      : city.type === "capital"
+                      ? "#7c3aed" // violet-600 for capitals
+                      : "#6b7280" // gray-500 for other cities
+                  }
+                  stroke="#ffffff"
+                  strokeWidth={isSelected ? 2 : 1}
+                  className="cursor-pointer hover:opacity-80 transition-all duration-200"
+                  style={{
+                    filter: isSelected
+                      ? "drop-shadow(0 2px 4px rgba(0,0,0,0.3))"
+                      : "none",
+                  }}
+                />
+
+                {/* City name label - only show for major cities or when selected */}
+                {(city.type === "major" ||
+                  city.type === "capital" ||
+                  isSelected) && (
+                  <text
+                    textAnchor="middle"
+                    y={-size - 3}
+                    className="pointer-events-none select-none"
+                    style={{
+                      fontFamily: "system-ui, sans-serif",
+                      fontSize: isMobileView ? "10px" : "8px",
+                      fontWeight: isSelected ? "600" : "500",
+                      fill: isSelected ? "#dc2626" : "#374151",
+                      filter: "drop-shadow(0 1px 2px rgba(255,255,255,0.8))",
+                    }}
+                  >
+                    {city.name}
+                  </text>
+                )}
+              </Marker>
+            );
+          })}
         </ZoomableGroup>
       </ComposableMap>
 
       {/* Backdrop for mobile when panel is open */}
-      {selectedRegion && isMobileView && (
+      {(selectedRegion || selectedCity) && isMobileView && (
         <div
           className="fixed inset-0 bg-black/40 backdrop-blur-sm z-20 sm:hidden"
-          onClick={() => setSelectedRegion(null)}
+          onClick={() => {
+            setSelectedRegion(null);
+            setSelectedCity(null);
+          }}
           aria-hidden="true"
         />
       )}
@@ -859,6 +1173,111 @@ const CanadaMap: React.FC = () => {
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* City Info Panel - Mobile Responsive */}
+      {selectedCity && (
+        <div
+          className={`
+            fixed sm:absolute 
+            bottom-0 left-0 right-0 sm:right-4 sm:top-4 sm:bottom-auto sm:left-auto
+            bg-white/95 backdrop-blur-md shadow-2xl sm:shadow-xl 
+            border-t sm:border border-gray-200
+            rounded-t-2xl sm:rounded-lg 
+            z-30 
+            transition-transform duration-300 ease-out
+            w-full sm:max-w-sm
+            ${
+              selectedCity && isMobileView
+                ? "translate-y-0"
+                : isMobileView
+                ? "translate-y-full"
+                : ""
+            }
+            ${
+              selectedCity && !isMobileView
+                ? "opacity-100 scale-100"
+                : !isMobileView
+                ? "opacity-0 scale-95"
+                : ""
+            }
+            max-h-[60vh] sm:max-h-[calc(100vh-5rem)] flex flex-col
+          `}
+        >
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <Building2 className="h-5 w-5 text-blue-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 truncate">
+                  {selectedCity.name}
+                </h3>
+                <p className="text-xs text-gray-500">
+                  {selectedCity.province} • {selectedCity.type}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedCity(null)}
+              className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Close city details"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="overflow-y-auto p-4 space-y-3 flex-grow">
+            <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+              <h4 className="font-semibold text-gray-900 mb-2 text-xs sm:text-sm flex items-center gap-2">
+                <Users className="h-4 w-4 text-blue-600" />
+                City Information
+              </h4>
+              <div className="space-y-2 text-xs sm:text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-gray-700">Population:</span>
+                  <span className="text-gray-900 font-semibold">
+                    {selectedCity.population}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-gray-700">Province:</span>
+                  <span className="text-gray-900 font-semibold">
+                    {selectedCity.province}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-gray-700">Type:</span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      selectedCity.type === "major"
+                        ? "bg-red-100 text-red-700"
+                        : selectedCity.type === "capital"
+                        ? "bg-purple-100 text-purple-700"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {selectedCity.type === "major"
+                      ? "Major City"
+                      : selectedCity.type === "capital"
+                      ? "Provincial Capital"
+                      : "City"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Additional city information can be added here */}
+            <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+              <h4 className="font-semibold text-gray-900 mb-2 text-xs sm:text-sm flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-green-600" />
+                Coordinates
+              </h4>
+              <p className="text-xs sm:text-sm text-gray-700">
+                Latitude: {selectedCity.coordinates[1].toFixed(4)}°<br />
+                Longitude: {selectedCity.coordinates[0].toFixed(4)}°
+              </p>
+            </div>
+          </div>
         </div>
       )}
 

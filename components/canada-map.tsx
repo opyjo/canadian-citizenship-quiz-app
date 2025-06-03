@@ -544,7 +544,7 @@ const CanadaMap: React.FC = () => {
   // Responsive map configuration
   const mapConfig = {
     // Mobile gets portrait aspect ratio with larger scale
-    scale: isMobileView ? 500 : 650,
+    scale: isMobileView ? 1000 : 650,
     center: isMobileView ? [-95, 62] : [-95, 65], // Better centering for mobile
     zoom: isMobileView ? 0.9 : 1,
     width: 800,

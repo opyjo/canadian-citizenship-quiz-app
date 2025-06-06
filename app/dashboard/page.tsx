@@ -46,12 +46,13 @@ export default function DashboardPage() {
 
         setUser(userData.user);
 
-        // Fetch quiz attempts
+        // Fetch quiz attempts - now filtered by user_id
         const { data, error } = await supabase
           .from("quiz_attempts")
           .select(
             "id, score, total_questions_in_attempt, created_at, time_taken_seconds, is_timed, quiz_type"
           )
+          .eq("user_id", userData.user.id)
           .order("created_at", { ascending: false });
 
         if (error) throw error;

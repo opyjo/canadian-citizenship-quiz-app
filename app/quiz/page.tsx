@@ -102,6 +102,10 @@ export default function QuizPage() {
             onConfirmAction();
             setLimitModalState((prev) => ({ ...prev, isOpen: false }));
           },
+          onClose: () => {
+            router.push("/");
+            setLimitModalState((prev) => ({ ...prev, isOpen: false }));
+          },
         });
         return;
       }

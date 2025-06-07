@@ -452,7 +452,10 @@ function PracticeQuizContent() {
         confirmText={modalState.confirmText}
         cancelText={modalState.cancelText}
         onConfirm={modalState.onConfirm}
-        onClose={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
+        onClose={() => {
+          router.push("/");
+          setModalState((prev) => ({ ...prev, isOpen: false }));
+        }}
       />
     );
   }

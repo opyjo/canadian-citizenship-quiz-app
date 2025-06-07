@@ -311,6 +311,10 @@ export default function TimedQuizPage() {
             onConfirmAction();
             setModalState((prev) => ({ ...prev, isOpen: false }));
           },
+          onClose: () => {
+            router.push("/");
+            setModalState((prev) => ({ ...prev, isOpen: false }));
+          },
         });
         return;
       }

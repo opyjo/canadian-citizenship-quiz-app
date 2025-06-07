@@ -13,7 +13,7 @@ import {
 
 interface ConfirmationModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose?: () => void;
   onConfirm: () => void;
   title: string;
   message: string;
@@ -35,7 +35,14 @@ export default function ConfirmationModal({
   }
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onClose}>
+    <AlertDialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose?.();
+        }
+      }}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
@@ -46,7 +53,6 @@ export default function ConfirmationModal({
           <AlertDialogAction
             onClick={() => {
               onConfirm();
-              onClose(); // Typically, the modal closes after confirmation too
             }}
           >
             {confirmText}

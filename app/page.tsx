@@ -68,7 +68,7 @@ export default function HomePage() {
       let confirmText = "OK";
       let cancelText = "Cancel";
       let onConfirmAction = () =>
-        setModalState({ ...modalState, isOpen: false });
+        setModalState((prev) => ({ ...prev, isOpen: false }));
 
       if (!result.isLoggedIn) {
         confirmText = "Sign Up";
@@ -88,9 +88,9 @@ export default function HomePage() {
         cancelText,
         onConfirm: () => {
           onConfirmAction();
-          setModalState({ ...modalState, isOpen: false });
+          setModalState((prev) => ({ ...prev, isOpen: false }));
         },
-        onClose: () => setModalState({ ...modalState, isOpen: false }),
+        onClose: () => setModalState((prev) => ({ ...prev, isOpen: false })),
       });
     }
   };
@@ -1021,7 +1021,7 @@ export default function HomePage() {
         onClose={() =>
           modalState.onClose
             ? modalState.onClose()
-            : setModalState({ ...modalState, isOpen: false })
+            : setModalState((prev) => ({ ...prev, isOpen: false }))
         }
       />
     </>

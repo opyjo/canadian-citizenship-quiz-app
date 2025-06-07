@@ -61,10 +61,6 @@ export function incrementLocalAttemptCount(quizMode: QuizMode): void {
   const counts = getLocalAttemptCounts();
   counts[quizMode] = (counts[quizMode] || 0) + 1;
   window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(counts));
-  // console.log( // Debug log removed
-  //   `[quizLimits] Incremented local count for ${quizMode}. New counts:`,
-  //   counts
-  // );
 }
 
 // 3. Main Access Check Function
@@ -87,21 +83,22 @@ export async function checkAttemptLimits(
   quizMode: QuizMode,
   supabase: SupabaseClient
 ): Promise<AttemptCheckResult> {
+  console.log(`[DEBUG] checkAttemptLimits called for mode: ${quizMode}`);
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  // console.log("[checkAttemptLimits] User auth object:", user); // Debug log removed
+
+  console.log("[DEBUG] User authentication status:", {
+    userExists: !!user,
+    userId: user?.id,
+  });
 
   if (user) {
-    // User is logged in
-    // console.log( // Debug log removed
-    //   "[checkAttemptLimits] Authenticated user path entered. User ID:",
-    //   user.id
-    // );
     try {
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("access_level") // Assuming 'access_level' column exists
+        .select("access_level")
         .eq("id", user.id)
         .single();
 
@@ -218,9 +215,12 @@ export async function checkAttemptLimits(
     // console.log("[checkAttemptLimits] Unauthenticated user path entered."); // Debug log removed
     const currentAttempts = getLocalAttemptCount(quizMode);
     const limit = FREE_TIER_LIMITS[quizMode];
-    // console.log( // Debug log removed
-    //   `[checkAttemptLimits] Unauth: Mode=${quizMode}, LocalAttempts=${currentAttempts}, Limit=${limit}`
-    // );
+
+    console.log("[DEBUG] Unauthenticated user attempt tracking:", {
+      quizMode,
+      currentAttempts,
+      limit,
+    });
 
     if (currentAttempts < limit) {
       // console.log("[checkAttemptLimits] Unauth: Access GRANTED."); // Debug log removed

@@ -52,7 +52,6 @@ function PracticeQuizContent() {
     confirmText: string;
     cancelText: string;
     onConfirm: () => void;
-    onClose?: () => void;
   }>({
     isOpen: false,
     title: "",
@@ -73,9 +72,8 @@ function PracticeQuizContent() {
 
   useEffect(() => {
     async function performAccessCheckAndFetchData() {
-      // Perform access check first
       const accessResult = await checkAttemptLimits("practice", supabase);
-      setIsAccessChecked(true); // Mark access check as done
+      setIsAccessChecked(true);
 
       if (!accessResult.canAttempt) {
         setLoading(false); // Stop loading indicator
@@ -101,11 +99,7 @@ function PracticeQuizContent() {
           cancelText: "Go Home", // Changed cancel to Go Home or similar
           onConfirm: () => {
             onConfirmAction();
-            setModalState({ ...modalState, isOpen: false });
-          },
-          onClose: () => {
-            router.push("/"); // Default close action: go home
-            setModalState({ ...modalState, isOpen: false });
+            setModalState((prev) => ({ ...prev, isOpen: false }));
           },
         });
         return; // Stop further execution if access is denied
@@ -458,10 +452,7 @@ function PracticeQuizContent() {
         confirmText={modalState.confirmText}
         cancelText={modalState.cancelText}
         onConfirm={modalState.onConfirm}
-        onClose={
-          modalState.onClose ||
-          (() => setModalState({ ...modalState, isOpen: false }))
-        }
+        onClose={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
       />
     );
   }

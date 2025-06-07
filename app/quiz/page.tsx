@@ -78,7 +78,7 @@ export default function QuizPage() {
       const {
         data: { user: authUser },
       } = await supabase.auth.getUser();
-      setUserId(authUser?.id || null);
+      setUserId(authUser?.id ?? null);
 
       if (!accessResult.canAttempt) {
         setLoading(false);
@@ -100,11 +100,7 @@ export default function QuizPage() {
           cancelText: "Go Home",
           onConfirm: () => {
             onConfirmAction();
-            setLimitModalState({ ...limitModalState, isOpen: false });
-          },
-          onClose: () => {
-            router.push("/");
-            setLimitModalState({ ...limitModalState, isOpen: false });
+            setLimitModalState((prev) => ({ ...prev, isOpen: false }));
           },
         });
         return;
@@ -146,7 +142,7 @@ export default function QuizPage() {
     }
 
     performAccessCheckAndFetchData();
-  }, [supabase, router]);
+  }, []);
 
   const currentQuestion = questions[currentQuestionIndex];
   const progress =
@@ -258,7 +254,7 @@ export default function QuizPage() {
         onConfirm={limitModalState.onConfirm}
         onClose={
           limitModalState.onClose ||
-          (() => setLimitModalState({ ...limitModalState, isOpen: false }))
+          (() => setLimitModalState((prev) => ({ ...prev, isOpen: false })))
         }
       />
     );
@@ -457,18 +453,20 @@ export default function QuizPage() {
         </Card>
       </div>
 
-      <ConfirmationModal
-        isOpen={isConfirmEndQuizModalOpen}
-        onClose={() => setIsConfirmEndQuizModalOpen(false)}
-        onConfirm={() => {
-          finishQuiz();
-          setIsConfirmEndQuizModalOpen(false);
-        }}
-        title="End Quiz?"
-        message="Are you sure you want to end the quiz? Your current answers will be submitted, and you will be taken to the results page."
-        confirmText="End Quiz"
-        cancelText="Continue Quiz"
-      />
+      {isConfirmEndQuizModalOpen && (
+        <ConfirmationModal
+          isOpen={true}
+          onClose={() => setIsConfirmEndQuizModalOpen(false)}
+          onConfirm={() => {
+            finishQuiz();
+            setIsConfirmEndQuizModalOpen(false);
+          }}
+          title="End Quiz?"
+          message="Are you sure you want to end the quiz? Your current answers will be submitted, and you will be taken to the results page."
+          confirmText="End Quiz"
+          cancelText="Continue Quiz"
+        />
+      )}
     </div>
   );
 }

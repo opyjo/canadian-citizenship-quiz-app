@@ -443,11 +443,6 @@ function QuestionReview({
         <div className="flex-1">
           <div className="flex justify-between">
             <p className="font-medium">Question {questionNumber}</p>
-            {question.category && (
-              <span className="text-xs text-muted-foreground px-2 py-1 bg-gray-100 rounded-full">
-                {question.category}
-              </span>
-            )}
           </div>
           <p>{question.question_text}</p>
         </div>
@@ -512,24 +507,6 @@ function QuestionReview({
             </div>
           );
         })}
-
-        {question.answer_explanation && (
-          <div className="mt-4">
-            <button
-              onClick={() => setShowExplanation(!showExplanation)}
-              className="flex items-center text-sm text-blue-600 hover:text-blue-800"
-            >
-              <Info className="h-4 w-4 mr-1" />
-              {showExplanation ? "Hide Explanation" : "Show Explanation"}
-            </button>
-
-            {showExplanation && (
-              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm">
-                {question.answer_explanation}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

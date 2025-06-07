@@ -280,41 +280,39 @@ export default function TimedQuizPage() {
 
   useEffect(() => {
     async function performAccessCheckAndFetchData() {
-      // Perform access check first
       const accessResult = await checkAttemptLimits("timed", supabaseClient);
-      setIsAccessChecked(true); // Mark access check as done
+      setIsAccessChecked(true);
 
       if (!accessResult.canAttempt) {
-        setLoading(false); // Stop loading indicator
-        setQuestions([]); // Clear any potential questions
-
         let confirmText = "OK";
-        let onConfirmAction = () => router.push("/"); // Go back to home
+        let onConfirmAction = () => {
+          router.push("/");
+        };
 
         if (!accessResult.isLoggedIn) {
           confirmText = "Sign Up";
-          onConfirmAction = () => router.push("/signup");
+          onConfirmAction = () => {
+            router.push("/signup");
+          };
         } else if (!accessResult.isPaidUser) {
           confirmText = "Upgrade Plan";
-          onConfirmAction = () => router.push("/pricing");
+          onConfirmAction = () => {
+            router.push("/pricing");
+          };
         }
 
         setModalState({
           isOpen: true,
           title: "Access Denied",
           message: accessResult.message,
-          confirmText: confirmText,
+          confirmText,
           cancelText: "Go Home",
           onConfirm: () => {
             onConfirmAction();
-            setModalState({ ...modalState, isOpen: false });
-          },
-          onClose: () => {
-            router.push("/");
-            setModalState({ ...modalState, isOpen: false });
+            setModalState((prev) => ({ ...prev, isOpen: false }));
           },
         });
-        return; // Stop further execution if access is denied
+        return;
       }
 
       // If access is granted, proceed to fetch quiz data
@@ -368,7 +366,7 @@ export default function TimedQuizPage() {
     }
 
     performAccessCheckAndFetchData();
-  }, [router]); // Simplified dependencies, supabaseClient is stable, searchParams not used here
+  }, []); // Empty dependency array - this should only run once on mount
 
   if (showUnauthenticatedResults) {
     return (
@@ -423,7 +421,7 @@ export default function TimedQuizPage() {
         onConfirm={modalState.onConfirm}
         onClose={
           modalState.onClose ||
-          (() => setModalState({ ...modalState, isOpen: false }))
+          (() => setModalState((prev) => ({ ...prev, isOpen: false })))
         }
       />
     );
@@ -574,18 +572,20 @@ export default function TimedQuizPage() {
         </Card>
       </div>
 
-      <ConfirmationModal
-        isOpen={isConfirmModalOpen}
-        onClose={() => setIsConfirmModalOpen(false)}
-        onConfirm={() => {
-          finishQuiz();
-          setIsConfirmModalOpen(false);
-        }}
-        title="End Quiz?"
-        message="Are you sure you want to end the quiz? Your current answers will be submitted, and you will be taken to the results page."
-        confirmText="End Quiz"
-        cancelText="Continue Quiz"
-      />
+      {isConfirmModalOpen && (
+        <ConfirmationModal
+          isOpen={true}
+          onClose={() => setIsConfirmModalOpen(false)}
+          onConfirm={() => {
+            finishQuiz();
+            setIsConfirmModalOpen(false);
+          }}
+          title="End Quiz?"
+          message="Are you sure you want to end the quiz? Your current answers will be submitted, and you will be taken to the results page."
+          confirmText="End Quiz"
+          cancelText="Continue Quiz"
+        />
+      )}
     </div>
   );
 }

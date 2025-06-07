@@ -4,11 +4,14 @@ import type { Database } from "@/types/supabase";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-console.log("Supabase Client Init - URL:", supabaseUrl);
-console.log(
-  "Supabase Client Init - Key:",
-  supabaseKey ? "Key is SET" : "Key is NOT SET"
-);
+// Only log in development environment
+if (process.env.NODE_ENV === "development") {
+  console.log("Supabase Client Init - URL:", supabaseUrl);
+  console.log(
+    "Supabase Client Init - Key:",
+    supabaseKey ? "Key is SET" : "Key is NOT SET"
+  );
+}
 
 if (!supabaseUrl) {
   throw new Error(

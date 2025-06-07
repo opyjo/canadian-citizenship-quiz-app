@@ -61,14 +61,15 @@ export default function DashboardPage() {
         const mappedData =
           data?.map((attempt) => ({
             ...attempt,
-            id: attempt.id,
-            total_questions: attempt.total_questions_in_attempt,
             time_taken: attempt.time_taken_seconds,
           })) || [];
 
-        setQuizAttempts(mappedData as any);
+        setQuizAttempts(mappedData);
       } catch (err: any) {
-        console.error("Error fetching data:", err);
+        // Only log errors in development
+        if (process.env.NODE_ENV === "development") {
+          console.error("Error fetching data:", err);
+        }
         setError(err.message || "Failed to load dashboard data");
       } finally {
         setLoading(false);

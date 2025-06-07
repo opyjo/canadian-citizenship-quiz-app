@@ -257,7 +257,9 @@ function PracticeQuizContent() {
   };
 
   const getResultData = () => {
-    console.log("[PracticeQuizPage] getResultData called");
+    if (process.env.NODE_ENV === "development") {
+      console.log("[PracticeQuizPage] getResultData called");
+    }
     try {
       const score = questions.filter(
         (q, index) =>
@@ -289,7 +291,9 @@ function PracticeQuizContent() {
   };
 
   const finishQuiz = async () => {
-    console.log("[PracticeQuizPage] finishQuiz called");
+    if (process.env.NODE_ENV === "development") {
+      console.log("[PracticeQuizPage] finishQuiz called");
+    }
     let localResultData;
     try {
       localResultData = getResultData(); // This contains score, totalQuestions etc. calculated locally

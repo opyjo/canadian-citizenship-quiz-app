@@ -13,12 +13,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, BookOpen, AlertTriangle, Shuffle } from "lucide-react";
-import {
-  checkAttemptLimits,
-  type QuizMode,
-  type AttemptCheckResult,
-} from "@/lib/quizLimits";
+import { Loader2, AlertTriangle, Shuffle } from "lucide-react";
+import { checkAttemptLimits, type QuizMode } from "@/lib/quizLimits";
 import ConfirmationModal from "@/components/confirmation-modal";
 
 export default function PracticePage() {

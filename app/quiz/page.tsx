@@ -212,7 +212,7 @@ export default function QuizPage() {
       const result = await response.json(); // Always parse JSON
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to save quiz attempt");
+        throw new Error(result.error ?? "Failed to save quiz attempt");
       }
 
       const attemptId = result.attemptId;
@@ -240,7 +240,7 @@ export default function QuizPage() {
       }
     } catch (err: any) {
       console.error("Error submitting quiz:", err);
-      setError(err.message || "Failed to submit quiz. Please try again.");
+      setError(err.message ?? "Failed to submit quiz. Please try again.");
       setShowUnauthenticatedResults(false);
     } finally {
       setLoading(false);

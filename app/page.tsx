@@ -6,7 +6,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -22,7 +21,6 @@ import {
   MessageCircleQuestion,
   Map,
   Bot,
-  ChevronDown,
   Clock,
 } from "lucide-react";
 import { useState } from "react";
@@ -32,7 +30,6 @@ import { checkAttemptLimits, type QuizMode } from "@/lib/quizLimits";
 import ConfirmationModal from "@/components/confirmation-modal";
 import {
   chapters,
-  quizTypes,
   features,
   stats,
   testimonials,
@@ -111,14 +108,14 @@ export default function HomePage() {
               id="hero-heading"
               className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6"
             >
-              Prepare for Your Citizenship Test with
-              <span className="text-red-600"> Confidence</span>
+              Prepare for Your Citizenship Test with{" "}
+              <span className="text-red-600">Confidence</span>
             </h1>
             <p className="text-xl lg:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto">
-              Master your citizenship journey with our complete 3-step system:
-              <strong> Study comprehensive materials</strong>,
-              <strong> practice unlimited questions</strong>, and
-              <strong> test yourself with realistic simulations</strong>.
+              Master your citizenship journey with our complete 3-step system:{" "}
+              <strong>Study comprehensive materials</strong>,{" "}
+              <strong>practice unlimited questions</strong>, and{" "}
+              <strong>test yourself with realistic simulations</strong>.
               Everything you need to pass your citizenship exam.
             </p>
 

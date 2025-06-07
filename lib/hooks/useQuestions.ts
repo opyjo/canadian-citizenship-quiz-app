@@ -28,7 +28,7 @@ export function useRandomQuestions(count: number = 20) {
         throw new Error(error.message);
       }
 
-      return data || [];
+      return data ?? [];
     },
     staleTime: 10 * 60 * 1000, // 10 minutes for random questions
     gcTime: 30 * 60 * 1000, // 30 minutes in cache
@@ -80,7 +80,7 @@ export function usePracticeQuestions(
         throw new Error(error.message);
       }
 
-      return data || [];
+      return data ?? [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes for practice questions
     enabled: count > 0, // Only run if count is valid

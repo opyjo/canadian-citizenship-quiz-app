@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import supabaseClient from "@/lib/supabase-client";
-import { CheckCircle, XCircle, AlertCircle, Clock, Info } from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, Clock } from "lucide-react";
 
 interface Question {
   id: number;
@@ -27,14 +27,14 @@ interface Question {
 
 // Define a type for the quiz attempt data fetched from Supabase
 interface QuizAttempt {
-  id: string;
+  id: number;
   user_answers: Record<string, string>;
   question_ids: number[];
   is_timed: boolean;
   time_taken_seconds: number | null;
   is_practice: boolean;
   practice_type: string | null;
-  category: string | null; // Category of the quiz attempt if applicable
+  category?: string | null; // Category of the quiz attempt if applicable
   created_at: string;
 }
 
@@ -70,7 +70,7 @@ export default function ResultsPage() {
         const { data: attemptData, error: attemptError } = await supabase
           .from("quiz_attempts")
           .select("*")
-          .eq("id", attemptId)
+          .eq("id", parseInt(attemptId, 10))
           .single();
 
         if (attemptError) throw attemptError;
@@ -83,7 +83,7 @@ export default function ResultsPage() {
         setTimeTaken(typedAttemptData.time_taken_seconds);
         setIsPractice(typedAttemptData.is_practice || false);
         setPracticeType(typedAttemptData.practice_type);
-        setQuizCategory(typedAttemptData.category); // Category for the overall quiz/practice session
+        setQuizCategory(typedAttemptData.category || null); // Category for the overall quiz/practice session
 
         // 2. Fetch the questions based on IDs from the attempt
         let fetchedQuestions: Question[] | null = null;
@@ -210,7 +210,6 @@ export default function ResultsPage() {
 
   // For non-practice quizzes, determine pass/fail. For practice, it's neutral.
   const passed = !isPractice && correctAnswersCount >= 15;
-  const failed = !isPractice && correctAnswersCount < 15;
 
   // Format time taken
   const formattedTimeTaken = timeTaken
@@ -240,7 +239,7 @@ export default function ResultsPage() {
               {isTimed && (
                 <div className="px-3 py-1 bg-amber-100 text-amber-600 rounded-full text-sm font-medium flex items-center">
                   <Clock className="h-4 w-4 mr-1" />
-                  Timed Quiz
+                  Time: {formattedTimeTaken}
                 </div>
               )}
             </div>
@@ -422,8 +421,6 @@ function QuestionReview({
   questionNumber: number;
   reviewContext: "all" | "correct" | "incorrect";
 }) {
-  const [showExplanation, setShowExplanation] = useState(false);
-
   return (
     <div className="border rounded-lg p-4 space-y-3">
       <div className="flex items-start gap-2">
@@ -461,9 +458,7 @@ function QuestionReview({
           let optionBgStyle = "";
           let optionBorderStyle = "border-gray-300"; // Default border
           let optionIconContainerStyle = "border-gray-300";
-          // let optionIconTextStyle = ""; // Not currently used for specific styling
 
-          // Unified styling logic
           if (isThisOptionTheCorrectAnswer) {
             optionBgStyle = "bg-green-50";
             optionBorderStyle = "border-green-600";

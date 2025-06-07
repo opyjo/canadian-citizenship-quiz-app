@@ -17,9 +17,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, BarChart2, Award, BookOpen } from "lucide-react";
 
-// Import the interface from our hooks
-import type { QuizAttempt } from "@/lib/hooks/useQuizAttempts";
-
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -37,6 +34,7 @@ export default function DashboardPage() {
         }
         setUser(userData.user);
       } catch (err) {
+        console.error("Error checking auth status:", err);
         router.push("/auth");
       } finally {
         setAuthLoading(false);
@@ -50,7 +48,7 @@ export default function DashboardPage() {
     data: quizAttempts = [],
     isLoading: quizLoading,
     error: quizError,
-  } = useQuizAttempts(user?.id || "");
+  } = useQuizAttempts(user?.id ?? "");
 
   const loading = authLoading || quizLoading;
   const error = quizError?.message;
@@ -221,7 +219,7 @@ export default function DashboardPage() {
                               : "N/A"}
                           </div>
                           <div className="capitalize">
-                            {attempt.quiz_type || "Unknown"}
+                            {attempt.quiz_type ?? "Unknown"}
                           </div>
                           <div>
                             {attempt.score !== null &&
@@ -272,7 +270,7 @@ export default function DashboardPage() {
                                 : "N/A"}
                             </div>
                             <div className="capitalize">
-                              {attempt.quiz_type || "Unknown"}
+                              {attempt.quiz_type ?? "Unknown"}
                             </div>
                             <div>
                               {attempt.score !== null &&
@@ -323,7 +321,7 @@ export default function DashboardPage() {
                                 : "N/A"}
                             </div>
                             <div className="capitalize">
-                              {attempt.quiz_type || "Unknown"}
+                              {attempt.quiz_type ?? "Unknown"}
                             </div>
                             <div>
                               {attempt.score !== null &&
@@ -376,7 +374,7 @@ export default function DashboardPage() {
                                 : "N/A"}
                             </div>
                             <div className="capitalize">
-                              {attempt.quiz_type || "Unknown"}
+                              {attempt.quiz_type ?? "Unknown"}
                             </div>
                             <div>
                               {attempt.score !== null &&

@@ -56,10 +56,7 @@ export default function UserNav() {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        hamburgerButtonRef.current &&
-        hamburgerButtonRef.current.contains(event.target as Node)
-      ) {
+      if (hamburgerButtonRef.current?.contains(event.target as Node)) {
         return;
       }
       if (
@@ -126,7 +123,7 @@ export default function UserNav() {
               </div>
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-sm font-semibold text-gray-900 truncate">
-                  {user.user_metadata?.full_name || "My Account"}
+                  {user.user_metadata?.full_name ?? "My Account"}
                 </span>
                 {user.email && (
                   <span className="text-xs text-gray-600 truncate">
@@ -162,7 +159,7 @@ export default function UserNav() {
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-semibold leading-none">
-                    {user.user_metadata?.full_name || "My Account"}
+                    {user.user_metadata?.full_name ?? "My Account"}
                   </p>
                   {user.email && (
                     <p className="text-xs leading-none text-gray-600">

@@ -61,10 +61,6 @@ export function incrementLocalAttemptCount(quizMode: QuizMode): void {
   const counts = getLocalAttemptCounts();
   counts[quizMode] = (counts[quizMode] || 0) + 1;
   window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(counts));
-  // console.log( // Debug log removed
-  //   `[quizLimits] Incremented local count for ${quizMode}. New counts:`,
-  //   counts
-  // );
 }
 
 // 3. Main Access Check Function
@@ -87,21 +83,22 @@ export async function checkAttemptLimits(
   quizMode: QuizMode,
   supabase: SupabaseClient
 ): Promise<AttemptCheckResult> {
+  console.log(`[DEBUG] checkAttemptLimits called for mode: ${quizMode}`);
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  // console.log("[checkAttemptLimits] User auth object:", user); // Debug log removed
+
+  console.log("[DEBUG] User authentication status:", {
+    userExists: !!user,
+    userId: user?.id,
+  });
 
   if (user) {
-    // User is logged in
-    // console.log( // Debug log removed
-    //   "[checkAttemptLimits] Authenticated user path entered. User ID:",
-    //   user.id
-    // );
     try {
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("access_level") // Assuming 'access_level' column exists
+        .select("access_level")
         .eq("id", user.id)
         .single();
 
@@ -116,13 +113,10 @@ export async function checkAttemptLimits(
         };
       }
 
-      // Modify this check to see if access_level is one of the paid types
       if (
-        profile &&
-        profile.access_level &&
+        profile?.access_level &&
         PAID_ACCESS_LEVELS.includes(profile.access_level)
       ) {
-        // console.log("[checkAttemptLimits] Paid user, access_level:", profile.access_level); // Keep commented
         return {
           canAttempt: true,
           message: "Paid user, unlimited access.",
@@ -132,9 +126,6 @@ export async function checkAttemptLimits(
         };
       }
 
-      // Authenticated free user: Check Supabase 'quiz_attempts' table
-      // This will be done via an API route to protect direct DB queries from client
-      // and to encapsulate the counting logic.
       try {
         const response = await fetch(`/api/quiz-access-check?mode=${quizMode}`);
 
@@ -142,8 +133,12 @@ export async function checkAttemptLimits(
           let errorMessage = "Failed to check attempts via API";
           try {
             const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
+            errorMessage = errorData.error ?? errorMessage;
           } catch (jsonError) {
+            console.warn(
+              "[quizLimits] Could not parse error response JSON:",
+              jsonError
+            );
             // If parsing JSON fails, use the status text or a generic message
             errorMessage = response.statusText || errorMessage;
             if (response.status === 401)
@@ -195,7 +190,7 @@ export async function checkAttemptLimits(
         return {
           canAttempt: false,
           message:
-            apiError.message ||
+            apiError.message ??
             "An error occurred while checking your quiz access.",
           isPaidUser: false,
           isLoggedIn: true,
@@ -214,16 +209,16 @@ export async function checkAttemptLimits(
       };
     }
   } else {
-    // User is not logged in (unauthenticated)
-    // console.log("[checkAttemptLimits] Unauthenticated user path entered."); // Debug log removed
     const currentAttempts = getLocalAttemptCount(quizMode);
     const limit = FREE_TIER_LIMITS[quizMode];
-    // console.log( // Debug log removed
-    //   `[checkAttemptLimits] Unauth: Mode=${quizMode}, LocalAttempts=${currentAttempts}, Limit=${limit}`
-    // );
+
+    console.log("[DEBUG] Unauthenticated user attempt tracking:", {
+      quizMode,
+      currentAttempts,
+      limit,
+    });
 
     if (currentAttempts < limit) {
-      // console.log("[checkAttemptLimits] Unauth: Access GRANTED."); // Debug log removed
       return {
         canAttempt: true,
         message: `Unauthenticated user. Attempts remaining: ${
@@ -234,9 +229,6 @@ export async function checkAttemptLimits(
         reason: "free_access",
       };
     } else {
-      // console.log(
-      //   "[checkAttemptLimits] Unauth: Access DENIED - limit reached."
-      // );
       return {
         canAttempt: false,
         message: `You have used all your free attempts for ${quizMode} quizzes. Please sign up or log in. If you have an account, logging in may grant you more attempts or premium access.`,
@@ -247,23 +239,3 @@ export async function checkAttemptLimits(
     }
   }
 }
-
-// Example of how it might be used (for testing, not part of the lib directly):
-// async function testLimits(supabaseClient: SupabaseClient) {
-//   console.log("Testing practice quiz for unauthenticated user:");
-//   let result = await checkAttemptLimits("practice", supabaseClient);
-//   console.log(result);
-//   incrementLocalAttemptCount("practice");
-//   result = await checkAttemptLimits("practice", supabaseClient);
-//   console.log(result);
-
-//   // To test authenticated, you'd need a logged-in Supabase client
-//   console.log("\nTesting timed quiz for (potentially) authenticated user:");
-//   result = await checkAttemptLimits("timed", supabaseClient);
-//   console.log(result);
-// }
-
-// Make sure to replace 'YOUR_SUPABASE_CLIENT_INSTANCE' with your actual Supabase client
-// if you uncomment and run testLimits.
-// e.g. import supabase from './supabaseClient'; // your supabase client setup
-// testLimits(supabase);

@@ -17,9 +17,7 @@ import ConfirmationModal from "@/components/confirmation-modal";
 import {
   checkAttemptLimits,
   incrementLocalAttemptCount,
-  type QuizMode,
 } from "@/lib/quizLimits";
-import Link from "next/link";
 
 interface Question {
   id: number;
@@ -80,7 +78,7 @@ export default function QuizPage() {
       const {
         data: { user: authUser },
       } = await supabase.auth.getUser();
-      setUserId(authUser?.id || null);
+      setUserId(authUser?.id ?? null);
 
       if (!accessResult.canAttempt) {
         setLoading(false);
@@ -102,11 +100,11 @@ export default function QuizPage() {
           cancelText: "Go Home",
           onConfirm: () => {
             onConfirmAction();
-            setLimitModalState({ ...limitModalState, isOpen: false });
+            setLimitModalState((prev) => ({ ...prev, isOpen: false }));
           },
           onClose: () => {
             router.push("/");
-            setLimitModalState({ ...limitModalState, isOpen: false });
+            setLimitModalState((prev) => ({ ...prev, isOpen: false }));
           },
         });
         return;
@@ -114,42 +112,31 @@ export default function QuizPage() {
 
       setLoading(true);
       try {
-        const { data: idObjects, error: idError } = await supabase
-          .from("questions")
-          .select("id");
-        if (idError) throw new Error(idError.message);
-        if (!idObjects || idObjects.length === 0)
-          throw new Error("No question IDs found.");
+        // Use server-side PostgreSQL function for optimal performance
+        // No client-side shuffling needed - database handles randomization
+        const { data, error } = await supabase.rpc(
+          "get_random_questions" as any,
+          { question_limit: 20 }
+        );
 
-        let questionIds = idObjects.map((item) => item.id);
-        for (let i = questionIds.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [questionIds[i], questionIds[j]] = [questionIds[j], questionIds[i]];
-        }
-        const selectedIds = questionIds.slice(0, 20);
+        if (error) throw new Error(error.message);
 
-        if (selectedIds.length === 0) {
+        if (!data || (data as Question[]).length === 0) {
           setQuestions([]);
-          setError("Not enough questions to start a quiz.");
+          setError("No questions available for quiz.");
           setLoading(false);
           return;
         }
 
-        const { data, error: questionsFetchError } = await supabase
-          .from("questions")
-          .select("*")
-          .in("id", selectedIds);
-        if (questionsFetchError) throw new Error(questionsFetchError.message);
-
-        if (data) {
-          const questionMap = new Map(data.map((q) => [q.id, q]));
-          const orderedQuestions = selectedIds
-            .map((id) => questionMap.get(id))
-            .filter(Boolean) as Question[];
-          setQuestions(orderedQuestions);
-        } else {
-          setQuestions([]);
+        if ((data as Question[]).length < 20) {
+          console.warn(
+            `Only ${
+              (data as Question[]).length
+            } questions available, expected 20`
+          );
         }
+
+        setQuestions(data as Question[]);
       } catch (err) {
         console.error("Error fetching questions:", err);
         setError((err as Error).message || "Failed to load questions.");
@@ -159,7 +146,7 @@ export default function QuizPage() {
     }
 
     performAccessCheckAndFetchData();
-  }, [supabase, router]);
+  }, []);
 
   const currentQuestion = questions[currentQuestionIndex];
   const progress =
@@ -225,7 +212,7 @@ export default function QuizPage() {
       const result = await response.json(); // Always parse JSON
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to save quiz attempt");
+        throw new Error(result.error ?? "Failed to save quiz attempt");
       }
 
       const attemptId = result.attemptId;
@@ -253,7 +240,7 @@ export default function QuizPage() {
       }
     } catch (err: any) {
       console.error("Error submitting quiz:", err);
-      setError(err.message || "Failed to submit quiz. Please try again.");
+      setError(err.message ?? "Failed to submit quiz. Please try again.");
       setShowUnauthenticatedResults(false);
     } finally {
       setLoading(false);
@@ -271,7 +258,7 @@ export default function QuizPage() {
         onConfirm={limitModalState.onConfirm}
         onClose={
           limitModalState.onClose ||
-          (() => setLimitModalState({ ...limitModalState, isOpen: false }))
+          (() => setLimitModalState((prev) => ({ ...prev, isOpen: false })))
         }
       />
     );
@@ -470,18 +457,20 @@ export default function QuizPage() {
         </Card>
       </div>
 
-      <ConfirmationModal
-        isOpen={isConfirmEndQuizModalOpen}
-        onClose={() => setIsConfirmEndQuizModalOpen(false)}
-        onConfirm={() => {
-          finishQuiz();
-          setIsConfirmEndQuizModalOpen(false);
-        }}
-        title="End Quiz?"
-        message="Are you sure you want to end the quiz? Your current answers will be submitted, and you will be taken to the results page."
-        confirmText="End Quiz"
-        cancelText="Continue Quiz"
-      />
+      {isConfirmEndQuizModalOpen && (
+        <ConfirmationModal
+          isOpen={true}
+          onClose={() => setIsConfirmEndQuizModalOpen(false)}
+          onConfirm={() => {
+            finishQuiz();
+            setIsConfirmEndQuizModalOpen(false);
+          }}
+          title="End Quiz?"
+          message="Are you sure you want to end the quiz? Your current answers will be submitted, and you will be taken to the results page."
+          confirmText="End Quiz"
+          cancelText="Continue Quiz"
+        />
+      )}
     </div>
   );
 }

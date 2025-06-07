@@ -15,8 +15,10 @@ import supabaseClient from "@/lib/supabase-client";
 import { Loader2 } from "lucide-react";
 import Timer from "@/components/timer";
 import ConfirmationModal from "@/components/confirmation-modal";
-import { incrementLocalAttemptCount } from "@/lib/quizLimits";
-import { checkAttemptLimits } from "@/lib/quizLimits";
+import {
+  incrementLocalAttemptCount,
+  checkAttemptLimits,
+} from "@/lib/quizLimits";
 
 interface Question {
   id: number;
@@ -116,35 +118,33 @@ export default function TimedQuizPage() {
       const result = await response.json(); // Always parse JSON
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to save timed quiz attempt");
+        throw new Error(result.error ?? "Failed to save timed quiz attempt");
       }
 
       attemptIdToRedirect = result.attemptId;
 
       if (attemptIdToRedirect) {
         router.push(`/results/${attemptIdToRedirect}`);
-      } else {
+      } else if (
+        typeof result.score === "number" &&
+        typeof result.totalQuestions === "number"
+      ) {
         // Handle unauthenticated or non-persisted attempt
-        if (
-          typeof result.score === "number" &&
-          typeof result.totalQuestions === "number"
-        ) {
-          setUnauthenticatedScore(result.score);
-          setUnauthenticatedTotalQuestions(result.totalQuestions);
-          setShowUnauthenticatedResults(true);
-        } else {
-          console.error(
-            "API did not return score/totalQuestions for unauthenticated timed attempt:",
-            result
-          );
-          setError(
-            "Quiz finished, but there was an issue displaying your score."
-          );
-        }
+        setUnauthenticatedScore(result.score);
+        setUnauthenticatedTotalQuestions(result.totalQuestions);
+        setShowUnauthenticatedResults(true);
+      } else {
+        console.error(
+          "API did not return score/totalQuestions for unauthenticated timed attempt:",
+          result
+        );
+        setError(
+          "Quiz finished, but there was an issue displaying your score."
+        );
       }
     } catch (err: any) {
       console.error("Error submitting timed quiz:", err);
-      setError(err.message || "Failed to submit timed quiz. Please try again.");
+      setError(err.message ?? "Failed to submit timed quiz. Please try again.");
       setShowUnauthenticatedResults(false);
     } finally {
       setLoading(false);
@@ -280,104 +280,88 @@ export default function TimedQuizPage() {
 
   useEffect(() => {
     async function performAccessCheckAndFetchData() {
-      // Perform access check first
       const accessResult = await checkAttemptLimits("timed", supabaseClient);
-      setIsAccessChecked(true); // Mark access check as done
+      setIsAccessChecked(true);
 
       if (!accessResult.canAttempt) {
-        setLoading(false); // Stop loading indicator
-        setQuestions([]); // Clear any potential questions
-
         let confirmText = "OK";
-        let onConfirmAction = () => router.push("/"); // Go back to home
+        let onConfirmAction = () => {
+          router.push("/");
+        };
 
         if (!accessResult.isLoggedIn) {
           confirmText = "Sign Up";
-          onConfirmAction = () => router.push("/signup");
+          onConfirmAction = () => {
+            router.push("/signup");
+          };
         } else if (!accessResult.isPaidUser) {
           confirmText = "Upgrade Plan";
-          onConfirmAction = () => router.push("/pricing");
+          onConfirmAction = () => {
+            router.push("/pricing");
+          };
         }
 
         setModalState({
           isOpen: true,
           title: "Access Denied",
           message: accessResult.message,
-          confirmText: confirmText,
+          confirmText,
           cancelText: "Go Home",
           onConfirm: () => {
             onConfirmAction();
-            setModalState({ ...modalState, isOpen: false });
+            setModalState((prev) => ({ ...prev, isOpen: false }));
           },
           onClose: () => {
             router.push("/");
-            setModalState({ ...modalState, isOpen: false });
+            setModalState((prev) => ({ ...prev, isOpen: false }));
           },
         });
-        return; // Stop further execution if access is denied
+        return;
       }
 
       // If access is granted, proceed to fetch quiz data
       setLoading(true); // Ensure loading is true before fetching actual questions
       try {
-        // 1. Fetch all question IDs
-        const { data: idObjects, error: idError } = await supabaseClient
-          .from("questions")
-          .select("id");
-
-        if (idError) {
-          console.error("Supabase error fetching IDs (timed):", idError);
-          throw new Error(idError.message);
+        const { data: userData } = await supabaseClient.auth.getUser();
+        if (userData.user) {
+          setUserId(userData.user.id);
         }
 
-        if (!idObjects || idObjects.length === 0) {
-          throw new Error("No question IDs found (timed).");
+        // Use server-side PostgreSQL function for optimal performance
+        // No client-side shuffling needed - database handles randomization
+        const { data, error } = await supabaseClient.rpc(
+          "get_random_questions" as any,
+          { question_limit: 20 }
+        );
+
+        if (error) {
+          if (process.env.NODE_ENV === "development") {
+            console.error("Supabase error fetching questions (timed):", error);
+          }
+          throw new Error(error.message);
         }
 
-        let questionIds = idObjects.map((item: { id: number }) => item.id);
-        for (let i = questionIds.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [questionIds[i], questionIds[j]] = [questionIds[j], questionIds[i]];
-        }
-        const selectedIds = questionIds.slice(0, 20);
-
-        if (selectedIds.length === 0) {
+        if (!data || (data as Question[]).length === 0) {
           setQuestions([]);
-          setError("Not enough questions to start a timed quiz.");
+          setError("No questions available for timed quiz.");
           setLoading(false); // Ensure loading is set to false here
           return;
         }
 
-        const { data, error } = await supabaseClient
-          .from("questions")
-          .select(
-            "id, question_text, option_a, option_b, option_c, option_d, correct_option"
-          )
-          .in("id", selectedIds);
-
-        if (error) {
-          console.error(
-            "Supabase error fetching questions by ID (timed):",
-            error
+        if ((data as Question[]).length < 20) {
+          console.warn(
+            `Only ${
+              (data as Question[]).length
+            } questions available for timed quiz, expected 20`
           );
-          throw new Error(error.message);
         }
 
-        if (data) {
-          const questionMap = new Map(data.map((q: Question) => [q.id, q]));
-          const orderedQuestions = selectedIds
-            .map((id: number) => questionMap.get(id))
-            .filter(Boolean) as Question[];
-          setQuestions(orderedQuestions);
-          setOriginalQuestions(orderedQuestions);
-          setError(null);
-        } else {
-          setQuestions([]);
-          setError("No questions returned for the timed quiz.");
-        }
+        setQuestions(data as Question[]);
+        setOriginalQuestions(data as Question[]);
+        setError(null);
       } catch (err: any) {
         console.error("Error in fetchData (timed):", err);
-        setError(err.message || "Failed to load questions for timed quiz.");
+        setError(err.message ?? "Failed to load questions for timed quiz.");
         setQuestions([]);
       } finally {
         setLoading(false);
@@ -386,7 +370,7 @@ export default function TimedQuizPage() {
     }
 
     performAccessCheckAndFetchData();
-  }, [router]); // Simplified dependencies, supabaseClient is stable, searchParams not used here
+  }, []); // Empty dependency array - this should only run once on mount
 
   if (showUnauthenticatedResults) {
     return (
@@ -441,7 +425,7 @@ export default function TimedQuizPage() {
         onConfirm={modalState.onConfirm}
         onClose={
           modalState.onClose ||
-          (() => setModalState({ ...modalState, isOpen: false }))
+          (() => setModalState((prev) => ({ ...prev, isOpen: false })))
         }
       />
     );
@@ -592,18 +576,20 @@ export default function TimedQuizPage() {
         </Card>
       </div>
 
-      <ConfirmationModal
-        isOpen={isConfirmModalOpen}
-        onClose={() => setIsConfirmModalOpen(false)}
-        onConfirm={() => {
-          finishQuiz();
-          setIsConfirmModalOpen(false);
-        }}
-        title="End Quiz?"
-        message="Are you sure you want to end the quiz? Your current answers will be submitted, and you will be taken to the results page."
-        confirmText="End Quiz"
-        cancelText="Continue Quiz"
-      />
+      {isConfirmModalOpen && (
+        <ConfirmationModal
+          isOpen={true}
+          onClose={() => setIsConfirmModalOpen(false)}
+          onConfirm={() => {
+            finishQuiz();
+            setIsConfirmModalOpen(false);
+          }}
+          title="End Quiz?"
+          message="Are you sure you want to end the quiz? Your current answers will be submitted, and you will be taken to the results page."
+          confirmText="End Quiz"
+          cancelText="Continue Quiz"
+        />
+      )}
     </div>
   );
 }

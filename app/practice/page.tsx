@@ -13,12 +13,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, BookOpen, AlertTriangle, Shuffle } from "lucide-react";
-import {
-  checkAttemptLimits,
-  type QuizMode,
-  type AttemptCheckResult,
-} from "@/lib/quizLimits";
+import { Loader2, AlertTriangle, Shuffle } from "lucide-react";
+import { checkAttemptLimits, type QuizMode } from "@/lib/quizLimits";
 import ConfirmationModal from "@/components/confirmation-modal";
 
 export default function PracticePage() {
@@ -78,7 +74,6 @@ export default function PracticePage() {
     quizPath: string,
     actionName: string
   ) => {
-    console.log(`[PracticePage] Attempting to start ${actionName}`);
     const result = await checkAttemptLimits(quizMode, supabase);
 
     if (result.canAttempt) {
@@ -93,7 +88,7 @@ export default function PracticePage() {
       let confirmText = "OK";
       let cancelText = "Later";
       let onConfirmAction = () =>
-        setModalState({ ...modalState, isOpen: false });
+        setModalState((prev) => ({ ...prev, isOpen: false }));
 
       if (!result.isLoggedIn) {
         confirmText = "Sign Up";
@@ -111,9 +106,9 @@ export default function PracticePage() {
         cancelText,
         onConfirm: () => {
           onConfirmAction();
-          setModalState({ ...modalState, isOpen: false });
+          setModalState((prev) => ({ ...prev, isOpen: false }));
         },
-        onClose: () => setModalState({ ...modalState, isOpen: false }),
+        onClose: () => setModalState((prev) => ({ ...prev, isOpen: false })),
       });
     }
   };
@@ -136,7 +131,7 @@ export default function PracticePage() {
         confirmText: "Sign In",
         cancelText: "Later",
         onConfirm: () => router.push("/auth"),
-        onClose: () => setModalState({ ...modalState, isOpen: false }),
+        onClose: () => setModalState((prev) => ({ ...prev, isOpen: false })),
       });
       return;
     }
@@ -147,8 +142,8 @@ export default function PracticePage() {
         message: "You have no incorrect questions to practice. Great job!",
         confirmText: "OK",
         cancelText: "",
-        onConfirm: () => setModalState({ ...modalState, isOpen: false }),
-        onClose: () => setModalState({ ...modalState, isOpen: false }),
+        onConfirm: () => setModalState((prev) => ({ ...prev, isOpen: false })),
+        onClose: () => setModalState((prev) => ({ ...prev, isOpen: false })),
       });
       return;
     }
@@ -322,7 +317,7 @@ export default function PracticePage() {
         onClose={() =>
           modalState.onClose
             ? modalState.onClose()
-            : setModalState({ ...modalState, isOpen: false })
+            : setModalState((prev) => ({ ...prev, isOpen: false }))
         }
       />
     </div>

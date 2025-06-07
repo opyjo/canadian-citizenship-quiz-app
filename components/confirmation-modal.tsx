@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useEffect } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,7 +14,7 @@ import {
 
 interface ConfirmationModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose?: () => void;
   onConfirm: () => void;
   title: string;
   message: string;
@@ -30,12 +31,29 @@ export default function ConfirmationModal({
   confirmText = "Confirm",
   cancelText = "Cancel",
 }: ConfirmationModalProps) {
+  const isConfirming = useRef(false);
+
+  useEffect(() => {
+    // Reset the ref when the modal is opened to ensure it's fresh for each interaction.
+    if (isOpen) {
+      isConfirming.current = false;
+    }
+  }, [isOpen]);
+
   if (!isOpen) {
     return null;
   }
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onClose}>
+    <AlertDialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        // Only trigger onClose if the modal is closing AND it wasn't due to a confirm action.
+        if (!open && !isConfirming.current) {
+          onClose?.();
+        }
+      }}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
@@ -45,8 +63,9 @@ export default function ConfirmationModal({
           <AlertDialogCancel onClick={onClose}>{cancelText}</AlertDialogCancel>
           <AlertDialogAction
             onClick={() => {
+              // Immediately flag that a confirmation is happening.
+              isConfirming.current = true;
               onConfirm();
-              onClose(); // Typically, the modal closes after confirmation too
             }}
           >
             {confirmText}

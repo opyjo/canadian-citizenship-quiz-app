@@ -13,9 +13,11 @@ import {
 import { Progress } from "@/components/ui/progress";
 import supabaseClient from "@/lib/supabase-client";
 import { Loader2 } from "lucide-react";
-import { incrementLocalAttemptCount } from "@/lib/quizLimits";
+import {
+  incrementLocalAttemptCount,
+  checkAttemptLimits,
+} from "@/lib/quizLimits";
 import ConfirmationModal from "@/components/confirmation-modal";
-import { checkAttemptLimits } from "@/lib/quizLimits";
 
 interface Question {
   id: number;
@@ -50,7 +52,6 @@ function PracticeQuizContent() {
     confirmText: string;
     cancelText: string;
     onConfirm: () => void;
-    onClose?: () => void;
   }>({
     isOpen: false,
     title: "",
@@ -71,9 +72,8 @@ function PracticeQuizContent() {
 
   useEffect(() => {
     async function performAccessCheckAndFetchData() {
-      // Perform access check first
       const accessResult = await checkAttemptLimits("practice", supabase);
-      setIsAccessChecked(true); // Mark access check as done
+      setIsAccessChecked(true);
 
       if (!accessResult.canAttempt) {
         setLoading(false); // Stop loading indicator
@@ -99,11 +99,7 @@ function PracticeQuizContent() {
           cancelText: "Go Home", // Changed cancel to Go Home or similar
           onConfirm: () => {
             onConfirmAction();
-            setModalState({ ...modalState, isOpen: false });
-          },
-          onClose: () => {
-            router.push("/"); // Default close action: go home
-            setModalState({ ...modalState, isOpen: false });
+            setModalState((prev) => ({ ...prev, isOpen: false }));
           },
         });
         return; // Stop further execution if access is denied
@@ -175,45 +171,29 @@ function PracticeQuizContent() {
             return;
           }
 
-          // Fetch all question IDs
-          const { data: allQuestionIds, error: idError } = await supabase
-            .from("questions")
-            .select("id");
+          // Use server-side PostgreSQL function for optimal performance
+          // No client-side shuffling needed - database handles randomization
+          const { data: questionData, error: questionError } =
+            await supabase.rpc("get_random_practice_questions" as any, {
+              user_id_param: userId || null,
+              question_limit: count,
+              incorrect_only: false,
+            });
 
-          if (idError) throw idError;
+          if (questionError) throw questionError;
 
-          if (allQuestionIds && allQuestionIds.length > 0) {
-            const shuffledIds = allQuestionIds
-              .map((q) => q.id)
-              .sort(() => 0.5 - Math.random());
-            const selectedIds = shuffledIds.slice(0, count);
-
-            if (selectedIds.length > 0) {
-              // Fetch the actual questions by selected IDs
-              const { data: questionData, error: questionError } =
-                await supabase
-                  .from("questions")
-                  .select("*")
-                  .in("id", selectedIds);
-
-              if (questionError) throw questionError;
-
-              if (questionData) {
-                // Re-shuffle here to ensure the presentation order is random, as .in() might return them ordered by ID
-                const finalShuffledQuestions = [...questionData].sort(
-                  () => 0.5 - Math.random()
-                );
-                setQuestions(finalShuffledQuestions);
-              } else {
-                setQuestions([]);
-              }
-            } else {
-              setError("No questions available to select for random practice.");
-              setQuestions([]);
-            }
-          } else {
-            setError("No questions found in the database for random practice.");
+          if (!questionData || (questionData as Question[]).length === 0) {
+            setError("No questions available for random practice.");
             setQuestions([]);
+          } else {
+            if ((questionData as Question[]).length < count) {
+              console.warn(
+                `Only ${
+                  (questionData as Question[]).length
+                } questions available for practice, expected ${count}`
+              );
+            }
+            setQuestions(questionData as Question[]);
           }
         } else {
           // No valid practice type specified
@@ -257,7 +237,6 @@ function PracticeQuizContent() {
   };
 
   const getResultData = () => {
-    console.log("[PracticeQuizPage] getResultData called");
     try {
       const score = questions.filter(
         (q, index) =>
@@ -279,7 +258,6 @@ function PracticeQuizContent() {
         })),
         practiceType,
       };
-      console.log("[PracticeQuizPage] resultData prepared:", results);
       return results;
     } catch (error) {
       console.error("[PracticeQuizPage] Error in getResultData:", error);
@@ -289,7 +267,6 @@ function PracticeQuizContent() {
   };
 
   const finishQuiz = async () => {
-    console.log("[PracticeQuizPage] finishQuiz called");
     let localResultData;
     try {
       localResultData = getResultData(); // This contains score, totalQuestions etc. calculated locally
@@ -362,17 +339,10 @@ function PracticeQuizContent() {
     }
 
     if (!userId) {
-      console.log(
-        "[PracticeQuizPage] User is not logged in. Incrementing local practice attempt count."
-      );
       incrementLocalAttemptCount("practice");
     }
 
     if (userId) {
-      console.log(
-        "[PracticeQuizPage] User is logged in. Processing practice results for user_incorrect_questions table.",
-        { userId, practiceType }
-      );
       try {
         // Logic for questions the user got wrong IN THIS SESSION
         const newlyIncorrectQuestions = localResultData.questions
@@ -383,10 +353,6 @@ function PracticeQuizContent() {
           }));
 
         if (newlyIncorrectQuestions.length > 0) {
-          console.log(
-            "[PracticeQuizPage] Upserting newly incorrect questions:",
-            newlyIncorrectQuestions
-          );
           const { error: upsertError } = await supabase
             .from("user_incorrect_questions")
             .upsert(newlyIncorrectQuestions, {
@@ -399,15 +365,7 @@ function PracticeQuizContent() {
               upsertError
             );
             // Optionally set an error state for the user
-          } else {
-            console.log(
-              "[PracticeQuizPage] Successfully upserted newly incorrect questions."
-            );
           }
-        } else {
-          console.log(
-            "[PracticeQuizPage] No new incorrect questions in this session."
-          );
         }
 
         // New logic: If this was a session for practicing incorrect questions,
@@ -419,10 +377,6 @@ function PracticeQuizContent() {
             .map((q: any) => q.id);
 
           if (correctlyAnsweredInThisSession.length > 0) {
-            console.log(
-              "[PracticeQuizPage] Removing correctly answered questions from user_incorrect_questions table:",
-              correctlyAnsweredInThisSession
-            );
             const { error: deleteError } = await supabase
               .from("user_incorrect_questions")
               .delete()
@@ -435,10 +389,6 @@ function PracticeQuizContent() {
                 deleteError
               );
               // Optionally set an error state for the user
-            } else {
-              console.log(
-                "[PracticeQuizPage] Successfully removed correctly answered questions."
-              );
             }
           }
         }
@@ -448,10 +398,6 @@ function PracticeQuizContent() {
           errorLogging
         );
       }
-    } else {
-      console.log(
-        "[PracticeQuizPage] User not logged in. Skipping save/update of user data (user_incorrect_questions)."
-      );
     }
     // No explicit redirect here if unauthenticated or error, as those states render different UI.
   };
@@ -506,10 +452,10 @@ function PracticeQuizContent() {
         confirmText={modalState.confirmText}
         cancelText={modalState.cancelText}
         onConfirm={modalState.onConfirm}
-        onClose={
-          modalState.onClose ||
-          (() => setModalState({ ...modalState, isOpen: false }))
-        }
+        onClose={() => {
+          router.push("/");
+          setModalState((prev) => ({ ...prev, isOpen: false }));
+        }}
       />
     );
   }

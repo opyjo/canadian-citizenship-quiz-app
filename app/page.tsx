@@ -6,7 +6,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -22,7 +21,6 @@ import {
   MessageCircleQuestion,
   Map,
   Bot,
-  ChevronDown,
   Clock,
 } from "lucide-react";
 import { useState } from "react";
@@ -32,7 +30,6 @@ import { checkAttemptLimits, type QuizMode } from "@/lib/quizLimits";
 import ConfirmationModal from "@/components/confirmation-modal";
 import {
   chapters,
-  quizTypes,
   features,
   stats,
   testimonials,
@@ -68,7 +65,7 @@ export default function HomePage() {
       let confirmText = "OK";
       let cancelText = "Cancel";
       let onConfirmAction = () =>
-        setModalState({ ...modalState, isOpen: false });
+        setModalState((prev) => ({ ...prev, isOpen: false }));
 
       if (!result.isLoggedIn) {
         confirmText = "Sign Up";
@@ -88,9 +85,9 @@ export default function HomePage() {
         cancelText,
         onConfirm: () => {
           onConfirmAction();
-          setModalState({ ...modalState, isOpen: false });
+          setModalState((prev) => ({ ...prev, isOpen: false }));
         },
-        onClose: () => setModalState({ ...modalState, isOpen: false }),
+        onClose: () => setModalState((prev) => ({ ...prev, isOpen: false })),
       });
     }
   };
@@ -111,14 +108,14 @@ export default function HomePage() {
               id="hero-heading"
               className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6"
             >
-              Prepare for Your Citizenship Test with
-              <span className="text-red-600"> Confidence</span>
+              Prepare for Your Citizenship Test with{" "}
+              <span className="text-red-600">Confidence</span>
             </h1>
             <p className="text-xl lg:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto">
-              Master your citizenship journey with our complete 3-step system:
-              <strong> Study comprehensive materials</strong>,
-              <strong> practice unlimited questions</strong>, and
-              <strong> test yourself with realistic simulations</strong>.
+              Master your citizenship journey with our complete 3-step system:{" "}
+              <strong>Study comprehensive materials</strong>,{" "}
+              <strong>practice unlimited questions</strong>, and{" "}
+              <strong>test yourself with realistic simulations</strong>.
               Everything you need to pass your citizenship exam.
             </p>
 
@@ -1021,7 +1018,7 @@ export default function HomePage() {
         onClose={() =>
           modalState.onClose
             ? modalState.onClose()
-            : setModalState({ ...modalState, isOpen: false })
+            : setModalState((prev) => ({ ...prev, isOpen: false }))
         }
       />
     </>

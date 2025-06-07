@@ -17,9 +17,7 @@ import ConfirmationModal from "@/components/confirmation-modal";
 import {
   checkAttemptLimits,
   incrementLocalAttemptCount,
-  type QuizMode,
 } from "@/lib/quizLimits";
-import Link from "next/link";
 
 interface Question {
   id: number;
@@ -114,20 +112,28 @@ export default function QuizPage() {
 
       setLoading(true);
       try {
-        // Single optimized query with PostgreSQL RANDOM() for better performance
-        const { data, error } = await supabase
-          .from("questions")
-          .select("*")
-          .order("random()")
-          .limit(20);
+        // Use server-side PostgreSQL function for optimal performance
+        // No client-side shuffling needed - database handles randomization
+        const { data, error } = await supabase.rpc(
+          "get_random_questions" as any,
+          { question_limit: 20 }
+        );
 
         if (error) throw new Error(error.message);
 
-        if (!data || data.length === 0) {
+        if (!data || (data as Question[]).length === 0) {
           setQuestions([]);
           setError("No questions available for quiz.");
           setLoading(false);
           return;
+        }
+
+        if ((data as Question[]).length < 20) {
+          console.warn(
+            `Only ${
+              (data as Question[]).length
+            } questions available, expected 20`
+          );
         }
 
         setQuestions(data as Question[]);

@@ -43,6 +43,8 @@
     "@stripe/stripe-js": "^7.3.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "latest",
+    "@tanstack/react-query": "^5.80.6",
+    "@tanstack/react-query-devtools": "^5.80.6",
     "@types/topojson-client": "^3.1.5",
     "ai": "^4.3.16",
     "autoprefixer": "^10.4.20",

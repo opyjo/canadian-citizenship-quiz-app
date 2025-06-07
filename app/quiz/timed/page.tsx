@@ -15,8 +15,10 @@ import supabaseClient from "@/lib/supabase-client";
 import { Loader2 } from "lucide-react";
 import Timer from "@/components/timer";
 import ConfirmationModal from "@/components/confirmation-modal";
-import { incrementLocalAttemptCount } from "@/lib/quizLimits";
-import { checkAttemptLimits } from "@/lib/quizLimits";
+import {
+  incrementLocalAttemptCount,
+  checkAttemptLimits,
+} from "@/lib/quizLimits";
 
 interface Question {
   id: number;
@@ -116,35 +118,33 @@ export default function TimedQuizPage() {
       const result = await response.json(); // Always parse JSON
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to save timed quiz attempt");
+        throw new Error(result.error ?? "Failed to save timed quiz attempt");
       }
 
       attemptIdToRedirect = result.attemptId;
 
       if (attemptIdToRedirect) {
         router.push(`/results/${attemptIdToRedirect}`);
-      } else {
+      } else if (
+        typeof result.score === "number" &&
+        typeof result.totalQuestions === "number"
+      ) {
         // Handle unauthenticated or non-persisted attempt
-        if (
-          typeof result.score === "number" &&
-          typeof result.totalQuestions === "number"
-        ) {
-          setUnauthenticatedScore(result.score);
-          setUnauthenticatedTotalQuestions(result.totalQuestions);
-          setShowUnauthenticatedResults(true);
-        } else {
-          console.error(
-            "API did not return score/totalQuestions for unauthenticated timed attempt:",
-            result
-          );
-          setError(
-            "Quiz finished, but there was an issue displaying your score."
-          );
-        }
+        setUnauthenticatedScore(result.score);
+        setUnauthenticatedTotalQuestions(result.totalQuestions);
+        setShowUnauthenticatedResults(true);
+      } else {
+        console.error(
+          "API did not return score/totalQuestions for unauthenticated timed attempt:",
+          result
+        );
+        setError(
+          "Quiz finished, but there was an issue displaying your score."
+        );
       }
     } catch (err: any) {
       console.error("Error submitting timed quiz:", err);
-      setError(err.message || "Failed to submit timed quiz. Please try again.");
+      setError(err.message ?? "Failed to submit timed quiz. Please try again.");
       setShowUnauthenticatedResults(false);
     } finally {
       setLoading(false);
@@ -320,14 +320,17 @@ export default function TimedQuizPage() {
       // If access is granted, proceed to fetch quiz data
       setLoading(true); // Ensure loading is true before fetching actual questions
       try {
-        // Single optimized query with PostgreSQL RANDOM() for better performance
-        const { data, error } = await supabaseClient
-          .from("questions")
-          .select(
-            "id, question_text, option_a, option_b, option_c, option_d, correct_option"
-          )
-          .order("random()")
-          .limit(20);
+        const { data: userData } = await supabaseClient.auth.getUser();
+        if (userData.user) {
+          setUserId(userData.user.id);
+        }
+
+        // Use server-side PostgreSQL function for optimal performance
+        // No client-side shuffling needed - database handles randomization
+        const { data, error } = await supabaseClient.rpc(
+          "get_random_questions" as any,
+          { question_limit: 20 }
+        );
 
         if (error) {
           if (process.env.NODE_ENV === "development") {
@@ -336,11 +339,19 @@ export default function TimedQuizPage() {
           throw new Error(error.message);
         }
 
-        if (!data || data.length === 0) {
+        if (!data || (data as Question[]).length === 0) {
           setQuestions([]);
           setError("No questions available for timed quiz.");
           setLoading(false); // Ensure loading is set to false here
           return;
+        }
+
+        if ((data as Question[]).length < 20) {
+          console.warn(
+            `Only ${
+              (data as Question[]).length
+            } questions available for timed quiz, expected 20`
+          );
         }
 
         setQuestions(data as Question[]);
@@ -348,7 +359,7 @@ export default function TimedQuizPage() {
         setError(null);
       } catch (err: any) {
         console.error("Error in fetchData (timed):", err);
-        setError(err.message || "Failed to load questions for timed quiz.");
+        setError(err.message ?? "Failed to load questions for timed quiz.");
         setQuestions([]);
       } finally {
         setLoading(false);

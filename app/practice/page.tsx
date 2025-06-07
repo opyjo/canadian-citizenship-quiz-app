@@ -74,7 +74,6 @@ export default function PracticePage() {
     quizPath: string,
     actionName: string
   ) => {
-    console.log(`[PracticePage] Attempting to start ${actionName}`);
     const result = await checkAttemptLimits(quizMode, supabase);
 
     if (result.canAttempt) {

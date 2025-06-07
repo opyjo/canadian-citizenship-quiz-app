@@ -13,9 +13,11 @@ import {
 import { Progress } from "@/components/ui/progress";
 import supabaseClient from "@/lib/supabase-client";
 import { Loader2 } from "lucide-react";
-import { incrementLocalAttemptCount } from "@/lib/quizLimits";
+import {
+  incrementLocalAttemptCount,
+  checkAttemptLimits,
+} from "@/lib/quizLimits";
 import ConfirmationModal from "@/components/confirmation-modal";
-import { checkAttemptLimits } from "@/lib/quizLimits";
 
 interface Question {
   id: number;
@@ -175,20 +177,29 @@ function PracticeQuizContent() {
             return;
           }
 
-          // Single optimized query with PostgreSQL RANDOM() for better performance
-          const { data: questionData, error: questionError } = await supabase
-            .from("questions")
-            .select("*")
-            .order("random()")
-            .limit(count);
+          // Use server-side PostgreSQL function for optimal performance
+          // No client-side shuffling needed - database handles randomization
+          const { data: questionData, error: questionError } =
+            await supabase.rpc("get_random_practice_questions" as any, {
+              user_id_param: userId || null,
+              question_limit: count,
+              incorrect_only: false,
+            });
 
           if (questionError) throw questionError;
 
-          if (!questionData || questionData.length === 0) {
+          if (!questionData || (questionData as Question[]).length === 0) {
             setError("No questions available for random practice.");
             setQuestions([]);
           } else {
-            setQuestions(questionData);
+            if ((questionData as Question[]).length < count) {
+              console.warn(
+                `Only ${
+                  (questionData as Question[]).length
+                } questions available for practice, expected ${count}`
+              );
+            }
+            setQuestions(questionData as Question[]);
           }
         } else {
           // No valid practice type specified
@@ -232,9 +243,6 @@ function PracticeQuizContent() {
   };
 
   const getResultData = () => {
-    if (process.env.NODE_ENV === "development") {
-      console.log("[PracticeQuizPage] getResultData called");
-    }
     try {
       const score = questions.filter(
         (q, index) =>
@@ -256,7 +264,6 @@ function PracticeQuizContent() {
         })),
         practiceType,
       };
-      console.log("[PracticeQuizPage] resultData prepared:", results);
       return results;
     } catch (error) {
       console.error("[PracticeQuizPage] Error in getResultData:", error);
@@ -266,9 +273,6 @@ function PracticeQuizContent() {
   };
 
   const finishQuiz = async () => {
-    if (process.env.NODE_ENV === "development") {
-      console.log("[PracticeQuizPage] finishQuiz called");
-    }
     let localResultData;
     try {
       localResultData = getResultData(); // This contains score, totalQuestions etc. calculated locally
@@ -341,17 +345,10 @@ function PracticeQuizContent() {
     }
 
     if (!userId) {
-      console.log(
-        "[PracticeQuizPage] User is not logged in. Incrementing local practice attempt count."
-      );
       incrementLocalAttemptCount("practice");
     }
 
     if (userId) {
-      console.log(
-        "[PracticeQuizPage] User is logged in. Processing practice results for user_incorrect_questions table.",
-        { userId, practiceType }
-      );
       try {
         // Logic for questions the user got wrong IN THIS SESSION
         const newlyIncorrectQuestions = localResultData.questions
@@ -362,10 +359,6 @@ function PracticeQuizContent() {
           }));
 
         if (newlyIncorrectQuestions.length > 0) {
-          console.log(
-            "[PracticeQuizPage] Upserting newly incorrect questions:",
-            newlyIncorrectQuestions
-          );
           const { error: upsertError } = await supabase
             .from("user_incorrect_questions")
             .upsert(newlyIncorrectQuestions, {
@@ -378,15 +371,7 @@ function PracticeQuizContent() {
               upsertError
             );
             // Optionally set an error state for the user
-          } else {
-            console.log(
-              "[PracticeQuizPage] Successfully upserted newly incorrect questions."
-            );
           }
-        } else {
-          console.log(
-            "[PracticeQuizPage] No new incorrect questions in this session."
-          );
         }
 
         // New logic: If this was a session for practicing incorrect questions,
@@ -398,10 +383,6 @@ function PracticeQuizContent() {
             .map((q: any) => q.id);
 
           if (correctlyAnsweredInThisSession.length > 0) {
-            console.log(
-              "[PracticeQuizPage] Removing correctly answered questions from user_incorrect_questions table:",
-              correctlyAnsweredInThisSession
-            );
             const { error: deleteError } = await supabase
               .from("user_incorrect_questions")
               .delete()
@@ -414,10 +395,6 @@ function PracticeQuizContent() {
                 deleteError
               );
               // Optionally set an error state for the user
-            } else {
-              console.log(
-                "[PracticeQuizPage] Successfully removed correctly answered questions."
-              );
             }
           }
         }
@@ -427,10 +404,6 @@ function PracticeQuizContent() {
           errorLogging
         );
       }
-    } else {
-      console.log(
-        "[PracticeQuizPage] User not logged in. Skipping save/update of user data (user_incorrect_questions)."
-      );
     }
     // No explicit redirect here if unauthenticated or error, as those states render different UI.
   };

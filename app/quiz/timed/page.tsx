@@ -320,61 +320,32 @@ export default function TimedQuizPage() {
       // If access is granted, proceed to fetch quiz data
       setLoading(true); // Ensure loading is true before fetching actual questions
       try {
-        // 1. Fetch all question IDs
-        const { data: idObjects, error: idError } = await supabaseClient
-          .from("questions")
-          .select("id");
-
-        if (idError) {
-          console.error("Supabase error fetching IDs (timed):", idError);
-          throw new Error(idError.message);
-        }
-
-        if (!idObjects || idObjects.length === 0) {
-          throw new Error("No question IDs found (timed).");
-        }
-
-        let questionIds = idObjects.map((item: { id: number }) => item.id);
-        for (let i = questionIds.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [questionIds[i], questionIds[j]] = [questionIds[j], questionIds[i]];
-        }
-        const selectedIds = questionIds.slice(0, 20);
-
-        if (selectedIds.length === 0) {
-          setQuestions([]);
-          setError("Not enough questions to start a timed quiz.");
-          setLoading(false); // Ensure loading is set to false here
-          return;
-        }
-
+        // Single optimized query with PostgreSQL RANDOM() for better performance
         const { data, error } = await supabaseClient
           .from("questions")
           .select(
             "id, question_text, option_a, option_b, option_c, option_d, correct_option"
           )
-          .in("id", selectedIds);
+          .order("random()")
+          .limit(20);
 
         if (error) {
-          console.error(
-            "Supabase error fetching questions by ID (timed):",
-            error
-          );
+          if (process.env.NODE_ENV === "development") {
+            console.error("Supabase error fetching questions (timed):", error);
+          }
           throw new Error(error.message);
         }
 
-        if (data) {
-          const questionMap = new Map(data.map((q: Question) => [q.id, q]));
-          const orderedQuestions = selectedIds
-            .map((id: number) => questionMap.get(id))
-            .filter(Boolean) as Question[];
-          setQuestions(orderedQuestions);
-          setOriginalQuestions(orderedQuestions);
-          setError(null);
-        } else {
+        if (!data || data.length === 0) {
           setQuestions([]);
-          setError("No questions returned for the timed quiz.");
+          setError("No questions available for timed quiz.");
+          setLoading(false); // Ensure loading is set to false here
+          return;
         }
+
+        setQuestions(data as Question[]);
+        setOriginalQuestions(data as Question[]);
+        setError(null);
       } catch (err: any) {
         console.error("Error in fetchData (timed):", err);
         setError(err.message || "Failed to load questions for timed quiz.");

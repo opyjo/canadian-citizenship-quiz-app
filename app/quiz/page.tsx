@@ -114,42 +114,23 @@ export default function QuizPage() {
 
       setLoading(true);
       try {
-        const { data: idObjects, error: idError } = await supabase
+        // Single optimized query with PostgreSQL RANDOM() for better performance
+        const { data, error } = await supabase
           .from("questions")
-          .select("id");
-        if (idError) throw new Error(idError.message);
-        if (!idObjects || idObjects.length === 0)
-          throw new Error("No question IDs found.");
+          .select("*")
+          .order("random()")
+          .limit(20);
 
-        let questionIds = idObjects.map((item) => item.id);
-        for (let i = questionIds.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [questionIds[i], questionIds[j]] = [questionIds[j], questionIds[i]];
-        }
-        const selectedIds = questionIds.slice(0, 20);
+        if (error) throw new Error(error.message);
 
-        if (selectedIds.length === 0) {
+        if (!data || data.length === 0) {
           setQuestions([]);
-          setError("Not enough questions to start a quiz.");
+          setError("No questions available for quiz.");
           setLoading(false);
           return;
         }
 
-        const { data, error: questionsFetchError } = await supabase
-          .from("questions")
-          .select("*")
-          .in("id", selectedIds);
-        if (questionsFetchError) throw new Error(questionsFetchError.message);
-
-        if (data) {
-          const questionMap = new Map(data.map((q) => [q.id, q]));
-          const orderedQuestions = selectedIds
-            .map((id) => questionMap.get(id))
-            .filter(Boolean) as Question[];
-          setQuestions(orderedQuestions);
-        } else {
-          setQuestions([]);
-        }
+        setQuestions(data as Question[]);
       } catch (err) {
         console.error("Error fetching questions:", err);
         setError((err as Error).message || "Failed to load questions.");

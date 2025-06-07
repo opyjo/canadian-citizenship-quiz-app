@@ -175,45 +175,20 @@ function PracticeQuizContent() {
             return;
           }
 
-          // Fetch all question IDs
-          const { data: allQuestionIds, error: idError } = await supabase
+          // Single optimized query with PostgreSQL RANDOM() for better performance
+          const { data: questionData, error: questionError } = await supabase
             .from("questions")
-            .select("id");
+            .select("*")
+            .order("random()")
+            .limit(count);
 
-          if (idError) throw idError;
+          if (questionError) throw questionError;
 
-          if (allQuestionIds && allQuestionIds.length > 0) {
-            const shuffledIds = allQuestionIds
-              .map((q) => q.id)
-              .sort(() => 0.5 - Math.random());
-            const selectedIds = shuffledIds.slice(0, count);
-
-            if (selectedIds.length > 0) {
-              // Fetch the actual questions by selected IDs
-              const { data: questionData, error: questionError } =
-                await supabase
-                  .from("questions")
-                  .select("*")
-                  .in("id", selectedIds);
-
-              if (questionError) throw questionError;
-
-              if (questionData) {
-                // Re-shuffle here to ensure the presentation order is random, as .in() might return them ordered by ID
-                const finalShuffledQuestions = [...questionData].sort(
-                  () => 0.5 - Math.random()
-                );
-                setQuestions(finalShuffledQuestions);
-              } else {
-                setQuestions([]);
-              }
-            } else {
-              setError("No questions available to select for random practice.");
-              setQuestions([]);
-            }
-          } else {
-            setError("No questions found in the database for random practice.");
+          if (!questionData || questionData.length === 0) {
+            setError("No questions available for random practice.");
             setQuestions([]);
+          } else {
+            setQuestions(questionData);
           }
         } else {
           // No valid practice type specified

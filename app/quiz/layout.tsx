@@ -3,7 +3,7 @@
 export default function QuizLayout({
   children,
 }: {
-  children: React.ReactNode;
+  readonly children: React.ReactNode;
 }) {
   return <>{children}</>;
 }

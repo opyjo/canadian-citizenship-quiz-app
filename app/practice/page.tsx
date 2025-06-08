@@ -60,7 +60,7 @@ export default function PracticePage() {
         }
       } catch (err: any) {
         console.error("Error fetching data:", err);
-        setError(err.message || "Failed to load practice data");
+        setError(err.message ?? "Failed to load practice data");
       } finally {
         setLoading(false);
       }

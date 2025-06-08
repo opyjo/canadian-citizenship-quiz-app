@@ -404,42 +404,40 @@ function PracticeQuizContent() {
 
   if (showUnauthenticatedResults) {
     return (
-      <div className="container mx-auto py-8 px-4">
-        <Card className="w-full max-w-md text-center">
-          <CardHeader>
-            <CardTitle>Practice Finished!</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {unauthenticatedScore !== null &&
-            unauthenticatedTotalQuestions !== null ? (
-              <p className="text-2xl">
-                You scored: {unauthenticatedScore} /{" "}
-                {unauthenticatedTotalQuestions}
-              </p>
-            ) : (
-              <p>Your score is being calculated...</p> // Should not happen if localResultData is always available
-            )}
-            <p className="text-sm text-muted-foreground">
-              As you are not logged in, your results are not saved.
+      <Card className="w-full max-w-md text-center">
+        <CardHeader>
+          <CardTitle>Practice Finished!</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {unauthenticatedScore !== null &&
+          unauthenticatedTotalQuestions !== null ? (
+            <p className="text-2xl">
+              You scored: {unauthenticatedScore} /{" "}
+              {unauthenticatedTotalQuestions}
             </p>
-          </CardContent>
-          <CardFooter className="flex flex-col sm:flex-row gap-2">
-            <Button
-              onClick={() => router.push("/practice")}
-              className="w-full sm:w-auto"
-            >
-              Try Another Practice
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => router.push("/")}
-              className="w-full sm:w-auto"
-            >
-              Return Home
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
+          ) : (
+            <p>Your score is being calculated...</p> // Should not happen if localResultData is always available
+          )}
+          <p className="text-sm text-muted-foreground">
+            As you are not logged in, your results are not saved.
+          </p>
+        </CardContent>
+        <CardFooter className="flex flex-col sm:flex-row gap-2">
+          <Button
+            onClick={() => router.push("/practice")}
+            className="w-full sm:w-auto"
+          >
+            Try Another Practice
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => router.push("/")}
+            className="w-full sm:w-auto"
+          >
+            Return Home
+          </Button>
+        </CardFooter>
+      </Card>
     );
   }
 
@@ -462,85 +460,77 @@ function PracticeQuizContent() {
 
   if (!isAccessChecked && loading && !showUnauthenticatedResults) {
     return (
-      <div className="container mx-auto py-8 px-4">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-red-600" />
-          <p className="text-lg">Checking access...</p>
-        </div>
+      <div className="flex flex-col items-center space-y-4">
+        <Loader2 className="h-12 w-12 animate-spin text-red-600" />
+        <p className="text-lg">Checking access...</p>
       </div>
     );
   }
 
   if (loading && !showUnauthenticatedResults) {
     return (
-      <div className="container mx-auto py-8 px-4">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-red-600" />
-          <p className="text-lg">Loading practice questions...</p>
-        </div>
+      <div className="flex flex-col items-center space-y-4">
+        <Loader2 className="h-12 w-12 animate-spin text-red-600" />
+        <p className="text-lg">Loading practice questions...</p>
       </div>
     );
   }
 
   if (error && !showUnauthenticatedResults) {
     return (
-      <div className="container mx-auto py-8 px-4">
-        <Card className="w-full max-w-3xl">
-          <CardHeader>
-            <CardTitle
-              className={`${
-                error.startsWith("Congratulations")
-                  ? "text-green-600"
-                  : "text-red-600"
-              }`}
-            >
-              {error.startsWith("Congratulations") ? "All Clear!" : "Error"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>{error}</p>
-          </CardContent>
-          <CardFooter>
-            <Button
-              onClick={() => {
-                if (error.startsWith("Congratulations")) {
-                  router.push("/"); // Go home if all clear
-                } else {
-                  router.push("/practice"); // Go back to practice options for other errors
-                }
-              }}
-            >
-              {error.startsWith("Congratulations")
-                ? "Return Home"
-                : "Return to Practice Options"}
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
+      <Card className="w-full max-w-3xl">
+        <CardHeader>
+          <CardTitle
+            className={`${
+              error.startsWith("Congratulations")
+                ? "text-green-600"
+                : "text-red-600"
+            }`}
+          >
+            {error.startsWith("Congratulations") ? "All Clear!" : "Error"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>{error}</p>
+        </CardContent>
+        <CardFooter>
+          <Button
+            onClick={() => {
+              if (error.startsWith("Congratulations")) {
+                router.push("/"); // Go home if all clear
+              } else {
+                router.push("/practice"); // Go back to practice options for other errors
+              }
+            }}
+          >
+            {error.startsWith("Congratulations")
+              ? "Return Home"
+              : "Return to Practice Options"}
+          </Button>
+        </CardFooter>
+      </Card>
     );
   }
 
   if (!currentQuestion && !loading && !error && !showUnauthenticatedResults) {
     return (
-      <div className="container mx-auto py-8 px-4">
-        <Card className="w-full max-w-3xl">
-          <CardHeader>
-            <CardTitle>No Questions Available</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>
-              There are no questions available for this practice session. This
-              might be because all incorrect questions have been cleared or no
-              questions match the selected criteria.
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button onClick={() => router.push("/practice")}>
-              Return to Practice Options
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
+      <Card className="w-full max-w-3xl">
+        <CardHeader>
+          <CardTitle>No Questions Available</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>
+            There are no questions available for this practice session. This
+            might be because all incorrect questions have been cleared or no
+            questions match the selected criteria.
+          </p>
+        </CardContent>
+        <CardFooter>
+          <Button onClick={() => router.push("/practice")}>
+            Return to Practice Options
+          </Button>
+        </CardFooter>
+      </Card>
     );
   }
 
@@ -548,75 +538,73 @@ function PracticeQuizContent() {
   if (showUnauthenticatedResults) return null;
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="max-w-3xl w-full space-y-6">
-        <div className="flex flex-col space-y-2">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-medium">
-              Question {currentQuestionIndex + 1} of {questions.length}
-            </h2>
-            <div className="px-3 py-1 bg-red-100 text-red-600 rounded-full text-sm font-medium">
-              {practiceType === "incorrect"
-                ? "Incorrect Questions"
-                : "Random Practice"}
-            </div>
+    <div className="max-w-3xl w-full space-y-6">
+      <div className="flex flex-col space-y-2">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-medium">
+            Question {currentQuestionIndex + 1} of {questions.length}
+          </h2>
+          <div className="px-3 py-1 bg-red-100 text-red-600 rounded-full text-sm font-medium">
+            {practiceType === "incorrect"
+              ? "Incorrect Questions"
+              : "Random Practice"}
           </div>
-          <Progress value={progress} className="h-2" />
         </div>
-
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="text-xl">
-              {currentQuestion.question_text}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {["a", "b", "c", "d"].map((option) => (
-              <div
-                key={option}
-                className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                  selectedAnswers[currentQuestionIndex] === option
-                    ? "border-red-600 bg-red-50"
-                    : "hover:bg-gray-50"
-                }`}
-                onClick={() => handleAnswerSelect(option)}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
-                      selectedAnswers[currentQuestionIndex] === option
-                        ? "border-red-600 bg-red-600 text-white"
-                        : "border-gray-300"
-                    }`}
-                  >
-                    <span className="text-sm">{option.toUpperCase()}</span>
-                  </div>
-                  <span>
-                    {currentQuestion[`option_${option}` as keyof Question]}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentQuestionIndex === 0}
-            >
-              Previous
-            </Button>
-            <Button
-              onClick={handleNext}
-              disabled={!selectedAnswers[currentQuestionIndex]}
-            >
-              {currentQuestionIndex === questions.length - 1
-                ? "Finish Practice"
-                : "Next Question"}
-            </Button>
-          </CardFooter>
-        </Card>
+        <Progress value={progress} className="h-2" />
       </div>
+
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-xl">
+            {currentQuestion.question_text}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {["a", "b", "c", "d"].map((option) => (
+            <div
+              key={option}
+              className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                selectedAnswers[currentQuestionIndex] === option
+                  ? "border-red-600 bg-red-50"
+                  : "hover:bg-gray-50"
+              }`}
+              onClick={() => handleAnswerSelect(option)}
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
+                    selectedAnswers[currentQuestionIndex] === option
+                      ? "border-red-600 bg-red-600 text-white"
+                      : "border-gray-300"
+                  }`}
+                >
+                  <span className="text-sm">{option.toUpperCase()}</span>
+                </div>
+                <span>
+                  {currentQuestion[`option_${option}` as keyof Question]}
+                </span>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button
+            variant="outline"
+            onClick={handlePrevious}
+            disabled={currentQuestionIndex === 0}
+          >
+            Previous
+          </Button>
+          <Button
+            onClick={handleNext}
+            disabled={!selectedAnswers[currentQuestionIndex]}
+          >
+            {currentQuestionIndex === questions.length - 1
+              ? "Finish Practice"
+              : "Next Question"}
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 }
@@ -624,11 +612,9 @@ function PracticeQuizContent() {
 // Loading fallback component
 function PracticeQuizLoading() {
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="flex flex-col items-center space-y-4">
-        <Loader2 className="h-12 w-12 animate-spin text-red-600" />
-        <p className="text-lg">Loading practice quiz...</p>
-      </div>
+    <div className="flex flex-col items-center space-y-4">
+      <Loader2 className="h-12 w-12 animate-spin text-red-600" />
+      <p className="text-lg">Loading practice quiz...</p>
     </div>
   );
 }
@@ -636,7 +622,7 @@ function PracticeQuizLoading() {
 // Main component with Suspense wrapper
 export default function PracticeQuizPage() {
   return (
-    <div className="container mx-auto py-8">
+    <div className="flex min-h-[calc(100vh-8rem)] w-full items-center justify-center p-4">
       <Suspense fallback={<PracticeQuizLoading />}>
         <PracticeQuizContent />
       </Suspense>

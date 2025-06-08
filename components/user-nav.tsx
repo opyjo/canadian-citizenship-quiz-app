@@ -29,6 +29,7 @@ import {
   HelpCircle,
   Bot,
   Map,
+  StarIcon,
 } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -287,6 +288,14 @@ export default function UserNav() {
           FAQ
         </Link>
 
+        <Link
+          href="/pricing"
+          className="text-sm font-medium text-yellow-600 hover:text-yellow-700 transition-colors flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-yellow-50"
+        >
+          <StarIcon className="h-4 w-4" />
+          Pricing
+        </Link>
+
         <button
           onClick={() => handleProtectedLinkClick("/settings")}
           className="text-sm font-medium text-gray-600 hover:text-red-600 transition-colors flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50 cursor-pointer"
@@ -393,6 +402,14 @@ export default function UserNav() {
           onClick={() => handleMobileLinkClick("/faq")}
         >
           <HelpCircle className="mr-3 h-4 w-4" /> FAQ
+        </Button>
+
+        <Button
+          variant="ghost"
+          className="w-full justify-start hover:bg-red-50 transition-colors"
+          onClick={() => handleMobileLinkClick("/pricing")}
+        >
+          <StarIcon className="mr-3 h-4 w-4" /> Pricing
         </Button>
 
         <Button

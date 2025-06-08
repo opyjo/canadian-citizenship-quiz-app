@@ -404,7 +404,7 @@ function PracticeQuizContent() {
 
   if (showUnauthenticatedResults) {
     return (
-      <div className="container mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
+      <div className="container mx-auto py-8 px-4">
         <Card className="w-full max-w-md text-center">
           <CardHeader>
             <CardTitle>Practice Finished!</CardTitle>
@@ -462,7 +462,7 @@ function PracticeQuizContent() {
 
   if (!isAccessChecked && loading && !showUnauthenticatedResults) {
     return (
-      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto py-8 px-4">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-red-600" />
           <p className="text-lg">Checking access...</p>
@@ -473,7 +473,7 @@ function PracticeQuizContent() {
 
   if (loading && !showUnauthenticatedResults) {
     return (
-      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto py-8 px-4">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-red-600" />
           <p className="text-lg">Loading practice questions...</p>
@@ -484,7 +484,7 @@ function PracticeQuizContent() {
 
   if (error && !showUnauthenticatedResults) {
     return (
-      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto py-8 px-4">
         <Card className="w-full max-w-3xl">
           <CardHeader>
             <CardTitle
@@ -522,7 +522,7 @@ function PracticeQuizContent() {
 
   if (!currentQuestion && !loading && !error && !showUnauthenticatedResults) {
     return (
-      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto py-8 px-4">
         <Card className="w-full max-w-3xl">
           <CardHeader>
             <CardTitle>No Questions Available</CardTitle>
@@ -548,7 +548,7 @@ function PracticeQuizContent() {
   if (showUnauthenticatedResults) return null;
 
   return (
-    <div className="container mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
+    <div className="container mx-auto py-8 px-4">
       <div className="max-w-3xl w-full space-y-6">
         <div className="flex flex-col space-y-2">
           <div className="flex justify-between items-center">
@@ -624,7 +624,7 @@ function PracticeQuizContent() {
 // Loading fallback component
 function PracticeQuizLoading() {
   return (
-    <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
+    <div className="container mx-auto py-8 px-4">
       <div className="flex flex-col items-center space-y-4">
         <Loader2 className="h-12 w-12 animate-spin text-red-600" />
         <p className="text-lg">Loading practice quiz...</p>
@@ -636,8 +636,10 @@ function PracticeQuizLoading() {
 // Main component with Suspense wrapper
 export default function PracticeQuizPage() {
   return (
-    <Suspense fallback={<PracticeQuizLoading />}>
-      <PracticeQuizContent />
-    </Suspense>
+    <div className="container mx-auto py-8">
+      <Suspense fallback={<PracticeQuizLoading />}>
+        <PracticeQuizContent />
+      </Suspense>
+    </div>
   );
 }

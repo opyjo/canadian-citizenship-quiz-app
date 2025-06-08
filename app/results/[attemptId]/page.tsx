@@ -147,7 +147,7 @@ export default function ResultsPage() {
 
   if (loading) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <p>Loading results...</p>
       </div>
     );
@@ -155,7 +155,7 @@ export default function ResultsPage() {
 
   if (error) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
         <Card className="w-full max-w-3xl">
           <CardHeader>
             <CardTitle className="text-red-600">Error</CardTitle>
@@ -176,7 +176,7 @@ export default function ResultsPage() {
     // This check might be redundant if error state is properly set above,
     // but good as a safeguard before score calculation.
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
         <Card className="w-full max-w-3xl">
           <CardHeader>
             <CardTitle className="text-orange-600">No Questions</CardTitle>
@@ -217,7 +217,7 @@ export default function ResultsPage() {
     : "Not recorded";
 
   return (
-    <div className="container flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4">
+    <div className="flex flex-col items-center justify-center min-h-screen py-12 px-4">
       <div className="max-w-3xl w-full space-y-8">
         <div className="w-full flex justify-start mb-4">
           <Button onClick={() => router.push("/")} variant="outline">

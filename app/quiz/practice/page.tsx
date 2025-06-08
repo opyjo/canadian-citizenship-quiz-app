@@ -18,6 +18,7 @@ import {
   checkAttemptLimits,
 } from "@/lib/quizLimits";
 import ConfirmationModal from "@/components/confirmation-modal";
+import { usePracticeQuestions } from "@/lib/hooks/useQuestions";
 
 interface Question {
   id: number;
@@ -45,6 +46,20 @@ function PracticeQuizContent() {
   const supabase = supabaseClient;
   const [isAccessChecked, setIsAccessChecked] = useState(false);
 
+  const incorrectOnly = searchParams.get("incorrect") === "true";
+  const count = parseInt(searchParams.get("count") || "0", 10);
+  const mode = searchParams.get("mode");
+
+  const {
+    data: questionsData,
+    error: questionsError,
+    isLoading: questionsLoading,
+  } = usePracticeQuestions(
+    userId,
+    incorrectOnly ? 20 : count, // Fetch up to 20 if incorrect, otherwise use count
+    incorrectOnly
+  );
+
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
     title: string;
@@ -71,17 +86,15 @@ function PracticeQuizContent() {
     useState<number | null>(null);
 
   useEffect(() => {
-    async function performAccessCheckAndFetchData() {
+    async function performAccessCheckAndSetUser() {
+      // Step 1: Perform access check first
       const accessResult = await checkAttemptLimits("practice", supabase);
       setIsAccessChecked(true);
 
       if (!accessResult.canAttempt) {
-        setLoading(false); // Stop loading indicator
-        setQuestions([]); // Clear any potential questions
-        //setError(accessResult.message); // Or use modal
-
+        setLoading(false);
         let confirmText = "OK";
-        let onConfirmAction = () => router.push("/practice"); // Go back to practice options
+        let onConfirmAction = () => router.push("/practice");
 
         if (!accessResult.isLoggedIn) {
           confirmText = "Sign Up";
@@ -95,125 +108,69 @@ function PracticeQuizContent() {
           isOpen: true,
           title: "Access Denied",
           message: accessResult.message,
-          confirmText: confirmText,
-          cancelText: "Go Home", // Changed cancel to Go Home or similar
+          confirmText,
+          cancelText: "Go Home",
           onConfirm: () => {
             onConfirmAction();
             setModalState((prev) => ({ ...prev, isOpen: false }));
           },
         });
-        return; // Stop further execution if access is denied
+        return;
       }
 
-      // If access is granted, proceed to fetch quiz data
-      setLoading(true); // Ensure loading is true before fetching actual questions
-      try {
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData.user) {
-          setUserId(userData.user.id);
-        }
+      // Step 2: Set user ID if access is granted. This enables the usePracticeQuestions hook.
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUserId(user?.id ?? null); // Hook will run if userId changes from null
 
-        const incorrect = searchParams.get("incorrect") === "true";
-        const mode = searchParams.get("mode");
-        const countParam = searchParams.get("count");
-
-        if (incorrect) {
-          setPracticeType("incorrect");
-
-          if (!userData.user) {
-            router.push("/auth");
-            return;
-          }
-
-          // Fetch user's incorrect questions
-          const { data: incorrectData, error: incorrectError } = await supabase
-            .from("user_incorrect_questions")
-            .select("question_id")
-            .eq("user_id", userData.user.id);
-
-          if (incorrectError) throw incorrectError;
-
-          if (incorrectData && incorrectData.length > 0) {
-            const questionIds = incorrectData.map((item) => item.question_id);
-
-            // Fetch the actual questions
-            const { data: questionData, error: questionError } = await supabase
-              .from("questions")
-              .select("*")
-              .in("id", questionIds)
-              .order("id")
-              .limit(20);
-
-            if (questionError) throw questionError;
-            if (questionData) {
-              setQuestions(questionData);
-            } else {
-              setQuestions([]);
-            }
-          } else {
-            // No incorrect questions found for this user
-            setError(
-              "Congratulations! You have no incorrect questions to practice. Well done!"
-            );
-            setQuestions([]);
-            return;
-          }
-        } else if (mode === "random" && countParam) {
-          setPracticeType("random");
-          const count = parseInt(countParam, 10);
-
-          if (isNaN(count) || count <= 0) {
-            setError(
-              "Invalid number of questions specified for random practice."
-            );
-            setQuestions([]);
-            router.push("/practice");
-            return;
-          }
-
-          // Use server-side PostgreSQL function for optimal performance
-          // No client-side shuffling needed - database handles randomization
-          const { data: questionData, error: questionError } =
-            await supabase.rpc("get_random_practice_questions" as any, {
-              user_id_param: userId || null,
-              question_limit: count,
-              incorrect_only: false,
-            });
-
-          if (questionError) throw questionError;
-
-          if (!questionData || (questionData as Question[]).length === 0) {
-            setError("No questions available for random practice.");
-            setQuestions([]);
-          } else {
-            if ((questionData as Question[]).length < count) {
-              console.warn(
-                `Only ${
-                  (questionData as Question[]).length
-                } questions available for practice, expected ${count}`
-              );
-            }
-            setQuestions(questionData as Question[]);
-          }
-        } else {
-          // No valid practice type specified
-          router.push("/practice");
-          return;
-        }
-      } catch (err: any) {
-        console.error("Error fetching questions:", err);
-        setError(err.message || "Failed to load practice questions");
-      } finally {
-        setLoading(false);
-        setStartTime(Date.now());
+      // Set practice type for UI elements
+      if (incorrectOnly) {
+        setPracticeType("incorrect");
+      } else if (mode === "random" && count > 0) {
+        setPracticeType("random");
+      } else {
+        // Invalid parameters, redirect
+        router.push("/practice");
       }
     }
 
-    performAccessCheckAndFetchData();
-  }, [supabase, searchParams, router]);
+    performAccessCheckAndSetUser();
+  }, [supabase, router, incorrectOnly, mode, count]);
+
+  useEffect(() => {
+    // This effect now reacts to the state from the usePracticeQuestions hook
+    if (questionsLoading) {
+      setLoading(true);
+      return;
+    }
+
+    setLoading(false);
+    setStartTime(Date.now());
+
+    if (questionsError) {
+      setError(questionsError.message || "Failed to load practice questions.");
+      return;
+    }
+
+    if (questionsData) {
+      if (incorrectOnly && questionsData.length === 0) {
+        setError(
+          "Congratulations! You have no incorrect questions to practice. Well done!"
+        );
+      }
+      if (!incorrectOnly && mode === "random" && questionsData.length === 0) {
+        setError("No questions available for random practice.");
+      }
+      setQuestions(questionsData);
+    }
+  }, [questionsData, questionsError, questionsLoading, incorrectOnly, mode]);
 
   const currentQuestion = questions[currentQuestionIndex];
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+  const progress =
+    questions.length > 0
+      ? ((currentQuestionIndex + 1) / questions.length) * 100
+      : 0;
 
   const handleAnswerSelect = (option: string) => {
     setSelectedAnswers({

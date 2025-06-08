@@ -62,7 +62,8 @@ export function useQuestionsByIds(ids: number[]) {
 export function usePracticeQuestions(
   userId: string | null,
   count: number,
-  incorrectOnly: boolean = false
+  incorrectOnly: boolean = false,
+  enabled: boolean = true
 ) {
   return useQuery({
     queryKey: queryKeys.practice(userId, count, incorrectOnly),
@@ -83,6 +84,6 @@ export function usePracticeQuestions(
       return data ?? [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes for practice questions
-    enabled: count > 0, // Only run if count is valid
+    enabled: enabled && count > 0, // Only run if count is valid and hook is enabled
   });
 }

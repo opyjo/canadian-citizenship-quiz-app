@@ -86,8 +86,10 @@ export async function checkAttemptLimits(
   console.log(`[DEBUG] checkAttemptLimits called for mode: ${quizMode}`);
 
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const user = session?.user;
 
   console.log("[DEBUG] User authentication status:", {
     userExists: !!user,

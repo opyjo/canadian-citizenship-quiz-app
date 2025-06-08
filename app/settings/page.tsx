@@ -292,24 +292,19 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-red-600" />
-          <p className="text-lg">Loading settings...</p>
-        </div>
+      <div className="container mx-auto flex items-center justify-center min-h-screen">
+        <Loader2 className="h-12 w-12 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="container py-8 px-4">
-      <div className="max-w-2xl mx-auto space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold">Account Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your account preferences and security
-          </p>
-        </div>
+    <div className="container mx-auto py-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold mb-2">Settings</h1>
+        <p className="text-muted-foreground mb-8">
+          Manage your account preferences and security
+        </p>
 
         <Tabs defaultValue="profile">
           <TabsList className="mb-4">

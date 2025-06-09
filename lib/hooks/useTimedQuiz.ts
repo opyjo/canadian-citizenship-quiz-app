@@ -26,7 +26,8 @@ type UIState =
   | "SHOWING_MODAL"
   | "SHOWING_FEEDBACK"
   | "UNAUTHENTICATED_RESULTS"
-  | "SHOWING_QUIZ";
+  | "SHOWING_QUIZ"
+  | "SUBMITTING";
 
 interface ModalState {
   isOpen: boolean;
@@ -188,6 +189,7 @@ export function useTimedQuiz() {
   }, [questions, selectedAnswers, timeRemaining]);
 
   const finishQuiz = useCallback(() => {
+    setUiState("SUBMITTING");
     if (finishQuizMutation.isPending) return;
     const resultData = getResultData();
     finishQuizMutation.mutate(resultData);

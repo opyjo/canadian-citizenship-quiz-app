@@ -26,7 +26,8 @@ type UIState =
   | "SHOWING_MODAL"
   | "SHOWING_FEEDBACK"
   | "UNAUTHENTICATED_RESULTS"
-  | "SHOWING_QUIZ";
+  | "SHOWING_QUIZ"
+  | "SUBMITTING";
 
 interface ModalState {
   isOpen: boolean;
@@ -279,6 +280,7 @@ export function useStandardQuiz() {
   };
 
   const finishQuiz = () => {
+    setUiState("SUBMITTING");
     const resultData = getResultData();
     submitQuiz(resultData);
   };

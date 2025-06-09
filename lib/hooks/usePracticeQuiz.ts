@@ -26,7 +26,8 @@ type UIState =
   | "SHOWING_MODAL"
   | "SHOWING_FEEDBACK"
   | "UNAUTHENTICATED_RESULTS"
-  | "SHOWING_QUIZ";
+  | "SHOWING_QUIZ"
+  | "SUBMITTING";
 
 interface ModalState {
   isOpen: boolean;
@@ -189,17 +190,19 @@ export function usePracticeQuiz() {
                 .delete()
                 .eq("user_id", userId)
                 .in("question_id", correctlyAnswered);
-              queryClient.invalidateQueries({
-                queryKey: [
-                  "questions",
-                  "practice",
-                  userId,
-                  incorrectOnly ? 20 : count,
-                  true,
-                ],
-              });
             }
           }
+          // Only invalidate caches after all DB updates are complete
+          queryClient.invalidateQueries({
+            queryKey: [
+              "questions",
+              "practice",
+              userId,
+              incorrectOnly ? 20 : count,
+              true,
+            ],
+          });
+          invalidateQuizAttempts(queryClient, userId);
         } catch (dbError: any) {
           console.error(
             "Error updating user_incorrect_questions table:",
@@ -286,18 +289,18 @@ export function usePracticeQuiz() {
             "Congratulations! You have no incorrect questions to practice. Well done!"
           );
           setUiState("SHOWING_FEEDBACK");
-        } else {
+        }
+        if (!incorrectOnly) {
           setFeedbackMessage(
             "There are no questions available for this practice session. Please try again later."
           );
           setUiState("SHOWING_FEEDBACK");
         }
-      } else {
-        if (uiState === "LOADING" && !isSubmitting) {
-          setQuestions(questionsData);
-          setStartTime(Date.now());
-          setUiState("SHOWING_QUIZ");
-        }
+      }
+      if (uiState === "LOADING" && !isSubmitting) {
+        setQuestions(questionsData);
+        setStartTime(Date.now());
+        setUiState("SHOWING_QUIZ");
       }
     }
   }, [
@@ -360,6 +363,7 @@ export function usePracticeQuiz() {
   };
 
   const finishQuiz = () => {
+    setUiState("SUBMITTING");
     try {
       const localResultData = getResultData();
       submitQuiz(localResultData);

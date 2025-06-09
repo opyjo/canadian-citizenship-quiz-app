@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import supabaseClient from "@/lib/supabase-client";
 import {
   checkAttemptLimits,
   incrementLocalAttemptCount,
 } from "@/lib/quizLimits";
 import { usePracticeQuestions } from "./useQuestions";
+import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
 
 // Define interfaces for our state and props
 interface Question {
@@ -49,6 +50,7 @@ export function usePracticeQuiz() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = supabaseClient;
+  const queryClient = useQueryClient();
 
   // Internal state
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -93,11 +95,12 @@ export function usePracticeQuiz() {
     userId,
     incorrectOnly ? 20 : count,
     incorrectOnly,
-    isAccessChecked && uiState !== "SHOWING_MODAL"
+    isAccessChecked && uiState !== "SHOWING_MODAL",
+    incorrectOnly ? { staleTime: 0, refetchOnMount: true } : undefined
   );
 
   const { mutate: submitQuiz, isPending: isSubmitting } = useMutation<
-    { attemptId?: string },
+    { attemptId?: string; score?: number; totalQuestions?: number },
     Error,
     ResultData
   >({
@@ -134,8 +137,10 @@ export function usePracticeQuiz() {
       }
       return resultFromApi;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: async (data, variables) => {
+      invalidateQuizAttempts(queryClient, userId);
       if (data.attemptId) {
+        await Promise.resolve();
         router.push(`/results/${data.attemptId}`);
       } else {
         setUnauthenticatedResults({
@@ -184,6 +189,15 @@ export function usePracticeQuiz() {
                 .delete()
                 .eq("user_id", userId)
                 .in("question_id", correctlyAnswered);
+              queryClient.invalidateQueries({
+                queryKey: [
+                  "questions",
+                  "practice",
+                  userId,
+                  incorrectOnly ? 20 : count,
+                  true,
+                ],
+              });
             }
           }
         } catch (dbError: any) {

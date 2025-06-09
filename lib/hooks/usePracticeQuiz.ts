@@ -7,6 +7,7 @@ import {
   incrementLocalAttemptCount,
 } from "@/lib/quizLimits";
 import { usePracticeQuestions } from "./useQuestions";
+import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
 
 // Define interfaces for our state and props
 interface Question {
@@ -137,6 +138,7 @@ export function usePracticeQuiz() {
       return resultFromApi;
     },
     onSuccess: async (data, variables) => {
+      invalidateQuizAttempts(queryClient, userId);
       if (data.attemptId) {
         await Promise.resolve();
         router.push(`/results/${data.attemptId}`);

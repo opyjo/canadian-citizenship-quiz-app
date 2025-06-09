@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import supabaseClient from "@/lib/supabase-client";
 import {
   checkAttemptLimits,
   incrementLocalAttemptCount,
 } from "@/lib/quizLimits";
+import { queryKeys } from "@/lib/query-client";
+import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
 
 // Define interfaces for our state and props
 interface Question {
@@ -66,6 +68,7 @@ const fetchTimedQuestions = async () => {
 export function useTimedQuiz() {
   const router = useRouter();
   const supabase = supabaseClient;
+  const queryClient = useQueryClient();
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -141,6 +144,7 @@ export function useTimedQuiz() {
       return resultFromApi;
     },
     onSuccess: (data) => {
+      invalidateQuizAttempts(queryClient, userId ?? null);
       if (data.attemptId) {
         router.push(`/results/${data.attemptId}`);
       } else {

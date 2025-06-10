@@ -18,6 +18,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
+import { useAuthUser } from "@/hooks/useAuthUser";
 
 // Define a type for subscription details
 interface SubscriptionDetails {
@@ -28,7 +29,12 @@ interface SubscriptionDetails {
 }
 
 export default function SettingsPage() {
-  const [user, setUser] = useState<any>(null);
+  // Auth state
+  const {
+    data: user,
+    isLoading: authLoading,
+    error: authError,
+  } = useAuthUser();
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -49,31 +55,27 @@ export default function SettingsPage() {
   const supabase = supabaseClient;
 
   useEffect(() => {
-    async function getUserAndProfile() {
-      const { data: authData, error: authError } =
-        await supabase.auth.getUser();
+    if (authLoading) return;
+    if (authError || !user) {
+      router.push("/auth");
+      return;
+    }
 
-      if (authError || !authData.user) {
-        router.push("/auth");
-        return;
-      }
+    setEmail(user.email ?? "");
+    setFullName(user.user_metadata?.full_name ?? "");
 
-      setUser(authData.user);
-      setEmail(authData.user.email || "");
-      setFullName(authData.user.user_metadata?.full_name || "");
-
-      // Fetch profile to get subscription status
+    async function fetchProfile() {
+      if (!user) return;
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select(
           "stripe_subscription_status, subscription_current_period_end, cancel_at_period_end, active_stripe_subscription_id"
         )
-        .eq("id", authData.user.id)
+        .eq("id", user.id)
         .single();
 
       if (profileError && profileError.code !== "PGRST116") {
         console.error("Error fetching profile:", profileError);
-        // Set a default or error state for subscription details
         setSubscriptionDetails({
           status: "Error fetching status",
           current_period_end: null,
@@ -81,13 +83,13 @@ export default function SettingsPage() {
           active_stripe_subscription_id: null,
         });
       } else if (profileData) {
-        const pData = profileData as any; // Temporary cast to any
+        const pData = profileData as any;
         setSubscriptionDetails({
-          status: pData.stripe_subscription_status || "none",
+          status: pData.stripe_subscription_status ?? "none",
           current_period_end: pData.subscription_current_period_end,
-          cancel_at_period_end: pData.cancel_at_period_end || false,
+          cancel_at_period_end: pData.cancel_at_period_end ?? false,
           active_stripe_subscription_id:
-            pData.active_stripe_subscription_id || null,
+            pData.active_stripe_subscription_id ?? null,
         });
       } else {
         setSubscriptionDetails({
@@ -97,12 +99,11 @@ export default function SettingsPage() {
           active_stripe_subscription_id: null,
         });
       }
-
       setLoading(false);
     }
 
-    getUserAndProfile();
-  }, [router, supabase]);
+    fetchProfile();
+  }, [authLoading, authError, user, router, supabase]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,7 +168,7 @@ export default function SettingsPage() {
       setConfirmPassword("");
     } catch (error: any) {
       setError(
-        error.message || "An error occurred while updating your password"
+        error.message ?? "An error occurred while updating your password"
       );
     } finally {
       setUpdating(false);
@@ -190,19 +191,20 @@ export default function SettingsPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to cancel subscription");
+        throw new Error(result.error ?? "Failed to cancel subscription");
       }
 
       setSubscriptionMessage(
-        result.message || "Subscription cancellation initiated."
+        result.message ?? "Subscription cancellation initiated."
       );
       // Re-fetch profile to update subscription status display
+      if (!user) return;
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select(
           "stripe_subscription_status, subscription_current_period_end, cancel_at_period_end, active_stripe_subscription_id"
         )
-        .eq("id", user.id) // user should be available here
+        .eq("id", user.id)
         .single();
 
       if (profileError) {
@@ -224,7 +226,7 @@ export default function SettingsPage() {
       console.error("Cancellation error:", err);
       setSubscriptionMessage(null); // Clear any success message from API if client-side error happens
       setError(
-        err.message || "An error occurred while cancelling your subscription."
+        err.message ?? "An error occurred while cancelling your subscription."
       );
     } finally {
       setCancellingSubscription(false);
@@ -247,15 +249,14 @@ export default function SettingsPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to reactivate subscription.");
+        throw new Error(result.error ?? "Failed to reactivate subscription.");
       }
 
       setSubscriptionMessage(
-        result.message || "Subscription reactivation initiated."
+        result.message ?? "Subscription reactivation initiated."
       );
       // Re-fetch profile to update subscription status display
-      // This relies on the webhook having updated the DB quickly.
-      // For immediate UI feedback, we could also optimistically update or use the API response.
+      if (!user) return;
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select(
@@ -272,18 +273,18 @@ export default function SettingsPage() {
       } else if (profileData) {
         const pData = profileData as any;
         setSubscriptionDetails({
-          status: pData.stripe_subscription_status || "none", // Or infer 'active' as discussed before
+          status: pData.stripe_subscription_status ?? "none", // Or infer 'active' as discussed before
           current_period_end: pData.subscription_current_period_end,
-          cancel_at_period_end: pData.cancel_at_period_end || false,
+          cancel_at_period_end: pData.cancel_at_period_end ?? false,
           active_stripe_subscription_id:
-            pData.active_stripe_subscription_id || null,
+            pData.active_stripe_subscription_id ?? null,
         });
       }
     } catch (err: any) {
       console.error("Reactivation error:", err);
       setSubscriptionMessage(null);
       setError(
-        err.message || "An error occurred while reactivating your subscription."
+        err.message ?? "An error occurred while reactivating your subscription."
       );
     } finally {
       setIsUncancelling(false);

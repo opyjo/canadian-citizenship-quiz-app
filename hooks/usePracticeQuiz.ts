@@ -8,6 +8,7 @@ import {
 } from "@/lib/quizLimits";
 import { usePracticeQuestions } from "./useQuestions";
 import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
+import { useAuthUser } from "./useAuthUser";
 
 // Define interfaces for our state and props
 interface Question {
@@ -53,6 +54,14 @@ export function usePracticeQuiz() {
   const supabase = supabaseClient;
   const queryClient = useQueryClient();
 
+  // Auth state
+  const {
+    data: user,
+    isLoading: authLoading,
+    error: authError,
+  } = useAuthUser();
+  const userId = user?.id ?? null;
+
   // Internal state
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -60,7 +69,6 @@ export function usePracticeQuiz() {
     Record<number, string>
   >({});
   const [startTime, setStartTime] = useState<number>(0);
-  const [userId, setUserId] = useState<string | null>(null);
   const [practiceType, setPracticeType] = useState<string>("");
   const [isAccessChecked, setIsAccessChecked] = useState(false);
 
@@ -96,7 +104,10 @@ export function usePracticeQuiz() {
     userId,
     incorrectOnly ? 20 : count,
     incorrectOnly,
-    isAccessChecked && uiState !== "SHOWING_MODAL",
+    !authLoading &&
+      !authError &&
+      isAccessChecked &&
+      uiState !== "SHOWING_MODAL",
     incorrectOnly ? { staleTime: 0, refetchOnMount: true } : undefined
   );
 
@@ -214,19 +225,14 @@ export function usePracticeQuiz() {
     },
   });
 
-  useEffect(() => {
-    // First, get the user so we know if they are logged in or not.
-    const getUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUserId(user?.id ?? null);
-    };
-    getUser();
-  }, [supabase]);
-
   // Effect for access control
   useEffect(() => {
+    if (authLoading) return;
+    if (authError) {
+      setFeedbackMessage("Authentication failed. Please try again.");
+      setUiState("SHOWING_FEEDBACK");
+      return;
+    }
     // Wait until userId is determined.
     if (userId === undefined) return;
 
@@ -264,14 +270,29 @@ export function usePracticeQuiz() {
       // Avoid routing away if a modal is already showing
       router.push("/practice");
     }
-  }, [userId, supabase, router, incorrectOnly, mode, count]);
+  }, [
+    authLoading,
+    authError,
+    userId,
+    supabase,
+    router,
+    incorrectOnly,
+    mode,
+    count,
+    uiState,
+  ]);
 
-  // Effect to react to data fetching state
+  // Handle combined loading states
+  const isLoadingAny = authLoading || questionsLoading || isSubmitting;
+
   useEffect(() => {
-    if (questionsLoading || isSubmitting) {
-      setLoadingMessage(
-        isSubmitting ? "Submitting results..." : "Loading practice questions..."
-      );
+    if (isLoadingAny) {
+      const message = authLoading
+        ? "Checking authentication..."
+        : isSubmitting
+        ? "Submitting results..."
+        : "Loading practice questions...";
+      setLoadingMessage(message);
       setUiState("LOADING");
       return;
     }
@@ -304,12 +325,12 @@ export function usePracticeQuiz() {
       }
     }
   }, [
-    uiState,
-    questionsData,
-    questionsError,
-    questionsLoading,
-    incorrectOnly,
+    isLoadingAny,
+    authLoading,
     isSubmitting,
+    questionsError,
+    questionsData,
+    incorrectOnly,
   ]);
 
   // Event Handlers

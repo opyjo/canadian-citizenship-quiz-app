@@ -31,29 +31,16 @@ import {
   Map,
   StarIcon,
 } from "lucide-react";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
+
+import { useAuthUser } from "@/hooks/useAuthUser";
 
 export default function UserNav() {
-  const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: user, isLoading: authLoading } = useAuthUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
   const supabase = supabaseClient;
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const hamburgerButtonRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, [supabase]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -81,7 +68,6 @@ export default function UserNav() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    setUser(null);
     setIsMobileMenuOpen(false);
     router.push("/");
     router.refresh();
@@ -102,11 +88,11 @@ export default function UserNav() {
   };
 
   const renderAuthBlock = (isMobile: boolean) => {
-    if (loading && isMobile)
+    if (authLoading && isMobile)
       return (
         <div className="h-10 w-full bg-gray-100 rounded-lg animate-pulse mt-4"></div>
       );
-    if (loading && !isMobile)
+    if (authLoading && !isMobile)
       return (
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 bg-gray-100 rounded-full animate-pulse"></div>

@@ -16,12 +16,17 @@ import {
 import { Loader2, AlertTriangle, Shuffle } from "lucide-react";
 import { checkAttemptLimits, type QuizMode } from "@/lib/quizLimits";
 import ConfirmationModal from "@/components/confirmation-modal";
+import { useAuthUser } from "@/hooks/useAuthUser";
 
 export default function PracticePage() {
   const [incorrectQuestionsCount, setIncorrectQuestionsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null);
+  const {
+    data: user,
+    isLoading: authLoading,
+    error: authError,
+  } = useAuthUser();
   const router = useRouter();
   const supabase = supabaseClient;
 
@@ -43,21 +48,21 @@ export default function PracticePage() {
   });
 
   useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      setIncorrectQuestionsCount(0);
+      return;
+    }
     async function fetchData() {
       setLoading(true);
       try {
-        const { data: userData } = await supabase.auth.getUser();
-        setUser(userData.user);
-
-        if (userData.user) {
-          const { data: incorrectData, error: incorrectError } = await supabase
-            .from("user_incorrect_questions")
-            .select("question_id", { count: "exact" })
-            .eq("user_id", userData.user.id);
-
-          if (incorrectError) throw incorrectError;
-          setIncorrectQuestionsCount(incorrectData?.length || 0);
-        }
+        if (!user) return;
+        const { data: incorrectData, error: incorrectError } = await supabase
+          .from("user_incorrect_questions")
+          .select("question_id", { count: "exact" })
+          .eq("user_id", user.id);
+        if (incorrectError) throw incorrectError;
+        setIncorrectQuestionsCount(incorrectData?.length || 0);
       } catch (err: any) {
         console.error("Error fetching data:", err);
         setError(err.message ?? "Failed to load practice data");
@@ -65,9 +70,8 @@ export default function PracticePage() {
         setLoading(false);
       }
     }
-
     fetchData();
-  }, [supabase]);
+  }, [supabase, user]);
 
   const handleStartQuizFlow = async (
     quizMode: QuizMode,
@@ -154,7 +158,7 @@ export default function PracticePage() {
     );
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">

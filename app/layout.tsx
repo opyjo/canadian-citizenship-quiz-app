@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Bot } from "lucide-react";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { GlobalErrorBoundary } from "@/components/global-error-boundary";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -138,11 +139,13 @@ export default function RootLayout({
         className={`${inter.className} min-h-screen bg-background antialiased`}
       >
         <QueryProvider>
-          <UserNav />
+          <GlobalErrorBoundary>
+            <UserNav />
 
-          <main id="main-content" className="flex-1">
-            {children}
-          </main>
+            <main id="main-content" className="flex-1">
+              {children}
+            </main>
+          </GlobalErrorBoundary>
 
           {/* Global Floating Chatbot - Available on all pages */}
           <div className="fixed bottom-6 right-6 z-50">

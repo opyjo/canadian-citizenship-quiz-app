@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { useTimedQuiz } from "@/lib/hooks/useTimedQuiz";
+import { useTimedQuiz } from "@/hooks/useTimedQuiz";
 import { TimedQuizView } from "@/components/quiz/TimedQuizView";
 import { QuizLoadingIndicator } from "@/components/quiz/QuizLoadingIndicator";
 import { QuizErrorDisplay } from "@/components/quiz/QuizErrorDisplay";

@@ -8,6 +8,7 @@ import {
 } from "@/lib/quizLimits";
 import { queryKeys } from "@/lib/query-client";
 import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
+import { useAuthUser } from "./useAuthUser";
 
 // Define interfaces for our state and props
 interface Question {
@@ -71,18 +72,27 @@ export function useTimedQuiz() {
   const supabase = supabaseClient;
   const queryClient = useQueryClient();
 
+  // Auth state
+  const {
+    data: user,
+    isLoading: authLoading,
+    error: authError,
+  } = useAuthUser();
+  const userId = user?.id ?? null;
+
+  // Internal state
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<
     Record<number, string>
   >({});
-  const [userId, setUserId] = useState<string | null | undefined>(undefined);
   const [isAccessChecked, setIsAccessChecked] = useState(false);
   const [isConfirmEndQuizModalOpen, setIsConfirmEndQuizModalOpen] =
     useState(false);
   const [timeRemaining, setTimeRemaining] = useState(TIME_LIMIT);
   const [quizActive, setQuizActive] = useState(false);
 
+  // State for different UI views
   const [uiState, setUiState] = useState<UIState>("LOADING");
   const [loadingMessage, setLoadingMessage] = useState("Checking access...");
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
@@ -195,18 +205,17 @@ export function useTimedQuiz() {
     finishQuizMutation.mutate(resultData);
   }, [getResultData, finishQuizMutation]);
 
+  // Effect for access control
   useEffect(() => {
-    const getUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUserId(user?.id ?? null);
-    };
-    getUser();
-  }, [supabase]);
-
-  useEffect(() => {
+    if (authLoading) return;
+    if (authError) {
+      setFeedbackMessage("Authentication failed. Please try again.");
+      setUiState("SHOWING_FEEDBACK");
+      return;
+    }
+    // Wait until userId is determined.
     if (userId === undefined) return;
+
     async function performAccessCheck() {
       const accessResult = await checkAttemptLimits("timed", supabase);
       if (!accessResult.canAttempt) {
@@ -232,12 +241,18 @@ export function useTimedQuiz() {
       setIsAccessChecked(true);
     }
     performAccessCheck();
-  }, [userId, supabase, router]);
+  }, [authLoading, authError, userId, supabase, router]);
+
+  // Handle combined loading states
+  const isLoadingAny =
+    authLoading || questionsLoading || finishQuizMutation.isPending;
 
   useEffect(() => {
-    if (questionsLoading || finishQuizMutation.isPending) {
+    if (isLoadingAny) {
       setLoadingMessage(
-        finishQuizMutation.isPending
+        authLoading
+          ? "Checking authentication..."
+          : finishQuizMutation.isPending
           ? "Submitting results..."
           : "Loading questions..."
       );
@@ -260,11 +275,11 @@ export function useTimedQuiz() {
       }
     }
   }, [
-    uiState,
-    questionsData,
-    questionsError,
-    questionsLoading,
+    isLoadingAny,
+    authLoading,
     finishQuizMutation.isPending,
+    questionsError,
+    questionsData,
   ]);
 
   useEffect(() => {

@@ -16,32 +16,17 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, BarChart2, Award, BookOpen } from "lucide-react";
+import { useAuthUser } from "@/hooks/useAuthUser";
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<any>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  // Auth state
+  const {
+    data: user,
+    isLoading: authLoading,
+    error: authError,
+  } = useAuthUser();
   const router = useRouter();
   const supabase = supabaseClient;
-
-  // Get user authentication state
-  useEffect(() => {
-    async function checkAuth() {
-      try {
-        const { data: userData } = await supabase.auth.getUser();
-        if (!userData.user) {
-          router.push("/auth");
-          return;
-        }
-        setUser(userData.user);
-      } catch (err) {
-        console.error("Error checking auth status:", err);
-        router.push("/auth");
-      } finally {
-        setAuthLoading(false);
-      }
-    }
-    checkAuth();
-  }, [router]);
 
   // Use TanStack Query for quiz attempts
   const {
@@ -51,7 +36,7 @@ export default function DashboardPage() {
   } = useQuizAttempts(user?.id ?? "");
 
   const loading = authLoading || quizLoading;
-  const error = quizError?.message;
+  const error = authError?.message || quizError?.message;
 
   if (loading) {
     return (

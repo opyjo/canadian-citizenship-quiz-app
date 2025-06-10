@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { useStandardQuiz } from "@/lib/hooks/useStandardQuiz";
+import { useStandardQuiz } from "@/hooks/useStandardQuiz";
 import { StandardQuizView } from "@/components/quiz/StandardQuizView";
 import { QuizLoadingIndicator } from "@/components/quiz/QuizLoadingIndicator";
 import { QuizErrorDisplay } from "@/components/quiz/QuizErrorDisplay";

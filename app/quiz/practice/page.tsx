@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { usePracticeQuiz } from "@/lib/hooks/usePracticeQuiz";
+import { usePracticeQuiz } from "@/hooks/usePracticeQuiz";
 import { PracticeQuizView } from "@/components/quiz/PracticeQuizView";
 import { QuizLoadingIndicator } from "@/components/quiz/QuizLoadingIndicator";
 import { QuizErrorDisplay } from "@/components/quiz/QuizErrorDisplay";

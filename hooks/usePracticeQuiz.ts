@@ -161,7 +161,7 @@ export function usePracticeQuiz() {
         incrementLocalAttemptCount("practice");
       }
 
-      if (userId) {
+      if (userId && variables?.questions) {
         try {
           const newlyIncorrectQuestions = variables.questions
             .filter(

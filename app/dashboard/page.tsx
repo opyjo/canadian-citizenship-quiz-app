@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import supabaseClient from "@/lib/supabase-client";
-import { useQuizAttempts } from "@/lib/hooks/useQuizAttempts";
+import { useQuizAttempts } from "@/hooks/useQuizAttempts";
 import { Button } from "@/components/ui/button";
 import {
   Card,

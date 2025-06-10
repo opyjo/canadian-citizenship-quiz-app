@@ -33,12 +33,14 @@ import {
 } from "lucide-react";
 
 import { useAuthUser } from "@/hooks/useAuthUser";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function UserNav() {
   const { data: user, isLoading: authLoading } = useAuthUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
   const supabase = supabaseClient;
+  const queryClient = useQueryClient();
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const hamburgerButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -68,6 +70,7 @@ export default function UserNav() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+    queryClient.invalidateQueries({ queryKey: ["auth", "user"] });
     setIsMobileMenuOpen(false);
     router.push("/");
     router.refresh();

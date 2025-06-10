@@ -32,11 +32,11 @@ import {
   StarIcon,
 } from "lucide-react";
 
-import { useAuthUser } from "@/hooks/useAuthUser";
+import { useAuth } from "@/context/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function UserNav() {
-  const { data: user, isLoading: authLoading } = useAuthUser();
+  const { user, initialized, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
   const supabase = supabaseClient;
@@ -69,11 +69,13 @@ export default function UserNav() {
   }, [isMobileMenuOpen]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    queryClient.invalidateQueries({ queryKey: ["auth", "user"] });
-    setIsMobileMenuOpen(false);
-    router.push("/");
-    router.refresh();
+    try {
+      await signOut();
+      setIsMobileMenuOpen(false);
+      router.push("/");
+    } catch (error) {
+      console.error("Sign out failed:", error);
+    }
   };
 
   const handleProtectedLinkClick = (path: string) => {
@@ -91,11 +93,11 @@ export default function UserNav() {
   };
 
   const renderAuthBlock = (isMobile: boolean) => {
-    if (authLoading && isMobile)
+    if (!initialized && isMobile)
       return (
         <div className="h-10 w-full bg-gray-100 rounded-lg animate-pulse mt-4"></div>
       );
-    if (authLoading && !isMobile)
+    if (!initialized && !isMobile)
       return (
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 bg-gray-100 rounded-full animate-pulse"></div>

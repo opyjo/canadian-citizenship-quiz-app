@@ -8,7 +8,7 @@ import {
 } from "@/lib/quizLimits";
 import { usePracticeQuestions } from "./useQuestions";
 import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
-import { useAuthUser } from "./useAuthUser";
+import { useAuth } from "@/context/AuthContext";
 
 // Define interfaces for our state and props
 interface Question {
@@ -55,11 +55,7 @@ export function usePracticeQuiz() {
   const queryClient = useQueryClient();
 
   // Auth state
-  const {
-    data: user,
-    isLoading: authLoading,
-    error: authError,
-  } = useAuthUser();
+  const { user, initialized } = useAuth();
   const userId = user?.id ?? null;
 
   // Internal state
@@ -104,10 +100,7 @@ export function usePracticeQuiz() {
     userId,
     incorrectOnly ? 20 : count,
     incorrectOnly,
-    !authLoading &&
-      !authError &&
-      isAccessChecked &&
-      uiState !== "SHOWING_MODAL",
+    initialized && isAccessChecked && uiState !== "SHOWING_MODAL",
     incorrectOnly ? { staleTime: 0, refetchOnMount: true } : undefined
   );
 
@@ -227,14 +220,7 @@ export function usePracticeQuiz() {
 
   // Effect for access control
   useEffect(() => {
-    if (authLoading) return;
-    if (authError) {
-      setFeedbackMessage("Authentication failed. Please try again.");
-      setUiState("SHOWING_FEEDBACK");
-      return;
-    }
-    // Wait until userId is determined.
-    if (userId === undefined) return;
+    if (!initialized) return;
 
     async function performAccessCheck() {
       const accessResult = await checkAttemptLimits("practice", supabase);
@@ -271,8 +257,7 @@ export function usePracticeQuiz() {
       router.push("/practice");
     }
   }, [
-    authLoading,
-    authError,
+    initialized,
     userId,
     supabase,
     router,
@@ -283,11 +268,11 @@ export function usePracticeQuiz() {
   ]);
 
   // Handle combined loading states
-  const isLoadingAny = authLoading || questionsLoading || isSubmitting;
+  const isLoadingAny = !initialized || questionsLoading || isSubmitting;
 
   useEffect(() => {
     if (isLoadingAny) {
-      const message = authLoading
+      const message = !initialized
         ? "Checking authentication..."
         : isSubmitting
         ? "Submitting results..."
@@ -326,7 +311,7 @@ export function usePracticeQuiz() {
     }
   }, [
     isLoadingAny,
-    authLoading,
+    !initialized,
     isSubmitting,
     questionsError,
     questionsData,

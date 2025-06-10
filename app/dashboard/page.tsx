@@ -16,15 +16,11 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, BarChart2, Award, BookOpen } from "lucide-react";
-import { useAuthUser } from "@/hooks/useAuthUser";
+import { useAuth } from "@/context/AuthContext";
 
 export default function DashboardPage() {
   // Auth state
-  const {
-    data: user,
-    isLoading: authLoading,
-    error: authError,
-  } = useAuthUser();
+  const { user, initialized } = useAuth();
   const router = useRouter();
   const supabase = supabaseClient;
 
@@ -35,8 +31,8 @@ export default function DashboardPage() {
     error: quizError,
   } = useQuizAttempts(user?.id ?? "");
 
-  const loading = authLoading || quizLoading;
-  const error = authError?.message || quizError?.message;
+  const loading = !initialized || quizLoading;
+  const error = quizError?.message;
 
   if (loading) {
     return (

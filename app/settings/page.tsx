@@ -18,7 +18,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
-import { useAuthUser } from "@/hooks/useAuthUser";
+import { useAuth } from "@/context/AuthContext";
 
 // Define a type for subscription details
 interface SubscriptionDetails {
@@ -30,11 +30,7 @@ interface SubscriptionDetails {
 
 export default function SettingsPage() {
   // Auth state
-  const {
-    data: user,
-    isLoading: authLoading,
-    error: authError,
-  } = useAuthUser();
+  const { user, initialized } = useAuth();
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -55,8 +51,8 @@ export default function SettingsPage() {
   const supabase = supabaseClient;
 
   useEffect(() => {
-    if (authLoading) return;
-    if (authError || !user) {
+    if (!initialized) return;
+    if (!user) {
       router.push("/auth");
       return;
     }
@@ -103,7 +99,7 @@ export default function SettingsPage() {
     }
 
     fetchProfile();
-  }, [authLoading, authError, user, router, supabase]);
+  }, [initialized, user, router, supabase]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();

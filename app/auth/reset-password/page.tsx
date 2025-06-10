@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
-import { useAuthUser } from "@/hooks/useAuthUser";
+import { useAuth } from "@/context/AuthContext";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -28,18 +28,14 @@ export default function ResetPasswordPage() {
   const [message, setMessage] = useState<string | null>(null);
   const router = useRouter();
   const supabase = supabaseClient;
-  const {
-    data: user,
-    isLoading: authLoading,
-    error: authError,
-  } = useAuthUser();
+  const { user, initialized } = useAuth();
 
   useEffect(() => {
-    if (authLoading) return;
+    if (!initialized) return;
     if (!user) {
       setError("Invalid or expired password reset link. Please try again.");
     }
-  }, [authLoading, user]);
+  }, [initialized, user]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();

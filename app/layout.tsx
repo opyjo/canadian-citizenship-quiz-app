@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Bot } from "lucide-react";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { GlobalErrorBoundary } from "@/components/global-error-boundary";
+import { AuthProvider } from "@/context/AuthContext";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -139,150 +140,152 @@ export default function RootLayout({
         className={`${inter.className} min-h-screen bg-background antialiased`}
       >
         <QueryProvider>
-          <GlobalErrorBoundary>
-            <UserNav />
+          <AuthProvider>
+            <GlobalErrorBoundary>
+              <UserNav />
 
-            <main id="main-content" className="flex-1">
-              {children}
-            </main>
-          </GlobalErrorBoundary>
+              <main id="main-content" className="flex-1">
+                {children}
+              </main>
+            </GlobalErrorBoundary>
 
-          {/* Global Floating Chatbot - Available on all pages */}
-          <div className="fixed bottom-6 right-6 z-50">
-            <div className="relative">
-              {/* Subtle background glow */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 opacity-20 animate-pulse"></div>
+            {/* Global Floating Chatbot - Available on all pages */}
+            <div className="fixed bottom-6 right-6 z-50">
+              <div className="relative">
+                {/* Subtle background glow */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 opacity-20 animate-pulse"></div>
 
-              {/* Main chatbot button */}
-              <Button
-                size="lg"
-                className="relative bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-xl hover:shadow-2xl transition-all duration-200 focus:ring-4 focus:ring-purple-500 focus:ring-offset-2 rounded-full w-16 h-16 p-0 transform hover:scale-105"
-                asChild
-                aria-label="Ask AI Assistant - Get help with citizenship questions"
-              >
-                <Link
-                  href="/ask-ai"
-                  className="flex items-center justify-center"
+                {/* Main chatbot button */}
+                <Button
+                  size="lg"
+                  className="relative bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-xl hover:shadow-2xl transition-all duration-200 focus:ring-4 focus:ring-purple-500 focus:ring-offset-2 rounded-full w-16 h-16 p-0 transform hover:scale-105"
+                  asChild
+                  aria-label="Ask AI Assistant - Get help with citizenship questions"
                 >
-                  <Bot
-                    className="h-7 w-7 transition-all duration-200"
-                    aria-hidden="true"
-                  />
-                </Link>
-              </Button>
+                  <Link
+                    href="/ask-ai"
+                    className="flex items-center justify-center"
+                  >
+                    <Bot
+                      className="h-7 w-7 transition-all duration-200"
+                      aria-hidden="true"
+                    />
+                  </Link>
+                </Button>
 
-              {/* Small notification indicator */}
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white shadow-sm"></div>
-            </div>
-          </div>
-
-          <footer className="bg-gray-900 text-white py-12">
-            <div className="container mx-auto px-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="text-center">
-                  <h3 className="font-bold text-lg mb-4">Study Guide</h3>
-                  <ul className="space-y-2 text-gray-300">
-                    <li>
-                      <a
-                        href="/study/canadian-history"
-                        className="hover:text-white transition-colors"
-                      >
-                        Canadian History
-                      </a>
-                    </li>
-                    <li>
-                      <a
-                        href="/study/rights-responsibilities"
-                        className="hover:text-white transition-colors"
-                      >
-                        Rights & Responsibilities
-                      </a>
-                    </li>
-                    <li>
-                      <a
-                        href="/study/government-structure"
-                        className="hover:text-white transition-colors"
-                      >
-                        Government Structure
-                      </a>
-                    </li>
-                    <li>
-                      <a
-                        href="/study/geography"
-                        className="hover:text-white transition-colors"
-                      >
-                        Geography
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-                <div className="text-center">
-                  <h3 className="font-bold text-lg mb-4">Practice Tests</h3>
-                  <ul className="space-y-2 text-gray-300">
-                    <li>
-                      <a
-                        href="/quiz/standard"
-                        className="hover:text-white transition-colors"
-                      >
-                        Standard Quiz
-                      </a>
-                    </li>
-                    <li>
-                      <a
-                        href="/quiz/timed"
-                        className="hover:text-white transition-colors"
-                      >
-                        Timed Quiz
-                      </a>
-                    </li>
-                    <li>
-                      <a
-                        href="/faq"
-                        className="hover:text-white transition-colors"
-                      >
-                        FAQ
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="text-center">
-                  <h3 className="font-bold text-lg mb-4">About</h3>
-                  <ul className="space-y-2 text-gray-300">
-                    <li>
-                      <a
-                        href="/about"
-                        className="hover:text-white transition-colors"
-                      >
-                        About Us
-                      </a>
-                    </li>
-                    <li>
-                      <a
-                        href="/contact"
-                        className="hover:text-white transition-colors"
-                      >
-                        Contact
-                      </a>
-                    </li>
-                    <li>
-                      <a
-                        href="/privacy-policy"
-                        className="hover:text-white transition-colors"
-                      >
-                        Privacy Policy
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-              <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-                <p>
-                  &copy; 2025 Canada Citizenship Guide. All rights reserved.
-                </p>
+                {/* Small notification indicator */}
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white shadow-sm"></div>
               </div>
             </div>
-          </footer>
+
+            <footer className="bg-gray-900 text-white py-12">
+              <div className="container mx-auto px-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <div className="text-center">
+                    <h3 className="font-bold text-lg mb-4">Study Guide</h3>
+                    <ul className="space-y-2 text-gray-300">
+                      <li>
+                        <a
+                          href="/study/canadian-history"
+                          className="hover:text-white transition-colors"
+                        >
+                          Canadian History
+                        </a>
+                      </li>
+                      <li>
+                        <a
+                          href="/study/rights-responsibilities"
+                          className="hover:text-white transition-colors"
+                        >
+                          Rights & Responsibilities
+                        </a>
+                      </li>
+                      <li>
+                        <a
+                          href="/study/government-structure"
+                          className="hover:text-white transition-colors"
+                        >
+                          Government Structure
+                        </a>
+                      </li>
+                      <li>
+                        <a
+                          href="/study/geography"
+                          className="hover:text-white transition-colors"
+                        >
+                          Geography
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="text-center">
+                    <h3 className="font-bold text-lg mb-4">Practice Tests</h3>
+                    <ul className="space-y-2 text-gray-300">
+                      <li>
+                        <a
+                          href="/quiz/standard"
+                          className="hover:text-white transition-colors"
+                        >
+                          Standard Quiz
+                        </a>
+                      </li>
+                      <li>
+                        <a
+                          href="/quiz/timed"
+                          className="hover:text-white transition-colors"
+                        >
+                          Timed Quiz
+                        </a>
+                      </li>
+                      <li>
+                        <a
+                          href="/faq"
+                          className="hover:text-white transition-colors"
+                        >
+                          FAQ
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="text-center">
+                    <h3 className="font-bold text-lg mb-4">About</h3>
+                    <ul className="space-y-2 text-gray-300">
+                      <li>
+                        <a
+                          href="/about"
+                          className="hover:text-white transition-colors"
+                        >
+                          About Us
+                        </a>
+                      </li>
+                      <li>
+                        <a
+                          href="/contact"
+                          className="hover:text-white transition-colors"
+                        >
+                          Contact
+                        </a>
+                      </li>
+                      <li>
+                        <a
+                          href="/privacy-policy"
+                          className="hover:text-white transition-colors"
+                        >
+                          Privacy Policy
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+                  <p>
+                    &copy; 2025 Canada Citizenship Guide. All rights reserved.
+                  </p>
+                </div>
+              </div>
+            </footer>
+          </AuthProvider>
         </QueryProvider>
       </body>
     </html>

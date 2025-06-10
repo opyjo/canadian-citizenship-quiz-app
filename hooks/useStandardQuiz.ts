@@ -8,7 +8,7 @@ import {
 } from "@/lib/quizLimits";
 import { queryKeys } from "@/lib/query-client";
 import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
-import { useAuthUser } from "./useAuthUser";
+import { useAuth } from "@/context/AuthContext";
 
 // Define interfaces for our state and props
 interface Question {
@@ -71,11 +71,7 @@ export function useStandardQuiz() {
   const queryClient = useQueryClient();
 
   // Auth state
-  const {
-    data: user,
-    isLoading: authLoading,
-    error: authError,
-  } = useAuthUser();
+  const { user, initialized } = useAuth();
   const userId = user?.id ?? null;
 
   // Internal state
@@ -179,12 +175,7 @@ export function useStandardQuiz() {
 
   // Effect for access control
   useEffect(() => {
-    if (authLoading) return;
-    if (authError) {
-      setFeedbackMessage("Authentication failed. Please try again.");
-      setUiState("SHOWING_FEEDBACK");
-      return;
-    }
+    if (!initialized) return;
     // Wait until userId is determined.
     if (userId === undefined) return;
 
@@ -215,19 +206,15 @@ export function useStandardQuiz() {
     }
 
     performAccessCheck();
-  }, [authLoading, authError, userId, supabase, router]);
+  }, [initialized, userId, supabase, router]);
 
   // Handle combined loading states
-  const isLoadingAny = authLoading || questionsLoading || isSubmitting;
+  const isLoadingAny = questionsLoading || isSubmitting;
 
   useEffect(() => {
     if (isLoadingAny) {
       setLoadingMessage(
-        authLoading
-          ? "Checking authentication..."
-          : isSubmitting
-          ? "Submitting results..."
-          : "Loading questions..."
+        isSubmitting ? "Submitting results..." : "Loading questions..."
       );
       setUiState("LOADING");
       return;
@@ -249,7 +236,7 @@ export function useStandardQuiz() {
         setUiState("SHOWING_QUIZ");
       }
     }
-  }, [isLoadingAny, authLoading, isSubmitting, questionsError, questionsData]);
+  }, [isLoadingAny, questionsError, questionsData]);
 
   const getResultData = (): ResultData => {
     const timeTaken = Math.floor((Date.now() - startTime) / 1000);

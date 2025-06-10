@@ -16,17 +16,13 @@ import {
 import { Loader2, AlertTriangle, Shuffle } from "lucide-react";
 import { checkAttemptLimits, type QuizMode } from "@/lib/quizLimits";
 import ConfirmationModal from "@/components/confirmation-modal";
-import { useAuthUser } from "@/hooks/useAuthUser";
+import { useAuth } from "@/context/AuthContext";
 
 export default function PracticePage() {
   const [incorrectQuestionsCount, setIncorrectQuestionsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const {
-    data: user,
-    isLoading: authLoading,
-    error: authError,
-  } = useAuthUser();
+  const { user, initialized } = useAuth();
   const router = useRouter();
   const supabase = supabaseClient;
 
@@ -48,6 +44,7 @@ export default function PracticePage() {
   });
 
   useEffect(() => {
+    if (!initialized) return;
     if (!user) {
       setLoading(false);
       setIncorrectQuestionsCount(0);
@@ -71,7 +68,7 @@ export default function PracticePage() {
       }
     }
     fetchData();
-  }, [supabase, user]);
+  }, [supabase, user, initialized]);
 
   const handleStartQuizFlow = async (
     quizMode: QuizMode,
@@ -158,7 +155,7 @@ export default function PracticePage() {
     );
   };
 
-  if (authLoading || loading) {
+  if (!initialized || loading) {
     return (
       <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">

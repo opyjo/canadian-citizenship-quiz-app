@@ -6,9 +6,8 @@ import {
   checkAttemptLimits,
   incrementLocalAttemptCount,
 } from "@/lib/quizLimits";
-import { queryKeys } from "@/lib/query-client";
 import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
-import { useAuthUser } from "./useAuthUser";
+import { useAuth } from "@/context/AuthContext";
 
 // Define interfaces for our state and props
 interface Question {
@@ -73,11 +72,7 @@ export function useTimedQuiz() {
   const queryClient = useQueryClient();
 
   // Auth state
-  const {
-    data: user,
-    isLoading: authLoading,
-    error: authError,
-  } = useAuthUser();
+  const { user, initialized } = useAuth();
   const userId = user?.id ?? null;
 
   // Internal state
@@ -207,17 +202,13 @@ export function useTimedQuiz() {
 
   // Effect for access control
   useEffect(() => {
-    if (authLoading) return;
-    if (authError) {
-      setFeedbackMessage("Authentication failed. Please try again.");
-      setUiState("SHOWING_FEEDBACK");
-      return;
-    }
+    if (!initialized) return;
     // Wait until userId is determined.
     if (userId === undefined) return;
 
     async function performAccessCheck() {
       const accessResult = await checkAttemptLimits("timed", supabase);
+
       if (!accessResult.canAttempt) {
         let confirmText = accessResult.isPaidUser ? "OK" : "Upgrade Plan";
         if (!accessResult.isLoggedIn) confirmText = "Sign Up";
@@ -241,16 +232,16 @@ export function useTimedQuiz() {
       setIsAccessChecked(true);
     }
     performAccessCheck();
-  }, [authLoading, authError, userId, supabase, router]);
+  }, [initialized, userId, supabase, router]);
 
   // Handle combined loading states
   const isLoadingAny =
-    authLoading || questionsLoading || finishQuizMutation.isPending;
+    !initialized || questionsLoading || finishQuizMutation.isPending;
 
   useEffect(() => {
     if (isLoadingAny) {
       setLoadingMessage(
-        authLoading
+        !initialized
           ? "Checking authentication..."
           : finishQuizMutation.isPending
           ? "Submitting results..."
@@ -276,7 +267,7 @@ export function useTimedQuiz() {
     }
   }, [
     isLoadingAny,
-    authLoading,
+    !initialized,
     finishQuizMutation.isPending,
     questionsError,
     questionsData,

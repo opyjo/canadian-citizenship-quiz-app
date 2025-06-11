@@ -55,9 +55,6 @@ export default function PracticePage() {
     const result = await checkAttemptLimits(quizMode, supabase);
 
     if (result.canAttempt) {
-      console.log(
-        `[PracticePage] Access granted for ${actionName}. Navigating to ${quizPath}`
-      );
       router.push(quizPath);
     } else {
       console.log(
@@ -100,35 +97,108 @@ export default function PracticePage() {
   };
 
   const startPracticeIncorrect = () => {
-    if (!user) {
-      setModalState({
-        isOpen: true,
-        title: "Sign In Required",
-        message:
-          "You need to be signed in to practice your incorrect questions.",
-        confirmText: "Sign In",
-        cancelText: "Later",
-        onConfirm: () => router.push("/auth"),
-        onClose: () => setModalState((prev) => ({ ...prev, isOpen: false })),
-      });
-      return;
-    }
-    if (incorrectQuestionsCount === 0 && user) {
-      setModalState({
-        isOpen: true,
-        title: "No Incorrect Questions",
-        message: "You have no incorrect questions to practice. Great job!",
-        confirmText: "OK",
-        cancelText: "",
-        onConfirm: () => setModalState((prev) => ({ ...prev, isOpen: false })),
-        onClose: () => setModalState((prev) => ({ ...prev, isOpen: false })),
-      });
-      return;
-    }
     handleStartQuizFlow(
       "practice",
       "/quiz/practice?incorrect=true",
       "Practice Incorrect Questions"
+    );
+  };
+
+  // Extracted function to handle incorrect questions section rendering
+  const renderIncorrectQuestionsSection = () => {
+    // No user - show sign in card
+    if (!user) {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle>Sign In Required for Incorrect Questions</CardTitle>
+            <CardDescription>
+              Sign in to track and practice questions you've answered
+              incorrectly.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              <p>
+                Practicing incorrect questions requires an account to track your
+                quiz history.
+              </p>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Link href="/auth" className="w-full">
+              <Button className="w-full" variant="default">
+                Sign In or Create Account
+              </Button>
+            </Link>
+          </CardFooter>
+        </Card>
+      );
+    }
+
+    // User has no incorrect questions
+    if (incorrectQuestionsCount === 0) {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle>No Incorrect Questions</CardTitle>
+            <CardDescription>
+              You haven't answered any questions incorrectly yet, or you haven't
+              taken any quizzes. Great job!
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-2 text-green-600">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <p>Keep up the good work!</p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // User has incorrect questions - show practice card
+    return (
+      <Card className="overflow-hidden">
+        <CardHeader className="pb-3">
+          <CardTitle>Practice Incorrect Questions</CardTitle>
+          <CardDescription>
+            You have {incorrectQuestionsCount} question
+            {incorrectQuestionsCount !== 1 ? "s" : ""} answered incorrectly.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-500" />
+            <span>Focus on the questions you found tricky.</span>
+          </div>
+        </CardContent>
+        <CardFooter className="bg-gray-50 dark:bg-gray-800 border-t">
+          <Button
+            className="w-full"
+            variant="secondary"
+            onClick={startPracticeIncorrect}
+            disabled={!user || incorrectQuestionsCount === 0}
+          >
+            Practice {incorrectQuestionsCount} Incorrect Question
+            {incorrectQuestionsCount !== 1 ? "s" : ""}
+          </Button>
+        </CardFooter>
+      </Card>
     );
   };
 
@@ -182,90 +252,8 @@ export default function PracticePage() {
           </CardContent>
         </Card>
 
-        {/* Practice Incorrect Questions Section - No longer in a Tab */}
-        {!user ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Sign In Required for Incorrect Questions</CardTitle>
-              <CardDescription>
-                Sign in to track and practice questions you've answered
-                incorrectly.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-2 text-amber-600">
-                <AlertTriangle className="h-5 w-5" />
-                <p>
-                  Practicing incorrect questions requires an account to track
-                  your quiz history.
-                </p>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Link href="/auth" className="w-full">
-                <Button className="w-full" variant="default">
-                  Sign In or Create Account
-                </Button>
-              </Link>
-            </CardFooter>
-          </Card>
-        ) : incorrectQuestionsCount === 0 ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>No Incorrect Questions</CardTitle>
-              <CardDescription>
-                You haven't answered any questions incorrectly yet, or you
-                haven't taken any quizzes. Great job!
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-2 text-green-600">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <p>Keep up the good work!</p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-3">
-              <CardTitle>Practice Incorrect Questions</CardTitle>
-              <CardDescription>
-                You have {incorrectQuestionsCount} question
-                {incorrectQuestionsCount !== 1 ? "s" : ""} answered incorrectly.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                <span>Focus on the questions you found tricky.</span>
-              </div>
-            </CardContent>
-            <CardFooter className="bg-gray-50 dark:bg-gray-800 border-t">
-              <Button
-                className="w-full"
-                variant="secondary"
-                onClick={startPracticeIncorrect}
-                disabled={!user || incorrectQuestionsCount === 0}
-              >
-                Practice {incorrectQuestionsCount} Incorrect Question
-                {incorrectQuestionsCount !== 1 ? "s" : ""}
-              </Button>
-            </CardFooter>
-          </Card>
-        )}
+        {/* Practice Incorrect Questions Section - Clean function approach */}
+        {renderIncorrectQuestionsSection()}
 
         {incorrectError && (
           <Card className="border-red-500 bg-red-50 dark:bg-red-900/30">

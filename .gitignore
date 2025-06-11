@@ -31,3 +31,5 @@ next-env.d.ts
 
 # User-specific
 .cursor/
+# Sentry Config File
+.env.sentry-build-plugin

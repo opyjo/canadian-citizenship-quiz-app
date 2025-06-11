@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, createContext, useContext } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import supabase from "@/lib/supabase-client";
@@ -26,14 +28,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setInitialized(true);
     });
 
-    // Listen for auth state changes
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -50,9 +50,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     // The listener will update state automatically
   };
 
+  const contextValue = React.useMemo(
+    () => ({ user, session, initialized, signOut }),
+    [user, session, initialized, signOut]
+  );
+
   return (
-    <AuthContext.Provider value={{ user, session, initialized, signOut }}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 };

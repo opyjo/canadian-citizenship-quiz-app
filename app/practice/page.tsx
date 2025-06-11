@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import supabaseClient from "@/lib/supabase-client";
@@ -17,14 +17,18 @@ import { Loader2, AlertTriangle, Shuffle } from "lucide-react";
 import { checkAttemptLimits, type QuizMode } from "@/lib/quizLimits";
 import ConfirmationModal from "@/components/confirmation-modal";
 import { useAuth } from "@/context/AuthContext";
+import { useIncorrectQuestionsCount } from "@/hooks/useIncorrectQuestionsCount";
 
 export default function PracticePage() {
-  const [incorrectQuestionsCount, setIncorrectQuestionsCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { user, initialized } = useAuth();
   const router = useRouter();
   const supabase = supabaseClient;
+
+  const {
+    count: incorrectQuestionsCount,
+    loading: incorrectLoading,
+    error: incorrectError,
+  } = useIncorrectQuestionsCount(user, initialized, supabase);
 
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
@@ -42,33 +46,6 @@ export default function PracticePage() {
     cancelText: "Cancel",
     onConfirm: () => {},
   });
-
-  useEffect(() => {
-    if (!initialized) return;
-    if (!user) {
-      setLoading(false);
-      setIncorrectQuestionsCount(0);
-      return;
-    }
-    async function fetchData() {
-      setLoading(true);
-      try {
-        if (!user) return;
-        const { data: incorrectData, error: incorrectError } = await supabase
-          .from("user_incorrect_questions")
-          .select("question_id", { count: "exact" })
-          .eq("user_id", user.id);
-        if (incorrectError) throw incorrectError;
-        setIncorrectQuestionsCount(incorrectData?.length || 0);
-      } catch (err: any) {
-        console.error("Error fetching data:", err);
-        setError(err.message ?? "Failed to load practice data");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [supabase, user, initialized]);
 
   const handleStartQuizFlow = async (
     quizMode: QuizMode,
@@ -155,7 +132,7 @@ export default function PracticePage() {
     );
   };
 
-  if (!initialized || loading) {
+  if (!initialized || incorrectLoading) {
     return (
       <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">
@@ -290,7 +267,7 @@ export default function PracticePage() {
           </Card>
         )}
 
-        {error && (
+        {incorrectError && (
           <Card className="border-red-500 bg-red-50 dark:bg-red-900/30">
             <CardHeader>
               <CardTitle className="text-red-700 dark:text-red-400">
@@ -298,7 +275,7 @@ export default function PracticePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-red-600 dark:text-red-300">{error}</p>
+              <p className="text-red-600 dark:text-red-300">{incorrectError}</p>
               <p className="text-sm text-muted-foreground mt-2">
                 Please try refreshing the page. If the problem persists, some
                 data might be temporarily unavailable.

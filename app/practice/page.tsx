@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import supabaseClient from "@/lib/supabase-client";
@@ -14,102 +14,47 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Loader2, AlertTriangle, Shuffle } from "lucide-react";
-import { checkAttemptLimits, type QuizMode } from "@/lib/quizLimits";
+import { checkAttemptLimitsWithAuth } from "@/lib/quizlimits/helpers";
+import { QuizMode } from "@/lib/quizlimits/constants";
 import ConfirmationModal from "@/components/confirmation-modal";
 import { useAuth } from "@/context/AuthContext";
+import { useIncorrectQuestionsCount } from "@/hooks/useIncorrectQuestionsCount";
 
 export default function PracticePage() {
-  const [incorrectQuestionsCount, setIncorrectQuestionsCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { user, initialized } = useAuth();
   const router = useRouter();
   const supabase = supabaseClient;
 
-  const [modalState, setModalState] = useState<{
+  const {
+    count: incorrectQuestionsCount,
+    loading: incorrectLoading,
+    error: incorrectError,
+  } = useIncorrectQuestionsCount(user, initialized, supabase);
+
+  // Simplified modal state - only what we need
+  const [limitModal, setLimitModal] = useState<{
     isOpen: boolean;
-    title: string;
     message: string;
-    confirmText: string;
-    cancelText: string;
-    onConfirm: () => void;
-    onClose?: () => void;
+    isLoggedIn: boolean;
   }>({
     isOpen: false,
-    title: "",
     message: "",
-    confirmText: "Confirm",
-    cancelText: "Cancel",
-    onConfirm: () => {},
+    isLoggedIn: false,
   });
 
-  useEffect(() => {
-    if (!initialized) return;
-    if (!user) {
-      setLoading(false);
-      setIncorrectQuestionsCount(0);
-      return;
-    }
-    async function fetchData() {
-      setLoading(true);
-      try {
-        if (!user) return;
-        const { data: incorrectData, error: incorrectError } = await supabase
-          .from("user_incorrect_questions")
-          .select("question_id", { count: "exact" })
-          .eq("user_id", user.id);
-        if (incorrectError) throw incorrectError;
-        setIncorrectQuestionsCount(incorrectData?.length || 0);
-      } catch (err: any) {
-        console.error("Error fetching data:", err);
-        setError(err.message ?? "Failed to load practice data");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [supabase, user, initialized]);
-
-  const handleStartQuizFlow = async (
-    quizMode: QuizMode,
-    quizPath: string,
-    actionName: string
-  ) => {
-    const result = await checkAttemptLimits(quizMode, supabase);
+  const handleStartQuizFlow = async (quizMode: QuizMode, quizPath: string) => {
+    const result = await checkAttemptLimitsWithAuth(user, quizMode, supabase);
 
     if (result.canAttempt) {
-      console.log(
-        `[PracticePage] Access granted for ${actionName}. Navigating to ${quizPath}`
-      );
+      // They can take the quiz - just navigate
       router.push(quizPath);
     } else {
-      console.log(
-        `[PracticePage] Access denied for ${actionName}. Reason: ${result.reason}, Message: ${result.message}`
-      );
-      let confirmText = "OK";
-      let cancelText = "Later";
-      let onConfirmAction = () =>
-        setModalState((prev) => ({ ...prev, isOpen: false }));
-
-      if (!result.isLoggedIn) {
-        confirmText = "Sign Up";
-        onConfirmAction = () => router.push("/signup");
-      } else if (!result.isPaidUser) {
-        confirmText = "Upgrade Plan";
-        onConfirmAction = () => router.push("/pricing");
-      }
-
-      setModalState({
+      // They hit their limit - show modal
+      // We know message and isLoggedIn exist when canAttempt is false
+      setLimitModal({
         isOpen: true,
-        title: "Practice Limit Reached",
         message: result.message,
-        confirmText,
-        cancelText,
-        onConfirm: () => {
-          onConfirmAction();
-          setModalState((prev) => ({ ...prev, isOpen: false }));
-        },
-        onClose: () => setModalState((prev) => ({ ...prev, isOpen: false })),
+        isLoggedIn: result.isLoggedIn,
       });
     }
   };
@@ -117,45 +62,107 @@ export default function PracticePage() {
   const startQuickPractice = (count: number) => {
     handleStartQuizFlow(
       "practice",
-      `/quiz/practice?mode=random&count=${count}`,
-      `Quick Practice (${count} questions)`
+      `/quiz/practice?mode=random&count=${count}`
     );
   };
 
   const startPracticeIncorrect = () => {
+    handleStartQuizFlow("practice", "/quiz/practice?incorrect=true");
+  };
+
+  const renderIncorrectQuestionsSection = () => {
     if (!user) {
-      setModalState({
-        isOpen: true,
-        title: "Sign In Required",
-        message:
-          "You need to be signed in to practice your incorrect questions.",
-        confirmText: "Sign In",
-        cancelText: "Later",
-        onConfirm: () => router.push("/auth"),
-        onClose: () => setModalState((prev) => ({ ...prev, isOpen: false })),
-      });
-      return;
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle>Sign In Required for Incorrect Questions</CardTitle>
+            <CardDescription>
+              Sign in to track and practice questions you've answered
+              incorrectly.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              <p>
+                Practicing incorrect questions requires an account to track your
+                quiz history.
+              </p>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Link href="/auth" className="w-full">
+              <Button className="w-full" variant="default">
+                Sign In or Create Account
+              </Button>
+            </Link>
+          </CardFooter>
+        </Card>
+      );
     }
-    if (incorrectQuestionsCount === 0 && user) {
-      setModalState({
-        isOpen: true,
-        title: "No Incorrect Questions",
-        message: "You have no incorrect questions to practice. Great job!",
-        confirmText: "OK",
-        cancelText: "",
-        onConfirm: () => setModalState((prev) => ({ ...prev, isOpen: false })),
-        onClose: () => setModalState((prev) => ({ ...prev, isOpen: false })),
-      });
-      return;
+
+    if (incorrectQuestionsCount === 0) {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle>No Incorrect Questions</CardTitle>
+            <CardDescription>
+              You haven't answered any questions incorrectly yet. Great job!
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-2 text-green-600">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <p>Keep up the good work!</p>
+            </div>
+          </CardContent>
+        </Card>
+      );
     }
-    handleStartQuizFlow(
-      "practice",
-      "/quiz/practice?incorrect=true",
-      "Practice Incorrect Questions"
+
+    return (
+      <Card className="overflow-hidden">
+        <CardHeader className="pb-3">
+          <CardTitle>Practice Incorrect Questions</CardTitle>
+          <CardDescription>
+            You have {incorrectQuestionsCount} question
+            {incorrectQuestionsCount !== 1 ? "s" : ""} answered incorrectly.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-500" />
+            <span>Focus on the questions you found tricky.</span>
+          </div>
+        </CardContent>
+        <CardFooter className="bg-gray-50 dark:bg-gray-800 border-t">
+          <Button
+            className="w-full"
+            variant="secondary"
+            onClick={startPracticeIncorrect}
+          >
+            Practice {incorrectQuestionsCount} Incorrect Question
+            {incorrectQuestionsCount !== 1 ? "s" : ""}
+          </Button>
+        </CardFooter>
+      </Card>
     );
   };
 
-  if (!initialized || loading) {
+  if (!initialized || incorrectLoading) {
     return (
       <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">
@@ -177,7 +184,6 @@ export default function PracticePage() {
           </p>
         </div>
 
-        {/* Quick Practice Section */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -205,92 +211,9 @@ export default function PracticePage() {
           </CardContent>
         </Card>
 
-        {/* Practice Incorrect Questions Section - No longer in a Tab */}
-        {!user ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Sign In Required for Incorrect Questions</CardTitle>
-              <CardDescription>
-                Sign in to track and practice questions you've answered
-                incorrectly.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-2 text-amber-600">
-                <AlertTriangle className="h-5 w-5" />
-                <p>
-                  Practicing incorrect questions requires an account to track
-                  your quiz history.
-                </p>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Link href="/auth" className="w-full">
-                <Button className="w-full" variant="default">
-                  Sign In or Create Account
-                </Button>
-              </Link>
-            </CardFooter>
-          </Card>
-        ) : incorrectQuestionsCount === 0 ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>No Incorrect Questions</CardTitle>
-              <CardDescription>
-                You haven't answered any questions incorrectly yet, or you
-                haven't taken any quizzes. Great job!
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-2 text-green-600">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <p>Keep up the good work!</p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-3">
-              <CardTitle>Practice Incorrect Questions</CardTitle>
-              <CardDescription>
-                You have {incorrectQuestionsCount} question
-                {incorrectQuestionsCount !== 1 ? "s" : ""} answered incorrectly.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                <span>Focus on the questions you found tricky.</span>
-              </div>
-            </CardContent>
-            <CardFooter className="bg-gray-50 dark:bg-gray-800 border-t">
-              <Button
-                className="w-full"
-                variant="secondary"
-                onClick={startPracticeIncorrect}
-                disabled={!user || incorrectQuestionsCount === 0}
-              >
-                Practice {incorrectQuestionsCount} Incorrect Question
-                {incorrectQuestionsCount !== 1 ? "s" : ""}
-              </Button>
-            </CardFooter>
-          </Card>
-        )}
+        {renderIncorrectQuestionsSection()}
 
-        {error && (
+        {incorrectError && (
           <Card className="border-red-500 bg-red-50 dark:bg-red-900/30">
             <CardHeader>
               <CardTitle className="text-red-700 dark:text-red-400">
@@ -298,27 +221,28 @@ export default function PracticePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-red-600 dark:text-red-300">{error}</p>
+              <p className="text-red-600 dark:text-red-300">{incorrectError}</p>
               <p className="text-sm text-muted-foreground mt-2">
-                Please try refreshing the page. If the problem persists, some
-                data might be temporarily unavailable.
+                Please try refreshing the page.
               </p>
             </CardContent>
           </Card>
         )}
       </div>
 
+      {/* Simplified modal - cleaner props */}
       <ConfirmationModal
-        isOpen={modalState.isOpen}
-        title={modalState.title}
-        message={modalState.message}
-        confirmText={modalState.confirmText}
-        cancelText={modalState.cancelText}
-        onConfirm={modalState.onConfirm}
+        isOpen={limitModal.isOpen}
+        title="Practice Limit Reached"
+        message={limitModal.message}
+        confirmText={limitModal.isLoggedIn ? "Upgrade Plan" : "Sign Up"}
+        cancelText="Later"
+        onConfirm={() => {
+          router.push(limitModal.isLoggedIn ? "/pricing" : "/signup");
+          setLimitModal({ isOpen: false, message: "", isLoggedIn: false });
+        }}
         onClose={() =>
-          modalState.onClose
-            ? modalState.onClose()
-            : setModalState((prev) => ({ ...prev, isOpen: false }))
+          setLimitModal({ isOpen: false, message: "", isLoggedIn: false })
         }
       />
     </div>

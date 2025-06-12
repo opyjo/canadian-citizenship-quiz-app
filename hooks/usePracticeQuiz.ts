@@ -1,64 +1,43 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import supabaseClient from "@/lib/supabase-client";
-import {
-  checkAttemptLimits,
-  incrementLocalAttemptCount,
-} from "@/lib/quizLimits";
+import { incrementLocalAttemptCount } from "@/lib/quizlimits/getCountFromLocalStorage";
+import { checkAttemptLimitsWithAuth } from "@/lib/quizlimits/helpers";
 import { usePracticeQuestions } from "./useQuestions";
 import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
 import { useAuth } from "@/context/AuthContext";
+import {
+  parseQuizParams,
+  prepareApiPayload,
+  calculateScore,
+} from "./utils/helpers";
+import {
+  Question,
+  UIState,
+  ModalState,
+  UnauthenticatedResults,
+  ResultData,
+} from "./utils/types";
 
 // Define interfaces for our state and props
-interface Question {
-  id: number;
-  question_text: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-  correct_option: string;
-  [key: string]: any;
-}
-
-type UIState =
-  | "LOADING"
-  | "SHOWING_MODAL"
-  | "SHOWING_FEEDBACK"
-  | "UNAUTHENTICATED_RESULTS"
-  | "SHOWING_QUIZ"
-  | "SUBMITTING";
-
-interface ModalState {
-  isOpen: boolean;
-  title: string;
-  message: string;
-  confirmText: string;
-  cancelText: string;
-  onConfirm: () => void;
-  onClose?: () => void;
-}
-
-interface ResultData {
-  score: number;
-  totalQuestions: number;
-  timeTaken: number;
-  questions: any[];
-  practiceType: string;
-}
 
 export function usePracticeQuiz() {
+  // Navigation and context
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = supabaseClient;
   const queryClient = useQueryClient();
-
-  // Auth state
   const { user, initialized } = useAuth();
   const userId = user?.id ?? null;
 
-  // Internal state
+  // Parse URL parameters
+  const { incorrectOnly, count, mode } = useMemo(
+    () => parseQuizParams(searchParams),
+    [searchParams]
+  );
+
+  // Quiz state
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<
@@ -68,7 +47,7 @@ export function usePracticeQuiz() {
   const [practiceType, setPracticeType] = useState<string>("");
   const [isAccessChecked, setIsAccessChecked] = useState(false);
 
-  // State for different UI views
+  // UI state
   const [uiState, setUiState] = useState<UIState>("LOADING");
   const [loadingMessage, setLoadingMessage] = useState("Checking access...");
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
@@ -80,18 +59,20 @@ export function usePracticeQuiz() {
     cancelText: "Cancel",
     onConfirm: () => {},
   });
-  const [unauthenticatedResults, setUnauthenticatedResults] = useState<{
-    score: number | null;
-    totalQuestions: number | null;
-    quizType: "standard" | "practice";
-  }>({ score: null, totalQuestions: null, quizType: "practice" });
+  const [unauthenticatedResults, setUnauthenticatedResults] =
+    useState<UnauthenticatedResults>({
+      score: null,
+      totalQuestions: null,
+      quizType: "practice",
+    });
 
-  // Get quiz parameters from URL
-  const incorrectOnly = searchParams.get("incorrect") === "true";
-  const count = parseInt(searchParams.get("count") ?? "0", 10);
-  const mode = searchParams.get("mode");
+  // ============================================================================
+  // Data Fetching
+  // ============================================================================
 
-  // Fetch data using our dedicated TanStack Query hook
+  const shouldFetchQuestions =
+    initialized && isAccessChecked && uiState !== "SHOWING_MODAL";
+
   const {
     data: questionsData,
     error: questionsError,
@@ -100,9 +81,13 @@ export function usePracticeQuiz() {
     userId,
     incorrectOnly ? 20 : count,
     incorrectOnly,
-    initialized && isAccessChecked && uiState !== "SHOWING_MODAL",
+    shouldFetchQuestions,
     incorrectOnly ? { staleTime: 0, refetchOnMount: true } : undefined
   );
+
+  // ============================================================================
+  // Mutation for Quiz Submission
+  // ============================================================================
 
   const { mutate: submitQuiz, isPending: isSubmitting } = useMutation<
     { attemptId?: string; score?: number; totalQuestions?: number },
@@ -110,23 +95,7 @@ export function usePracticeQuiz() {
     ResultData
   >({
     mutationFn: async (resultData) => {
-      const questionIds = questions.map((q) => q.id);
-      const userAnswersForApi: Record<string, string> = {};
-      resultData.questions.forEach((q: any, index: number) => {
-        if (q.selected_option !== undefined) {
-          userAnswersForApi[String(index)] = q.selected_option;
-        }
-      });
-
-      const payload = {
-        userAnswers: userAnswersForApi,
-        questionIds: questionIds,
-        isTimed: false,
-        timeTaken: resultData.timeTaken,
-        isPractice: true,
-        practiceType: practiceType,
-        category: null,
-      };
+      const payload = prepareApiPayload(questions, resultData, practiceType);
 
       const response = await fetch("/api/quiz-attempt", {
         method: "POST",
@@ -142,10 +111,11 @@ export function usePracticeQuiz() {
       }
       return resultFromApi;
     },
+
     onSuccess: async (data, variables) => {
       invalidateQuizAttempts(queryClient, userId);
+
       if (data.attemptId) {
-        await Promise.resolve();
         router.push(`/results/${data.attemptId}`);
       } else {
         setUnauthenticatedResults({
@@ -156,90 +126,56 @@ export function usePracticeQuiz() {
         setUiState("UNAUTHENTICATED_RESULTS");
       }
     },
+
     onError: (err) => {
       setFeedbackMessage(err.message ?? "Failed to submit practice quiz.");
       setUiState("SHOWING_FEEDBACK");
     },
+
     onSettled: async (data, error, variables) => {
+      // Track attempt for unauthenticated users
       if (!userId) {
         incrementLocalAttemptCount("practice");
       }
 
+      // Update incorrect questions for authenticated users
       if (userId && variables?.questions) {
-        try {
-          const newlyIncorrectQuestions = variables.questions
-            .filter(
-              (q: any) => !q.is_correct && q.selected_option !== undefined
-            )
-            .map((q: any) => ({ user_id: userId, question_id: q.id }));
-
-          if (newlyIncorrectQuestions.length > 0) {
-            await supabase
-              .from("user_incorrect_questions")
-              .upsert(newlyIncorrectQuestions, {
-                onConflict: "user_id,question_id",
-              });
-          }
-
-          if (practiceType === "incorrect") {
-            const correctlyAnswered = variables.questions
-              .filter(
-                (q: any) => q.is_correct && q.selected_option !== undefined
-              )
-              .map((q: any) => q.id);
-
-            if (correctlyAnswered.length > 0) {
-              await supabase
-                .from("user_incorrect_questions")
-                .delete()
-                .eq("user_id", userId)
-                .in("question_id", correctlyAnswered);
-            }
-          }
-          // Only invalidate caches after all DB updates are complete
-          queryClient.invalidateQueries({
-            queryKey: [
-              "questions",
-              "practice",
-              userId,
-              incorrectOnly ? 20 : count,
-              true,
-            ],
-          });
-          invalidateQuizAttempts(queryClient, userId);
-        } catch (dbError: any) {
-          console.error(
-            "Error updating user_incorrect_questions table:",
-            dbError
-          );
-          // Non-critical, so we don't show a user-facing error
-        }
+        await updateIncorrectQuestions(
+          variables.questions,
+          userId,
+          practiceType,
+          supabase,
+          queryClient,
+          incorrectOnly,
+          count
+        );
       }
     },
   });
 
-  // Effect for access control
+  // ============================================================================
+  // Access Control Effect
+  // ============================================================================
+
   useEffect(() => {
     if (!initialized) return;
 
-    async function performAccessCheck() {
-      const accessResult = await checkAttemptLimits("practice", supabase);
+    async function checkAccess() {
+      const result = await checkAttemptLimitsWithAuth(
+        user,
+        "practice",
+        supabase
+      );
 
-      if (!accessResult.canAttempt) {
+      if (!result.canAttempt) {
         setModalState({
           isOpen: true,
-          title: "Access Denied",
-          message: accessResult.message,
-          confirmText: accessResult.isPaidUser ? "OK" : "Upgrade Plan",
+          title: "Practice Limit Reached",
+          message: result.message,
+          confirmText: result.isLoggedIn ? "Upgrade Plan" : "Sign Up",
           cancelText: "Go Home",
-          onConfirm: () => {
-            if (accessResult.isPaidUser) {
-              setModalState((prev) => ({ ...prev, isOpen: false }));
-              router.push("/practice");
-            } else {
-              router.push(accessResult.isLoggedIn ? "/pricing" : "/signup");
-            }
-          },
+          onConfirm: () =>
+            router.push(result.isLoggedIn ? "/pricing" : "/signup"),
           onClose: () => router.push("/"),
         });
         setUiState("SHOWING_MODAL");
@@ -247,18 +183,19 @@ export function usePracticeQuiz() {
       setIsAccessChecked(true);
     }
 
-    performAccessCheck();
+    checkAccess();
 
-    // Set practice type based on URL params
-    if (incorrectOnly) setPracticeType("incorrect");
-    else if (mode === "random" && count > 0) setPracticeType("random");
-    else if (uiState !== "SHOWING_MODAL") {
-      // Avoid routing away if a modal is already showing
+    // Determine practice type
+    if (incorrectOnly) {
+      setPracticeType("incorrect");
+    } else if (mode === "random" && count > 0) {
+      setPracticeType("random");
+    } else if (uiState !== "SHOWING_MODAL") {
       router.push("/practice");
     }
   }, [
     initialized,
-    userId,
+    user,
     supabase,
     router,
     incorrectOnly,
@@ -267,43 +204,42 @@ export function usePracticeQuiz() {
     uiState,
   ]);
 
-  // Handle combined loading states
+  // ============================================================================
+  // Loading and Data Management Effect
+  // ============================================================================
+
   const isLoadingAny = !initialized || questionsLoading || isSubmitting;
 
   useEffect(() => {
+    let message = "";
+    if (!initialized) {
+      message = "Checking authentication...";
+    } else if (isSubmitting) {
+      message = "Submitting results...";
+    } else {
+      message = "Loading practice questions...";
+    }
+    setLoadingMessage(message);
+    setUiState("LOADING");
+  }, [isSubmitting]);
+
+  useEffect(() => {
     if (isLoadingAny) {
-      const message = !initialized
-        ? "Checking authentication..."
-        : isSubmitting
-        ? "Submitting results..."
-        : "Loading practice questions...";
-      setLoadingMessage(message);
-      setUiState("LOADING");
-      return;
-    }
-
-    if (questionsError) {
-      setFeedbackMessage(questionsError.message);
-      setUiState("SHOWING_FEEDBACK");
-      return;
-    }
-
-    if (questionsData) {
-      if (questionsData.length === 0) {
-        if (incorrectOnly) {
-          setFeedbackMessage(
-            "Congratulations! You have no incorrect questions to practice. Well done!"
-          );
-          setUiState("SHOWING_FEEDBACK");
-        }
-        if (!incorrectOnly) {
-          setFeedbackMessage(
-            "There are no questions available for this practice session. Please try again later."
-          );
-          setUiState("SHOWING_FEEDBACK");
-        }
+      if (questionsError) {
+        setFeedbackMessage(questionsError.message);
+        setUiState("SHOWING_FEEDBACK");
       }
-      if (uiState === "LOADING" && !isSubmitting) {
+      return;
+    }
+
+    if (questionsData && uiState === "LOADING" && !isSubmitting) {
+      if (questionsData.length === 0) {
+        const message = incorrectOnly
+          ? "Congratulations! You have no incorrect questions to practice. Well done!"
+          : "There are no questions available for this practice session. Please try again later.";
+        setFeedbackMessage(message);
+        setUiState("SHOWING_FEEDBACK");
+      } else {
         setQuestions(questionsData);
         setStartTime(Date.now());
         setUiState("SHOWING_QUIZ");
@@ -311,42 +247,47 @@ export function usePracticeQuiz() {
     }
   }, [
     isLoadingAny,
-    !initialized,
-    isSubmitting,
     questionsError,
     questionsData,
     incorrectOnly,
+    uiState,
+    isSubmitting,
   ]);
 
-  // Event Handlers
-  const handleAnswerSelect = (option: string) => {
-    setSelectedAnswers({ ...selectedAnswers, [currentQuestionIndex]: option });
-  };
+  // ============================================================================
+  // Quiz Control Functions
+  // ============================================================================
 
-  const handleNext = () => {
+  const handleAnswerSelect = useCallback(
+    (option: string) => {
+      setSelectedAnswers((prev) => ({
+        ...prev,
+        [currentQuestionIndex]: option,
+      }));
+    },
+    [currentQuestionIndex]
+  );
+
+  const handleNext = useCallback(() => {
     if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setCurrentQuestionIndex((prev) => prev + 1);
     } else {
       finishQuiz();
     }
-  };
+  }, [currentQuestionIndex, questions.length]);
 
-  const handlePrevious = () => {
+  const handlePrevious = useCallback(() => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
+      setCurrentQuestionIndex((prev) => prev - 1);
     }
-  };
+  }, [currentQuestionIndex]);
 
-  const getResultData = (): ResultData => {
+  const getResultData = useCallback((): ResultData => {
     try {
-      const score = questions.filter(
-        (q, index) =>
-          selectedAnswers[index]?.trim().toLowerCase() ===
-          q.correct_option?.trim().toLowerCase()
-      ).length;
+      const score = calculateScore(questions, selectedAnswers);
       const timeTaken = Math.floor((Date.now() - startTime) / 1000);
 
-      const results = {
+      return {
         score,
         totalQuestions: questions.length,
         timeTaken,
@@ -359,27 +300,30 @@ export function usePracticeQuiz() {
         })),
         practiceType,
       };
-      return results;
     } catch (error) {
       console.error("[PracticeQuizPage] Error in getResultData:", error);
       setFeedbackMessage("Error preparing quiz results. Please try again.");
       setUiState("SHOWING_FEEDBACK");
       throw error;
     }
-  };
+  }, [questions, selectedAnswers, startTime, practiceType]);
 
-  const finishQuiz = () => {
+  const finishQuiz = useCallback(() => {
     setUiState("SUBMITTING");
-    try {
-      const localResultData = getResultData();
-      submitQuiz(localResultData);
-    } catch (e) {
-      // getResultData already handles the error state
-      return;
-    }
-  };
+    const resultData = getResultData();
+    submitQuiz(resultData);
+  }, [getResultData, submitQuiz]);
 
-  // Returned state and handlers for the UI component
+  // ============================================================================
+  // Return Values
+  // ============================================================================
+
+  const currentQuestion = questions[currentQuestionIndex];
+  const progress =
+    questions.length > 0
+      ? ((currentQuestionIndex + 1) / questions.length) * 100
+      : 0;
+
   return {
     state: {
       uiState,
@@ -388,13 +332,10 @@ export function usePracticeQuiz() {
       modalState,
     },
     quiz: {
-      currentQuestion: questions[currentQuestionIndex],
+      currentQuestion,
       selectedAnswers,
       currentQuestionIndex,
-      progress:
-        questions.length > 0
-          ? ((currentQuestionIndex + 1) / questions.length) * 100
-          : 0,
+      progress,
       practiceType,
       questions,
     },
@@ -406,4 +347,63 @@ export function usePracticeQuiz() {
     },
     unauthenticatedResults,
   };
+}
+
+// ============================================================================
+// Async Helper for Updating Incorrect Questions
+// ============================================================================
+
+async function updateIncorrectQuestions(
+  questions: any[],
+  userId: string,
+  practiceType: string,
+  supabase: any,
+  queryClient: any,
+  incorrectOnly: boolean,
+  count: number
+) {
+  try {
+    // Add newly incorrect questions
+    const newlyIncorrectQuestions = questions
+      .filter((q) => !q.is_correct && q.selected_option !== undefined)
+      .map((q) => ({ user_id: userId, question_id: q.id }));
+
+    if (newlyIncorrectQuestions.length > 0) {
+      await supabase
+        .from("user_incorrect_questions")
+        .upsert(newlyIncorrectQuestions, {
+          onConflict: "user_id,question_id",
+        });
+    }
+
+    // Remove correctly answered questions if practicing incorrect
+    if (practiceType === "incorrect") {
+      const correctlyAnswered = questions
+        .filter((q) => q.is_correct && q.selected_option !== undefined)
+        .map((q) => q.id);
+
+      if (correctlyAnswered.length > 0) {
+        await supabase
+          .from("user_incorrect_questions")
+          .delete()
+          .eq("user_id", userId)
+          .in("question_id", correctlyAnswered);
+      }
+    }
+
+    // Invalidate caches
+    queryClient.invalidateQueries({
+      queryKey: [
+        "questions",
+        "practice",
+        userId,
+        incorrectOnly ? 20 : count,
+        true,
+      ],
+    });
+    invalidateQuizAttempts(queryClient, userId);
+  } catch (error) {
+    console.error("Error updating user_incorrect_questions table:", error);
+    // Non-critical error, don't show to user
+  }
 }

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import type { Database } from "@/types/supabase";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 interface QuestionFromDB {

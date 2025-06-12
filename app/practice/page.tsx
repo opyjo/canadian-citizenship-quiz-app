@@ -14,7 +14,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Loader2, AlertTriangle, Shuffle } from "lucide-react";
-import { checkAttemptLimits, type QuizMode } from "@/lib/quizLimits";
+import { checkAttemptLimitsWithAuth } from "@/lib/quizlimits/helpers";
+import { QuizMode } from "@/lib/quizlimits/constants";
 import ConfirmationModal from "@/components/confirmation-modal";
 import { useAuth } from "@/context/AuthContext";
 import { useIncorrectQuestionsCount } from "@/hooks/useIncorrectQuestionsCount";
@@ -30,60 +31,30 @@ export default function PracticePage() {
     error: incorrectError,
   } = useIncorrectQuestionsCount(user, initialized, supabase);
 
-  const [modalState, setModalState] = useState<{
+  // Simplified modal state - only what we need
+  const [limitModal, setLimitModal] = useState<{
     isOpen: boolean;
-    title: string;
     message: string;
-    confirmText: string;
-    cancelText: string;
-    onConfirm: () => void;
-    onClose?: () => void;
+    isLoggedIn: boolean;
   }>({
     isOpen: false,
-    title: "",
     message: "",
-    confirmText: "Confirm",
-    cancelText: "Cancel",
-    onConfirm: () => {},
+    isLoggedIn: false,
   });
 
-  const handleStartQuizFlow = async (
-    quizMode: QuizMode,
-    quizPath: string,
-    actionName: string
-  ) => {
-    const result = await checkAttemptLimits(quizMode, supabase);
+  const handleStartQuizFlow = async (quizMode: QuizMode, quizPath: string) => {
+    const result = await checkAttemptLimitsWithAuth(user, quizMode, supabase);
 
     if (result.canAttempt) {
+      // They can take the quiz - just navigate
       router.push(quizPath);
     } else {
-      console.log(
-        `[PracticePage] Access denied for ${actionName}. Reason: ${result.reason}, Message: ${result.message}`
-      );
-      let confirmText = "OK";
-      let cancelText = "Later";
-      let onConfirmAction = () =>
-        setModalState((prev) => ({ ...prev, isOpen: false }));
-
-      if (!result.isLoggedIn) {
-        confirmText = "Sign Up";
-        onConfirmAction = () => router.push("/signup");
-      } else if (!result.isPaidUser) {
-        confirmText = "Upgrade Plan";
-        onConfirmAction = () => router.push("/pricing");
-      }
-
-      setModalState({
+      // They hit their limit - show modal
+      // We know message and isLoggedIn exist when canAttempt is false
+      setLimitModal({
         isOpen: true,
-        title: "Practice Limit Reached",
         message: result.message,
-        confirmText,
-        cancelText,
-        onConfirm: () => {
-          onConfirmAction();
-          setModalState((prev) => ({ ...prev, isOpen: false }));
-        },
-        onClose: () => setModalState((prev) => ({ ...prev, isOpen: false })),
+        isLoggedIn: result.isLoggedIn,
       });
     }
   };
@@ -91,22 +62,15 @@ export default function PracticePage() {
   const startQuickPractice = (count: number) => {
     handleStartQuizFlow(
       "practice",
-      `/quiz/practice?mode=random&count=${count}`,
-      `Quick Practice (${count} questions)`
+      `/quiz/practice?mode=random&count=${count}`
     );
   };
 
   const startPracticeIncorrect = () => {
-    handleStartQuizFlow(
-      "practice",
-      "/quiz/practice?incorrect=true",
-      "Practice Incorrect Questions"
-    );
+    handleStartQuizFlow("practice", "/quiz/practice?incorrect=true");
   };
 
-  // Extracted function to handle incorrect questions section rendering
   const renderIncorrectQuestionsSection = () => {
-    // No user - show sign in card
     if (!user) {
       return (
         <Card>
@@ -137,15 +101,13 @@ export default function PracticePage() {
       );
     }
 
-    // User has no incorrect questions
     if (incorrectQuestionsCount === 0) {
       return (
         <Card>
           <CardHeader>
             <CardTitle>No Incorrect Questions</CardTitle>
             <CardDescription>
-              You haven't answered any questions incorrectly yet, or you haven't
-              taken any quizzes. Great job!
+              You haven't answered any questions incorrectly yet. Great job!
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -171,7 +133,6 @@ export default function PracticePage() {
       );
     }
 
-    // User has incorrect questions - show practice card
     return (
       <Card className="overflow-hidden">
         <CardHeader className="pb-3">
@@ -192,7 +153,6 @@ export default function PracticePage() {
             className="w-full"
             variant="secondary"
             onClick={startPracticeIncorrect}
-            disabled={!user || incorrectQuestionsCount === 0}
           >
             Practice {incorrectQuestionsCount} Incorrect Question
             {incorrectQuestionsCount !== 1 ? "s" : ""}
@@ -224,7 +184,6 @@ export default function PracticePage() {
           </p>
         </div>
 
-        {/* Quick Practice Section */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -252,7 +211,6 @@ export default function PracticePage() {
           </CardContent>
         </Card>
 
-        {/* Practice Incorrect Questions Section - Clean function approach */}
         {renderIncorrectQuestionsSection()}
 
         {incorrectError && (
@@ -265,25 +223,26 @@ export default function PracticePage() {
             <CardContent>
               <p className="text-red-600 dark:text-red-300">{incorrectError}</p>
               <p className="text-sm text-muted-foreground mt-2">
-                Please try refreshing the page. If the problem persists, some
-                data might be temporarily unavailable.
+                Please try refreshing the page.
               </p>
             </CardContent>
           </Card>
         )}
       </div>
 
+      {/* Simplified modal - cleaner props */}
       <ConfirmationModal
-        isOpen={modalState.isOpen}
-        title={modalState.title}
-        message={modalState.message}
-        confirmText={modalState.confirmText}
-        cancelText={modalState.cancelText}
-        onConfirm={modalState.onConfirm}
+        isOpen={limitModal.isOpen}
+        title="Practice Limit Reached"
+        message={limitModal.message}
+        confirmText={limitModal.isLoggedIn ? "Upgrade Plan" : "Sign Up"}
+        cancelText="Later"
+        onConfirm={() => {
+          router.push(limitModal.isLoggedIn ? "/pricing" : "/signup");
+          setLimitModal({ isOpen: false, message: "", isLoggedIn: false });
+        }}
         onClose={() =>
-          modalState.onClose
-            ? modalState.onClose()
-            : setModalState((prev) => ({ ...prev, isOpen: false }))
+          setLimitModal({ isOpen: false, message: "", isLoggedIn: false })
         }
       />
     </div>

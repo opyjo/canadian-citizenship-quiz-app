@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { FREE_TIER_LIMITS, type QuizMode } from "@/lib/quizLimits";
-import { cookies } from "next/headers";
+import { FREE_TIER_LIMITS, QuizMode } from "@/lib/quizlimits/constants";
 
 export async function GET(request: Request) {
-  const cookieStore = cookies();
   // Ensure createServerClient is correctly implemented and doesn't cause issues here.
   // We are proceeding under the assumption that lib/supabase/server.ts is functional.
   const supabase = createSupabaseServerClient();

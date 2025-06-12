@@ -71,7 +71,7 @@ export default function ResetPasswordPage() {
       }, 3000);
     } catch (error: any) {
       setError(
-        error.message || "An error occurred while resetting your password"
+        error.message ?? "An error occurred while resetting your password"
       );
     } finally {
       setLoading(false);

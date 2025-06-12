@@ -43,3 +43,26 @@ export function prepareApiPayload(
     category: null,
   };
 }
+
+export function prepareTimedQuizPayload(
+  questions: Question[],
+  resultData: ResultData
+) {
+  const questionIds = questions.map((q) => q.id);
+  const userAnswersForApi: Record<string, string> = {};
+
+  resultData.questions.forEach((q: any) => {
+    if (q.selected_option !== undefined) {
+      userAnswersForApi[String(q.index)] = q.selected_option;
+    }
+  });
+
+  return {
+    userAnswers: userAnswersForApi,
+    questionIds,
+    isTimed: true,
+    timeTaken: resultData.timeTaken,
+    isPractice: false,
+    practiceType: null,
+  };
+}

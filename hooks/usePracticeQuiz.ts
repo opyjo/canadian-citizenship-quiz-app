@@ -310,13 +310,8 @@ export function usePracticeQuiz() {
 
   const finishQuiz = useCallback(() => {
     setUiState("SUBMITTING");
-    try {
-      const resultData = getResultData();
-      submitQuiz(resultData);
-    } catch (e) {
-      // Error already handled in getResultData
-      return;
-    }
+    const resultData = getResultData();
+    submitQuiz(resultData);
   }, [getResultData, submitQuiz]);
 
   // ============================================================================

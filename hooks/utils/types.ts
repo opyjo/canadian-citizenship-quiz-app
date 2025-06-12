@@ -38,5 +38,7 @@ export interface ResultData {
 export interface UnauthenticatedResults {
   score: number | null;
   totalQuestions: number | null;
-  quizType: "standard" | "practice";
+  quizType: "standard" | "practice" | "timed";
 }
+
+export const TIME_LIMIT = 30 * 60; // 15 minutes in seconds

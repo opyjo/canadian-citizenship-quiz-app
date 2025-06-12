@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 interface UnauthenticatedResultsViewProps {
   readonly score: number | null;
   readonly totalQuestions: number | null;
-  readonly quizType?: "standard" | "practice";
+  readonly quizType?: "standard" | "practice" | "timed";
 }
 
 export function UnauthenticatedResultsView({

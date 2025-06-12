@@ -20,8 +20,6 @@ import {
   ResultData,
 } from "./utils/types";
 
-// Define interfaces for our state and props
-
 export function usePracticeQuiz() {
   // Navigation and context
   const router = useRouter();
@@ -31,11 +29,29 @@ export function usePracticeQuiz() {
   const { user, initialized } = useAuth();
   const userId = user?.id ?? null;
 
-  // Parse URL parameters
-  const { incorrectOnly, count, mode } = useMemo(
-    () => parseQuizParams(searchParams),
-    [searchParams]
-  );
+  // Parse URL parameters and determine practice type immediately
+  const { incorrectOnly, count, mode, practiceType, shouldRedirect } =
+    useMemo(() => {
+      const params = parseQuizParams(searchParams);
+
+      let practiceType = "";
+      let shouldRedirect = false;
+
+      if (params.incorrectOnly) {
+        practiceType = "incorrect";
+      } else if (params.mode === "random" && params.count > 0) {
+        practiceType = "random";
+      } else {
+        // Invalid parameters - need to redirect
+        shouldRedirect = true;
+      }
+
+      return {
+        ...params,
+        practiceType,
+        shouldRedirect,
+      };
+    }, [searchParams]);
 
   // Quiz state
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -44,8 +60,8 @@ export function usePracticeQuiz() {
     Record<number, string>
   >({});
   const [startTime, setStartTime] = useState<number>(0);
-  const [practiceType, setPracticeType] = useState<string>("");
   const [isAccessChecked, setIsAccessChecked] = useState(false);
+  const [isQuizStarted, setIsQuizStarted] = useState(false);
 
   // UI state
   const [uiState, setUiState] = useState<UIState>("LOADING");
@@ -67,11 +83,24 @@ export function usePracticeQuiz() {
     });
 
   // ============================================================================
+  // Redirect Effect (but only if quiz hasn't started)
+  // ============================================================================
+
+  useEffect(() => {
+    if (shouldRedirect && !isQuizStarted) {
+      router.push("/practice");
+    }
+  }, [shouldRedirect, router, isQuizStarted]);
+
+  // ============================================================================
   // Data Fetching
   // ============================================================================
 
   const shouldFetchQuestions =
-    initialized && isAccessChecked && uiState !== "SHOWING_MODAL";
+    initialized &&
+    isAccessChecked &&
+    uiState !== "SHOWING_MODAL" &&
+    !shouldRedirect;
 
   const {
     data: questionsData,
@@ -158,7 +187,7 @@ export function usePracticeQuiz() {
   // ============================================================================
 
   useEffect(() => {
-    if (!initialized) return;
+    if (!initialized || shouldRedirect) return;
 
     async function checkAccess() {
       const result = await checkAttemptLimitsWithAuth(
@@ -184,25 +213,7 @@ export function usePracticeQuiz() {
     }
 
     checkAccess();
-
-    // Determine practice type
-    if (incorrectOnly) {
-      setPracticeType("incorrect");
-    } else if (mode === "random" && count > 0) {
-      setPracticeType("random");
-    } else if (uiState !== "SHOWING_MODAL") {
-      router.push("/practice");
-    }
-  }, [
-    initialized,
-    user,
-    supabase,
-    router,
-    incorrectOnly,
-    mode,
-    count,
-    uiState,
-  ]);
+  }, [initialized, user, supabase, router, shouldRedirect]);
 
   // ============================================================================
   // Loading and Data Management Effect
@@ -220,8 +231,12 @@ export function usePracticeQuiz() {
       message = "Loading practice questions...";
     }
     setLoadingMessage(message);
-    setUiState("LOADING");
-  }, [isSubmitting]);
+
+    // Only set to LOADING if we're not submitting
+    if (!isSubmitting) {
+      setUiState("LOADING");
+    }
+  }, [!initialized, questionsLoading]);
 
   useEffect(() => {
     if (isLoadingAny) {
@@ -242,6 +257,7 @@ export function usePracticeQuiz() {
       } else {
         setQuestions(questionsData);
         setStartTime(Date.now());
+        setIsQuizStarted(true);
         setUiState("SHOWING_QUIZ");
       }
     }

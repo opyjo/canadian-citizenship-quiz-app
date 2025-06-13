@@ -46,11 +46,8 @@ export default function PracticePage() {
     const result = await checkAttemptLimitsWithAuth(user, quizMode, supabase);
 
     if (result.canAttempt) {
-      // They can take the quiz - just navigate
       router.push(quizPath);
     } else {
-      // They hit their limit - show modal
-      // We know message and isLoggedIn exist when canAttempt is false
       setLimitModal({
         isOpen: true,
         message: result.message,

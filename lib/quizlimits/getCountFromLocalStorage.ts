@@ -45,9 +45,9 @@ function isValidAttemptCounts(obj: any): obj is AttemptCounts {
 export function incrementLocalAttemptCount(quizMode: QuizMode): void {
   if (typeof window === "undefined") return;
 
-  const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-  const counts = stored ? JSON.parse(stored) : {};
-  counts[quizMode] = (counts[quizMode] ?? 0) + 1;
+  // Use the getter to ensure we always start with a valid, complete object
+  const counts = getLocalAttemptCounts();
+  counts[quizMode] = (counts[quizMode] || 0) + 1;
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(counts));
 }
 

@@ -137,9 +137,9 @@ async function checkAuthenticatedUserLimits(
   }
 }
 
-function checkUnauthenticatedUserLimits(
+async function checkUnauthenticatedUserLimits(
   quizMode: QuizMode
-): AttemptCheckResult {
+): Promise<AttemptCheckResult> {
   const currentAttempts = getLocalAttemptCount(quizMode);
   const limit = FREE_TIER_LIMITS[quizMode];
 

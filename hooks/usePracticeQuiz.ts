@@ -19,6 +19,7 @@ import {
   UnauthenticatedResults,
   ResultData,
 } from "./utils/types";
+import React from "react";
 
 export function usePracticeQuiz() {
   // Navigation and context
@@ -28,6 +29,7 @@ export function usePracticeQuiz() {
   const queryClient = useQueryClient();
   const { user, initialized } = useAuth();
   const userId = user?.id ?? null;
+  const incrementedRef = React.useRef(false);
 
   // Parse URL parameters and determine practice type immediately
   const { incorrectOnly, count, mode, practiceType, shouldRedirect } =
@@ -60,7 +62,6 @@ export function usePracticeQuiz() {
     Record<number, string>
   >({});
   const [startTime, setStartTime] = useState<number>(0);
-  const [isAccessChecked, setIsAccessChecked] = useState(false);
   const [isQuizStarted, setIsQuizStarted] = useState(false);
 
   // UI state
@@ -97,10 +98,7 @@ export function usePracticeQuiz() {
   // ============================================================================
 
   const shouldFetchQuestions =
-    initialized &&
-    isAccessChecked &&
-    uiState !== "SHOWING_MODAL" &&
-    !shouldRedirect;
+    initialized && uiState !== "SHOWING_MODAL" && !shouldRedirect;
 
   const {
     data: questionsData,
@@ -162,11 +160,6 @@ export function usePracticeQuiz() {
     },
 
     onSettled: async (data, error, variables) => {
-      // Track attempt for unauthenticated users
-      if (!userId) {
-        incrementLocalAttemptCount("practice");
-      }
-
       // Update incorrect questions for authenticated users
       if (userId && variables?.questions) {
         await updateIncorrectQuestions(
@@ -181,39 +174,6 @@ export function usePracticeQuiz() {
       }
     },
   });
-
-  // ============================================================================
-  // Access Control Effect
-  // ============================================================================
-
-  useEffect(() => {
-    if (!initialized || shouldRedirect) return;
-
-    async function checkAccess() {
-      const result = await checkAttemptLimitsWithAuth(
-        user,
-        "practice",
-        supabase
-      );
-
-      if (!result.canAttempt) {
-        setModalState({
-          isOpen: true,
-          title: "Practice Limit Reached",
-          message: result.message,
-          confirmText: result.isLoggedIn ? "Upgrade Plan" : "Sign Up",
-          cancelText: "Go Home",
-          onConfirm: () =>
-            router.push(result.isLoggedIn ? "/pricing" : "/signup"),
-          onClose: () => router.push("/"),
-        });
-        setUiState("SHOWING_MODAL");
-      }
-      setIsAccessChecked(true);
-    }
-
-    checkAccess();
-  }, [initialized, user, supabase, router, shouldRedirect]);
 
   // ============================================================================
   // Loading and Data Management Effect
@@ -258,6 +218,10 @@ export function usePracticeQuiz() {
         setQuestions(questionsData);
         setStartTime(Date.now());
         setIsQuizStarted(true);
+        if (!userId && !incrementedRef.current) {
+          incrementLocalAttemptCount("practice");
+          incrementedRef.current = true;
+        }
         setUiState("SHOWING_QUIZ");
       }
     }

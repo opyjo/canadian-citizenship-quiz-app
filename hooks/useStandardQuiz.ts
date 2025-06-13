@@ -1,5 +1,5 @@
 // src/hooks/useStandardQuiz.ts
-import { useReducer, useEffect, useState, useCallback } from "react";
+import { useReducer, useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
@@ -10,6 +10,7 @@ import { uiReducer, initialUIState } from "@/app/utils/reducers/uiReducer";
 import type { Question, ModalState } from "@/app/utils/types";
 import { useAttemptLimit } from "@/hooks/useAttemptLimit";
 import { UnauthenticatedResults } from "@/app/utils/types";
+import { incrementLocalAttemptCount } from "@/lib/quizlimits/getCountFromLocalStorage";
 
 export interface ResultData {
   score: number;
@@ -27,6 +28,7 @@ export function useStandardQuiz() {
   const queryClient = useQueryClient();
   const { user, initialized } = useAuth();
   const userId = user?.id ?? null;
+  const startIncrementRef = useRef(false);
 
   // UI reducer
   const [ui, dispatch] = useReducer(uiReducer, initialUIState);
@@ -67,21 +69,6 @@ export function useStandardQuiz() {
     isLoading: questionsLoading,
   } = useRandomQuestions(shouldFetch, 20);
 
-  // ============================================================================
-  // Loading and Submitting Effects
-  // ============================================================================
-  useEffect(() => {
-    if (!initialized) {
-      dispatch({ type: "LOADING", message: "Checking authentication…" });
-    } else if (isCheckingLimit) {
-      dispatch({ type: "LOADING", message: "Verifying access…" });
-    } else if (uiState === "SUBMITTING") {
-      dispatch({ type: "SUBMITTING" });
-    } else if (questionsLoading) {
-      dispatch({ type: "LOADING", message: "Loading questions…" });
-    }
-  }, [initialized, isCheckingLimit, questionsLoading, uiState]);
-  // ============================================================================
   // If limit‐check finishes and they can’t attempt, pop your modal
   // ============================================================================
   useEffect(() => {
@@ -96,8 +83,10 @@ export function useStandardQuiz() {
           cancelText: "Go Home",
           onConfirm: () =>
             router.push(limitIsLoggedIn ? "/pricing" : "/signup"),
-          onCancel: () => router.push("/"),
-        } as ModalState,
+          onClose: () => {
+            router.push("/practice");
+          },
+        },
       });
     }
   }, [isCheckingLimit, canAttempt, limitMessage, limitIsLoggedIn, router]);
@@ -118,15 +107,19 @@ export function useStandardQuiz() {
       } else {
         setQuestions(questionsData);
         setStartTime(Date.now());
+        if (!userId && !startIncrementRef.current) {
+          incrementLocalAttemptCount("standard");
+          startIncrementRef.current = true;
+        }
         dispatch({ type: "SHOW_QUIZ" });
       }
     }
-  }, [questionsLoading, questionsError, questionsData]);
+  }, [questionsLoading, questionsError, questionsData, userId]);
 
   // ============================================================================
   // Create the mutation for submitting the quiz
   // ============================================================================
-  const { mutate: submitQuiz } = useMutation<
+  const { mutate: submitQuiz, isPending: isSubmitting } = useMutation<
     { attemptId?: string },
     Error,
     ResultData
@@ -170,10 +163,23 @@ export function useStandardQuiz() {
       }
     },
     onError: (err) => dispatch({ type: "SHOW_FEEDBACK", message: err.message }),
-    onSettled: () => {
-      // (optional) update incorrect questions logic here
-    },
   });
+
+  // ============================================================================
+  // Loading and Submitting Effects
+  // ============================================================================
+  useEffect(() => {
+    if (!initialized) {
+      dispatch({ type: "LOADING", message: "Checking authentication…" });
+    } else if (isCheckingLimit) {
+      dispatch({ type: "LOADING", message: "Verifying access…" });
+    } else if (isSubmitting) {
+      dispatch({ type: "SUBMITTING" });
+    } else if (questionsLoading) {
+      dispatch({ type: "LOADING", message: "Loading questions…" });
+    }
+  }, [initialized, isCheckingLimit, questionsLoading, uiState, isSubmitting]);
+  // ============================================================================
 
   // ============================================================================
   // Quiz Control Functions

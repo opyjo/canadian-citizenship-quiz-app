@@ -250,12 +250,12 @@ export function usePracticeQuiz() {
     }
   }, [currentQuestionIndex]);
 
+  // ============================================================================
+  // Contruct the result(payload) and create finishQuiz function
+  // ============================================================================
+
   const finishQuiz = useCallback(() => {
     dispatch({ type: "SUBMITTING" });
-
-    // ============================================================================
-    // Contruct the result(payload) and submit the quiz
-    // ============================================================================
     const score = calculateScore(questions, selectedAnswers);
     const timeTaken = Math.floor((Date.now() - startTime) / 1000);
     const payload: ResultData = {

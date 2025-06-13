@@ -27,6 +27,7 @@ export function uiReducer(state: UIStateSlice, action: UIAction): UIStateSlice {
       return {
         ...state,
         uiState: "SUBMITTING",
+        loadingMessage: "Submitting results…",
       };
     case "SHOW_FEEDBACK":
       return {

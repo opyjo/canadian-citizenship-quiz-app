@@ -1,58 +1,46 @@
-import { useState, useEffect, useCallback } from "react";
+// src/hooks/useStandardQuiz.ts
+import { useReducer, useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import supabaseClient from "@/lib/supabase-client";
-import { checkAttemptLimitsWithAuth } from "@/lib/quizlimits/helpers";
-import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
 import { useAuth } from "@/context/AuthContext";
 import { useRandomQuestions } from "./useQuestions";
-import { Question, UIState, ModalState } from "../app/utils/types";
+import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
+import { calculateScore } from "@/app/utils/helpers";
+import { uiReducer, initialUIState } from "@/app/utils/reducers/uiReducer";
+import type { Question } from "@/app/utils/types";
+import { useAttemptLimit } from "@/hooks/useAttemptLimit";
+import { UnauthenticatedResults } from "@/app/utils/types";
+import { incrementLocalAttemptCount } from "@/lib/quizlimits/getCountFromLocalStorage";
 
-// Define interfaces specific to standard quiz
-interface ResultData {
+export interface ResultData {
   score: number;
   totalQuestions: number;
   timeTaken: number;
-  questions: any[];
-}
-
-interface UnauthenticatedResults {
-  score: number | null;
-  totalQuestions: number | null;
-  quizType: "standard";
+  questions: Array<{
+    index: number;
+    selected_option?: string;
+    is_correct: boolean;
+  }>;
 }
 
 export function useStandardQuiz() {
-  // Navigation and context
   const router = useRouter();
-  const supabase = supabaseClient;
   const queryClient = useQueryClient();
   const { user, initialized } = useAuth();
   const userId = user?.id ?? null;
+  const startIncrementRef = useRef(false);
 
-  // Quiz state
+  // UI reducer
+  const [ui, dispatch] = useReducer(uiReducer, initialUIState);
+  const { uiState, loadingMessage, feedbackMessage, modalState } = ui;
+
+  // Core quiz state
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<
     Record<number, string>
   >({});
-  const [startTime, setStartTime] = useState<number>(0);
-  const [isAccessChecked, setIsAccessChecked] = useState(false);
-
-  // UI state
-  const [uiState, setUiState] = useState<UIState>("LOADING");
-  const [loadingMessage, setLoadingMessage] = useState("Checking access...");
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-  const [isConfirmEndQuizModalOpen, setIsConfirmEndQuizModalOpen] =
-    useState(false);
-  const [modalState, setModalState] = useState<ModalState>({
-    isOpen: false,
-    title: "",
-    message: "",
-    confirmText: "Confirm",
-    cancelText: "Cancel",
-    onConfirm: () => {},
-  });
+  const [startTime, setStartTime] = useState(0);
   const [unauthenticatedResults, setUnauthenticatedResults] =
     useState<UnauthenticatedResults>({
       score: null,
@@ -60,38 +48,92 @@ export function useStandardQuiz() {
       quizType: "standard",
     });
 
-  // ============================================================================
-  // Data Fetching
-  // ============================================================================
+  // 1) Check attempt‐limit
+  const {
+    isChecking: isCheckingLimit,
+    canAttempt,
+    message: limitMessage,
+    isLoggedIn: limitIsLoggedIn,
+  } = useAttemptLimit("standard");
 
-  const shouldFetchQuestions =
-    initialized && isAccessChecked && uiState !== "SHOWING_MODAL";
+  // 2) Fetch questions only once ready
+  const shouldFetch =
+    initialized &&
+    !isCheckingLimit &&
+    canAttempt &&
+    uiState !== "SHOWING_MODAL";
 
   const {
     data: questionsData,
     error: questionsError,
     isLoading: questionsLoading,
-  } = useRandomQuestions(shouldFetchQuestions, 20);
+  } = useRandomQuestions(shouldFetch, 20);
 
   // ============================================================================
-  // Mutation for Quiz Submission
+  // If limit‐check finishes and they can’t attempt, pop your modal
   // ============================================================================
+  useEffect(() => {
+    if (!isCheckingLimit && !canAttempt) {
+      dispatch({
+        type: "SHOW_MODAL",
+        payload: {
+          isOpen: true,
+          title: "Access Denied",
+          message: limitMessage,
+          confirmText: limitIsLoggedIn ? "Upgrade Plan" : "Sign Up",
+          cancelText: "Go Home",
+          onConfirm: () =>
+            router.push(limitIsLoggedIn ? "/pricing" : "/signup"),
+          onClose: () => {
+            router.push("/");
+          },
+        },
+      });
+    }
+  }, [isCheckingLimit, canAttempt, limitMessage, limitIsLoggedIn, router]);
+  // ============================================================================
+  // When questions arrive or error occurs
+  // ============================================================================
+  useEffect(() => {
+    if (questionsError) {
+      dispatch({ type: "SHOW_FEEDBACK", message: questionsError.message });
+      return;
+    }
+    if (!questionsLoading && questionsData) {
+      if (questionsData.length === 0) {
+        dispatch({
+          type: "SHOW_FEEDBACK",
+          message: "No questions available for this quiz.",
+        });
+      } else {
+        setQuestions(questionsData);
+        setStartTime(Date.now());
+        if (!userId && !startIncrementRef.current) {
+          incrementLocalAttemptCount("standard");
+          startIncrementRef.current = true;
+        }
+        dispatch({ type: "SHOW_QUIZ" });
+      }
+    }
+  }, [questionsLoading, questionsError, questionsData, userId]);
 
+  // ============================================================================
+  // Create the mutation for submitting the quiz
+  // ============================================================================
   const { mutate: submitQuiz, isPending: isSubmitting } = useMutation<
-    { attemptId?: string; score?: number; totalQuestions?: number },
+    { attemptId?: string },
     Error,
     ResultData
   >({
     mutationFn: async (resultData) => {
       const questionIds = questions.map((q) => q.id);
-      const userAnswersForApi: Record<string, string> = {};
-      resultData.questions.forEach((q: any) => {
-        if (q.selected_option !== undefined) {
-          userAnswersForApi[String(q.index)] = q.selected_option;
-        }
+      const userAnswers: Record<string, string> = {};
+      resultData.questions.forEach((q) => {
+        if (q.selected_option) userAnswers[String(q.index)] = q.selected_option;
       });
+
       const payload = {
-        userAnswers: userAnswersForApi,
+        userAnswers,
         questionIds,
         isTimed: false,
         timeTaken: resultData.timeTaken,
@@ -99,201 +141,93 @@ export function useStandardQuiz() {
         practiceType: null,
       };
 
-      const response = await fetch("/api/quiz-attempt", {
+      const res = await fetch("/api/quiz-attempt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
-      const resultFromApi = await response.json();
-      if (!response.ok) {
-        throw new Error(resultFromApi.error || "Failed to save quiz attempt");
-      }
-      return resultFromApi;
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Failed to save attempt");
+      return json;
     },
-
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       invalidateQuizAttempts(queryClient, userId);
-
       if (data.attemptId) {
         router.push(`/results/${data.attemptId}`);
       } else {
         setUnauthenticatedResults({
-          score: data.score ?? null,
-          totalQuestions: data.totalQuestions ?? null,
+          score: variables.score,
+          totalQuestions: variables.totalQuestions,
           quizType: "standard",
         });
-        setUiState("UNAUTHENTICATED_RESULTS");
+        dispatch({ type: "UNAUTHENTICATED_RESULTS" });
       }
     },
-
-    onError: (err) => {
-      setFeedbackMessage(err.message || "Failed to submit standard quiz.");
-      setUiState("SHOWING_FEEDBACK");
-    },
-
-    // Removed incrementLocalAttemptCount to match the pattern
+    onError: (err) => dispatch({ type: "SHOW_FEEDBACK", message: err.message }),
   });
 
   // ============================================================================
-  // Access Control Effect
+  // Loading and Submitting Effects
   // ============================================================================
-
   useEffect(() => {
-    if (!initialized) return;
-
-    async function checkAccess() {
-      const result = await checkAttemptLimitsWithAuth(
-        user,
-        "standard",
-        supabase
-      );
-
-      if (!result.canAttempt) {
-        setModalState({
-          isOpen: true,
-          title: "Access Denied",
-          message: result.message,
-          confirmText: result.isLoggedIn ? "Upgrade Plan" : "Sign Up",
-          cancelText: "Go Home",
-          onConfirm: () =>
-            router.push(result.isLoggedIn ? "/pricing" : "/signup"),
-          onClose: () => router.push("/"),
-        });
-        setUiState("SHOWING_MODAL");
-      }
-      setIsAccessChecked(true);
-    }
-
-    checkAccess();
-  }, [initialized, user, supabase, router]);
-
-  // ============================================================================
-  // Loading and Data Management Effect
-  // ============================================================================
-
-  const isLoadingAny = !initialized || questionsLoading || isSubmitting;
-
-  useEffect(() => {
-    let message = "";
     if (!initialized) {
-      message = "Checking authentication...";
+      dispatch({ type: "LOADING", message: "Checking authentication…" });
+    } else if (isCheckingLimit) {
+      dispatch({ type: "LOADING", message: "Verifying access…" });
     } else if (isSubmitting) {
-      message = "Submitting results...";
-    } else {
-      message = "Loading questions...";
+      dispatch({ type: "SUBMITTING" });
+    } else if (questionsLoading) {
+      dispatch({ type: "LOADING", message: "Loading questions…" });
     }
-    setLoadingMessage(message);
-    setUiState("LOADING");
-  }, [isSubmitting]);
-
-  useEffect(() => {
-    if (isLoadingAny) {
-      if (questionsError) {
-        setFeedbackMessage(questionsError.message);
-        setUiState("SHOWING_FEEDBACK");
-      }
-      return;
-    }
-
-    if (questionsData && uiState === "LOADING" && !isSubmitting) {
-      if (questionsData.length === 0) {
-        setFeedbackMessage("No questions available for this quiz.");
-        setUiState("SHOWING_FEEDBACK");
-      } else {
-        setQuestions(questionsData);
-        setStartTime(Date.now());
-        setUiState("SHOWING_QUIZ");
-      }
-    }
-  }, [isLoadingAny, questionsError, questionsData, uiState, isSubmitting]);
+  }, [initialized, isCheckingLimit, questionsLoading, uiState, isSubmitting]);
+  // ============================================================================
 
   // ============================================================================
   // Quiz Control Functions
   // ============================================================================
-
   const handleAnswerSelect = useCallback(
-    (option: string) => {
-      setSelectedAnswers((prev) => ({
-        ...prev,
-        [currentQuestionIndex]: option,
-      }));
-    },
+    (opt: string) =>
+      setSelectedAnswers((p) => ({ ...p, [currentQuestionIndex]: opt })),
     [currentQuestionIndex]
   );
 
-  const handleNext = useCallback(() => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
-    } else {
-      finishQuiz();
-    }
-  }, [currentQuestionIndex, questions.length]);
-
-  const handlePrevious = useCallback(() => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex((prev) => prev - 1);
-    }
-  }, [currentQuestionIndex]);
-
-  const getResultData = useCallback((): ResultData => {
+  const finishQuiz = useCallback(() => {
+    dispatch({ type: "SUBMITTING" });
     const timeTaken = Math.floor((Date.now() - startTime) / 1000);
-    return {
-      score: questions.filter(
-        (q, index) =>
-          selectedAnswers[index]?.toLowerCase() ===
-          q.correct_option.toLowerCase()
-      ).length,
+    const payload: ResultData = {
+      score: calculateScore(questions, selectedAnswers),
       totalQuestions: questions.length,
       timeTaken,
-      questions: questions.map((q, index) => ({
-        ...q,
-        index,
-        selected_option: selectedAnswers[index],
+      questions: questions.map((q, i) => ({
+        index: i,
+        selected_option: selectedAnswers[i],
         is_correct:
-          selectedAnswers[index]?.toLowerCase() ===
-          q.correct_option.toLowerCase(),
+          selectedAnswers[i]?.toLowerCase() === q.correct_option.toLowerCase(),
       })),
     };
-  }, [questions, selectedAnswers, startTime]);
+    submitQuiz(payload);
+  }, [questions, selectedAnswers, startTime, submitQuiz]);
 
-  const finishQuiz = useCallback(() => {
-    setUiState("SUBMITTING");
-    const resultData = getResultData();
-    submitQuiz(resultData);
-  }, [getResultData, submitQuiz]);
+  const handleNext = useCallback(() => {
+    if (currentQuestionIndex < questions.length - 1)
+      setCurrentQuestionIndex((i) => i + 1);
+    else finishQuiz();
+  }, [currentQuestionIndex, questions.length, finishQuiz]);
 
-  const handleEndQuiz = useCallback(() => {
-    setIsConfirmEndQuizModalOpen(true);
-  }, []);
-
-  const handleCloseConfirmModal = useCallback(() => {
-    setIsConfirmEndQuizModalOpen(false);
-  }, []);
-
-  const handleConfirmEndQuiz = useCallback(() => {
-    finishQuiz();
-    setIsConfirmEndQuizModalOpen(false);
-  }, [finishQuiz]);
+  const handlePrevious = useCallback(() => {
+    if (currentQuestionIndex > 0) setCurrentQuestionIndex((i) => i - 1);
+  }, [currentQuestionIndex]);
 
   // ============================================================================
   // Return Values
   // ============================================================================
-
   const currentQuestion = questions[currentQuestionIndex];
-  const progress =
-    questions.length > 0
-      ? ((currentQuestionIndex + 1) / questions.length) * 100
-      : 0;
+  const progress = questions.length
+    ? ((currentQuestionIndex + 1) / questions.length) * 100
+    : 0;
 
   return {
-    state: {
-      uiState,
-      loadingMessage,
-      feedbackMessage,
-      modalState,
-      isConfirmEndQuizModalOpen,
-    },
+    state: { uiState, loadingMessage, feedbackMessage, modalState },
     quiz: {
       currentQuestion,
       selectedAnswers,
@@ -305,9 +239,6 @@ export function useStandardQuiz() {
       handleAnswerSelect,
       handleNext,
       handlePrevious,
-      handleEndQuiz,
-      handleCloseConfirmModal,
-      handleConfirmEndQuiz,
       finishQuiz,
     },
     unauthenticatedResults,

@@ -1,3 +1,4 @@
+// src/hooks/useAttemptLimit.ts
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import supabaseClient from "@/lib/supabase-client";
@@ -6,7 +7,7 @@ import {
   checkUnauthenticatedUserLimits,
 } from "@/lib/quizlimits/helpers";
 import type { QuizMode } from "@/lib/quizlimits/constants";
-import { AttemptCheckResult } from "@/lib/quizlimits/types";
+import type { AttemptCheckResult } from "@/lib/quizlimits/types";
 
 export function useAttemptLimit(mode: QuizMode) {
   const { user, initialized } = useAuth();
@@ -34,11 +35,11 @@ export function useAttemptLimit(mode: QuizMode) {
         result = { canAttempt: true };
       }
 
+      setCanAttempt(result.canAttempt);
       if (result.canAttempt) {
-        setCanAttempt(true);
         setMessage("");
+        setIsLoggedIn(!!user);
       } else {
-        setCanAttempt(false);
         setMessage(result.message);
         setIsLoggedIn(result.isLoggedIn);
       }

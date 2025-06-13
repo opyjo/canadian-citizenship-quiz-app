@@ -102,7 +102,7 @@ function isValidApiResponse(data: any): data is ApiAccessCheckResponse {
   );
 }
 
-async function checkAuthenticatedUserLimits(
+export async function checkAuthenticatedUserLimits(
   user: User,
   quizMode: QuizMode,
   supabase: SupabaseClient
@@ -137,9 +137,9 @@ async function checkAuthenticatedUserLimits(
   }
 }
 
-function checkUnauthenticatedUserLimits(
+export async function checkUnauthenticatedUserLimits(
   quizMode: QuizMode
-): AttemptCheckResult {
+): Promise<AttemptCheckResult> {
   const currentAttempts = getLocalAttemptCount(quizMode);
   const limit = FREE_TIER_LIMITS[quizMode];
 

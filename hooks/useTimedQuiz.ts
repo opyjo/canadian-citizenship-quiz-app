@@ -6,7 +6,7 @@ import { checkAttemptLimitsWithAuth } from "@/lib/quizlimits/helpers";
 import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
 import { useAuth } from "@/context/AuthContext";
 import { useRandomQuestions } from "./useQuestions";
-import { Question, UIState, ModalState } from "./utils/types";
+import { Question, UIState, ModalState } from "../app/utils/types";
 
 // Define interfaces specific to timed quiz
 interface ResultData {

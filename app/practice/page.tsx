@@ -238,9 +238,10 @@ export default function PracticePage() {
           router.push(limitModal.isLoggedIn ? "/pricing" : "/signup");
           setLimitModal({ isOpen: false, message: "", isLoggedIn: false });
         }}
-        onClose={() =>
-          setLimitModal({ isOpen: false, message: "", isLoggedIn: false })
-        }
+        onClose={() => {
+          router.push("/practice");
+          setLimitModal({ isOpen: false, message: "", isLoggedIn: false });
+        }}
       />
     </div>
   );

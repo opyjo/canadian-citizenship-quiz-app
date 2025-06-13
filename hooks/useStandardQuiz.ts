@@ -7,7 +7,7 @@ import { useRandomQuestions } from "./useQuestions";
 import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
 import { calculateScore } from "@/app/utils/helpers";
 import { uiReducer, initialUIState } from "@/app/utils/reducers/uiReducer";
-import type { Question, ModalState } from "@/app/utils/types";
+import type { Question } from "@/app/utils/types";
 import { useAttemptLimit } from "@/hooks/useAttemptLimit";
 import { UnauthenticatedResults } from "@/app/utils/types";
 import { incrementLocalAttemptCount } from "@/lib/quizlimits/getCountFromLocalStorage";
@@ -69,6 +69,7 @@ export function useStandardQuiz() {
     isLoading: questionsLoading,
   } = useRandomQuestions(shouldFetch, 20);
 
+  // ============================================================================
   // If limit‐check finishes and they can’t attempt, pop your modal
   // ============================================================================
   useEffect(() => {
@@ -84,7 +85,7 @@ export function useStandardQuiz() {
           onConfirm: () =>
             router.push(limitIsLoggedIn ? "/pricing" : "/signup"),
           onClose: () => {
-            router.push("/practice");
+            router.push("/");
           },
         },
       });

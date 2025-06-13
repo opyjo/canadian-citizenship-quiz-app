@@ -1,302 +1,248 @@
-import { useState, useEffect, useCallback } from "react";
+// src/hooks/useTimedQuiz.ts
+import { useReducer, useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import supabaseClient from "@/lib/supabase-client";
-import { checkAttemptLimitsWithAuth } from "@/lib/quizlimits/helpers";
-import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
 import { useAuth } from "@/context/AuthContext";
 import { useRandomQuestions } from "./useQuestions";
-import { Question, UIState, ModalState } from "../app/utils/types";
+import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
+import { calculateScore } from "@/app/utils/helpers";
+import { uiReducer, initialUIState } from "@/app/utils/reducers/uiReducer";
+import type { Question, UnauthenticatedResults } from "@/app/utils/types";
+import { useAttemptLimit } from "@/hooks/useAttemptLimit";
+import { incrementLocalAttemptCount } from "@/lib/quizlimits/getCountFromLocalStorage";
 
-// Define interfaces specific to timed quiz
-interface ResultData {
+const TIME_LIMIT = 15 * 60; // in seconds
+
+export interface ResultData {
   score: number;
   totalQuestions: number;
   timeTaken: number;
-  questions: any[];
+  questions: Array<{
+    index: number;
+    selected_option?: string;
+    is_correct: boolean;
+  }>;
 }
-
-interface UnauthenticatedResults {
-  score: number | null;
-  totalQuestions: number | null;
-}
-
-const TIME_LIMIT = 15 * 60; // 15 minutes in seconds
 
 export function useTimedQuiz() {
-  // Navigation and context
   const router = useRouter();
-  const supabase = supabaseClient;
   const queryClient = useQueryClient();
   const { user, initialized } = useAuth();
   const userId = user?.id ?? null;
+  const startIncrementRef = useRef(false);
 
-  // Quiz state
+  // UI reducer
+  const [ui, dispatch] = useReducer(uiReducer, initialUIState);
+  const { uiState, loadingMessage, feedbackMessage, modalState } = ui;
+
+  // Core quiz state
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<
     Record<number, string>
   >({});
-  const [isAccessChecked, setIsAccessChecked] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(TIME_LIMIT);
+  const [startTime, setStartTime] = useState(0);
   const [quizActive, setQuizActive] = useState(false);
-
-  // UI state
-  const [uiState, setUiState] = useState<UIState>("LOADING");
-  const [loadingMessage, setLoadingMessage] = useState("Checking access...");
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-  const [isConfirmEndQuizModalOpen, setIsConfirmEndQuizModalOpen] =
-    useState(false);
-  const [modalState, setModalState] = useState<ModalState>({
-    isOpen: false,
-    title: "",
-    message: "",
-    confirmText: "Confirm",
-    cancelText: "Cancel",
-    onConfirm: () => {},
-  });
+  const [timeRemaining, setTimeRemaining] = useState(TIME_LIMIT);
   const [unauthenticatedResults, setUnauthenticatedResults] =
     useState<UnauthenticatedResults>({
       score: null,
       totalQuestions: null,
+      quizType: "standard",
     });
 
-  // ============================================================================
-  // Data Fetching
-  // ============================================================================
+  // 1) Attempt‐limit check
+  const {
+    isChecking: isCheckingLimit,
+    canAttempt,
+    message: limitMessage,
+    isLoggedIn: limitIsLoggedIn,
+  } = useAttemptLimit("timed");
 
-  const shouldFetchQuestions =
-    initialized && isAccessChecked && uiState !== "SHOWING_MODAL";
+  // 2) Fetch questions once ready
+  const shouldFetch =
+    initialized &&
+    !isCheckingLimit &&
+    canAttempt &&
+    uiState !== "SHOWING_MODAL";
 
   const {
     data: questionsData,
     error: questionsError,
     isLoading: questionsLoading,
-  } = useRandomQuestions(shouldFetchQuestions, 20);
+  } = useRandomQuestions(shouldFetch, 20);
 
   // ============================================================================
-  // Mutation for Quiz Submission
+  // If limit‐check finishes and they can’t attempt, pop your modal
   // ============================================================================
+  useEffect(() => {
+    if (!isCheckingLimit && !canAttempt) {
+      dispatch({
+        type: "SHOW_MODAL",
+        payload: {
+          isOpen: true,
+          title: "Access Denied",
+          message: limitMessage,
+          confirmText: limitIsLoggedIn ? "Upgrade Plan" : "Sign Up",
+          cancelText: "Go Home",
+          onConfirm: () =>
+            router.push(limitIsLoggedIn ? "/pricing" : "/signup"),
+          onClose: () => {
+            router.push("/");
+          },
+        },
+      });
+    }
+  }, [isCheckingLimit, canAttempt, limitMessage, limitIsLoggedIn, router]);
 
+  // ============================================================================
+  // Create the mutation for submitting the quiz
+  // ============================================================================
   const { mutate: submitQuiz, isPending: isSubmitting } = useMutation<
-    { attemptId?: string; score?: number; totalQuestions?: number },
+    { attemptId?: string },
     Error,
     ResultData
   >({
     mutationFn: async (resultData) => {
       setQuizActive(false);
       const questionIds = questions.map((q) => q.id);
-      const userAnswersForApi: Record<string, string> = {};
-      resultData.questions.forEach((q: any) => {
-        if (q.selected_option !== undefined) {
-          userAnswersForApi[String(q.index)] = q.selected_option;
-        }
+      const userAnswers: Record<string, string> = {};
+      resultData.questions.forEach((q) => {
+        if (q.selected_option) userAnswers[String(q.index)] = q.selected_option;
       });
       const payload = {
-        userAnswers: userAnswersForApi,
+        userAnswers,
         questionIds,
         isTimed: true,
         timeTaken: resultData.timeTaken,
         isPractice: false,
         practiceType: null,
       };
-
-      const response = await fetch("/api/quiz-attempt", {
+      const res = await fetch("/api/quiz-attempt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
-      const resultFromApi = await response.json();
-      if (!response.ok) {
-        throw new Error(resultFromApi.error ?? "Failed to save quiz attempt");
-      }
-      return resultFromApi;
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Failed to submit");
+      return json;
     },
-
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       invalidateQuizAttempts(queryClient, userId);
-
       if (data.attemptId) {
         router.push(`/results/${data.attemptId}`);
       } else {
         setUnauthenticatedResults({
-          score: data.score ?? null,
-          totalQuestions: data.totalQuestions ?? null,
+          score: variables.score,
+          totalQuestions: variables.totalQuestions,
+          quizType: "timed",
         });
-        setUiState("UNAUTHENTICATED_RESULTS");
+        dispatch({ type: "UNAUTHENTICATED_RESULTS" });
       }
     },
-
-    onError: (err) => {
-      setFeedbackMessage(err.message || "Failed to submit timed quiz.");
-      setUiState("SHOWING_FEEDBACK");
-    },
+    onError: (err) => dispatch({ type: "SHOW_FEEDBACK", message: err.message }),
   });
 
   // ============================================================================
-  // Access Control Effect
+  // Loading and Submitting Effects
   // ============================================================================
 
   useEffect(() => {
-    if (!initialized) return;
-
-    async function checkAccess() {
-      const result = await checkAttemptLimitsWithAuth(user, "timed", supabase);
-
-      if (!result.canAttempt) {
-        setModalState({
-          isOpen: true,
-          title: "Access Denied",
-          message: result.message,
-          confirmText: result.isLoggedIn ? "Upgrade Plan" : "Sign Up",
-          cancelText: "Go Home",
-          onConfirm: () =>
-            router.push(result.isLoggedIn ? "/pricing" : "/signup"),
-          onClose: () => router.push("/"),
-        });
-        setUiState("SHOWING_MODAL");
-      }
-      setIsAccessChecked(true);
-    }
-
-    checkAccess();
-  }, [initialized, user, supabase, router]);
-
-  // ============================================================================
-  // Loading and Data Management Effect
-  // ============================================================================
-
-  const isLoadingAny = !initialized || questionsLoading || isSubmitting;
-
-  useEffect(() => {
-    let message = "";
     if (!initialized) {
-      message = "Checking authentication...";
+      dispatch({ type: "LOADING", message: "Checking authentication…" });
+    } else if (isCheckingLimit) {
+      dispatch({ type: "LOADING", message: "Verifying access…" });
     } else if (isSubmitting) {
-      message = "Submitting results...";
-    } else {
-      message = "Loading questions...";
+      dispatch({ type: "SUBMITTING" });
+    } else if (questionsLoading) {
+      dispatch({ type: "LOADING", message: "Loading questions…" });
     }
-    setLoadingMessage(message);
-    setUiState("LOADING");
-  }, [isSubmitting]);
+  }, [initialized, isCheckingLimit, isSubmitting, questionsLoading, uiState]);
 
+  // ============================================================================
+  // When questions arrive or error occurs
+  // ============================================================================
   useEffect(() => {
-    if (isLoadingAny) {
-      if (questionsError) {
-        setFeedbackMessage(questionsError.message);
-        setUiState("SHOWING_FEEDBACK");
-      }
+    if (questionsError) {
+      dispatch({ type: "SHOW_FEEDBACK", message: questionsError.message });
       return;
     }
-
-    if (questionsData && uiState === "LOADING" && !isSubmitting) {
+    if (!questionsLoading && questionsData) {
       if (questionsData.length === 0) {
-        setFeedbackMessage("No questions available for this quiz.");
-        setUiState("SHOWING_FEEDBACK");
+        dispatch({
+          type: "SHOW_FEEDBACK",
+          message: "No questions available for this quiz.",
+        });
       } else {
         setQuestions(questionsData);
+        setStartTime(Date.now());
         setQuizActive(true);
-        setUiState("SHOWING_QUIZ");
+        if (!userId && !startIncrementRef.current) {
+          incrementLocalAttemptCount("timed");
+          startIncrementRef.current = true;
+        }
+        dispatch({ type: "SHOW_QUIZ" });
       }
     }
-  }, [isLoadingAny, questionsError, questionsData, uiState, isSubmitting]);
-
-  // ============================================================================
-  // Timer Effect
-  // ============================================================================
-
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (quizActive && timeRemaining > 0) {
-      timer = setInterval(() => {
-        setTimeRemaining((prev) => prev - 1);
-      }, 1000);
-    } else if (timeRemaining === 0 && quizActive) {
-      finishQuiz();
-    }
-    return () => clearInterval(timer);
-  }, [quizActive, timeRemaining]);
+  }, [questionsLoading, questionsError, questionsData, userId]);
 
   // ============================================================================
   // Quiz Control Functions
   // ============================================================================
-
   const handleAnswerSelect = useCallback(
-    (option: string) => {
-      setSelectedAnswers((prev) => ({
-        ...prev,
-        [currentQuestionIndex]: option,
-      }));
-    },
+    (opt: string) =>
+      setSelectedAnswers((p) => ({ ...p, [currentQuestionIndex]: opt })),
     [currentQuestionIndex]
   );
-
-  const handleNext = useCallback(() => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
-    } else {
-      finishQuiz();
-    }
-  }, [currentQuestionIndex, questions.length]);
-
-  const handlePrevious = useCallback(() => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex((prev) => prev - 1);
-    }
-  }, [currentQuestionIndex]);
-
-  const getResultData = useCallback((): ResultData => {
+  const finishQuiz = useCallback(() => {
+    dispatch({ type: "SUBMITTING" });
+    if (isSubmitting) return;
     const timeTaken = TIME_LIMIT - timeRemaining;
-    return {
-      score: questions.filter(
-        (q, index) =>
-          selectedAnswers[index]?.toLowerCase() ===
-          q.correct_option.toLowerCase()
-      ).length,
+    const payload: ResultData = {
+      score: calculateScore(questions, selectedAnswers),
       totalQuestions: questions.length,
       timeTaken,
-      questions: questions.map((q, index) => ({
-        ...q,
-        index,
-        selected_option: selectedAnswers[index],
+      questions: questions.map((q, i) => ({
+        index: i,
+        selected_option: selectedAnswers[i],
         is_correct:
-          selectedAnswers[index]?.toLowerCase() ===
-          q.correct_option.toLowerCase(),
+          selectedAnswers[i]?.toLowerCase() === q.correct_option.toLowerCase(),
       })),
     };
-  }, [questions, selectedAnswers, timeRemaining]);
+    submitQuiz(payload);
+  }, [questions, selectedAnswers, timeRemaining, submitQuiz, isSubmitting]);
 
-  const finishQuiz = useCallback(() => {
-    setUiState("SUBMITTING");
-    if (isSubmitting) return;
-    const resultData = getResultData();
-    submitQuiz(resultData);
-  }, [getResultData, submitQuiz, isSubmitting]);
+  const handleNext = useCallback(() => {
+    if (currentQuestionIndex < questions.length - 1)
+      setCurrentQuestionIndex((i) => i + 1);
+    else finishQuiz();
+  }, [currentQuestionIndex, questions.length, finishQuiz]);
+  const handlePrevious = useCallback(() => {
+    if (currentQuestionIndex > 0) setCurrentQuestionIndex((i) => i - 1);
+  }, [currentQuestionIndex]);
 
-  const handleEndQuiz = useCallback(() => {
-    setIsConfirmEndQuizModalOpen(true);
-  }, []);
-
-  const handleCloseConfirmModal = useCallback(() => {
-    setIsConfirmEndQuizModalOpen(false);
-  }, []);
-
-  const handleConfirmEndQuiz = useCallback(() => {
-    finishQuiz();
-    setIsConfirmEndQuizModalOpen(false);
-  }, [finishQuiz]);
+  // ============================================================================
+  // Timer Effect
+  // ============================================================================
+  useEffect(() => {
+    if (!quizActive) return;
+    if (timeRemaining <= 0) {
+      finishQuiz();
+      return;
+    }
+    const id = setInterval(() => {
+      setTimeRemaining((t) => t - 1);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [quizActive, timeRemaining, finishQuiz]);
 
   // ============================================================================
   // Return Values
   // ============================================================================
-
   const currentQuestion = questions[currentQuestionIndex];
-  const progress =
-    questions.length > 0
-      ? ((currentQuestionIndex + 1) / questions.length) * 100
-      : 0;
+  const progress = questions.length
+    ? ((currentQuestionIndex + 1) / questions.length) * 100
+    : 0;
 
   return {
     state: {
@@ -304,7 +250,6 @@ export function useTimedQuiz() {
       loadingMessage,
       feedbackMessage,
       modalState,
-      isConfirmEndQuizModalOpen,
       timeRemaining,
     },
     quiz: {
@@ -318,9 +263,6 @@ export function useTimedQuiz() {
       handleAnswerSelect,
       handleNext,
       handlePrevious,
-      handleEndQuiz,
-      handleCloseConfirmModal,
-      handleConfirmEndQuiz,
       finishQuiz,
     },
     unauthenticatedResults,

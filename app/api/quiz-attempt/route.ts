@@ -42,6 +42,7 @@ export async function POST(request: Request) {
       data: { user },
       error: userError,
     } = await supabase.auth.getUser();
+
     if (userError)
       console.warn("API Route: Error fetching user:", userError.message);
     if (user) {

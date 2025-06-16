@@ -65,3 +65,37 @@ export function usePracticeQuestions(
     refetchOnMount: options?.refetchOnMount ?? false,
   });
 }
+
+// ADD ONLY THIS ONE HOOK:
+export function useQuestionsByIds(
+  questionIds: number[],
+  enabled: boolean = true
+) {
+  return useQuery({
+    queryKey: ["questions", "by-ids", questionIds.sort().join(",")],
+    queryFn: async (): Promise<Question[]> => {
+      if (!questionIds || questionIds.length === 0) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from("questions")
+        .select(
+          "id, question_text, option_a, option_b, option_c, option_d, correct_option"
+        )
+        .in("id", questionIds);
+
+      if (error) throw new Error(error.message);
+      if (!data) throw new Error("Questions not found");
+
+      // Maintain order from questionIds array
+      const questionMap = new Map(data.map((q: Question) => [q.id, q]));
+      return questionIds
+        .map((id) => questionMap.get(id))
+        .filter(Boolean) as Question[];
+    },
+    enabled: enabled && questionIds.length > 0,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+  });
+}

@@ -42,3 +42,30 @@ export interface UnauthenticatedResults {
 }
 
 export const TIME_LIMIT = 30 * 60; // 15 minutes in seconds
+
+export interface Question {
+  id: number;
+  question_text: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_option: string;
+}
+
+export interface QuizAttempt {
+  id: number;
+  user_answers: Record<string, string>;
+  question_ids: number[];
+  is_timed: boolean;
+  time_taken_seconds: number | null;
+  is_practice: boolean;
+  practice_type: string | null;
+  category?: string | null;
+  created_at: string;
+}
+
+export interface QuizResultsData {
+  attempt: QuizAttempt;
+  questions: Question[];
+}

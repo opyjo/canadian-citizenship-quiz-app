@@ -65,10 +65,15 @@ export default function ResultsPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen py-12 px-4">
       <div className="max-w-3xl w-full space-y-8">
-        <div className="w-full flex justify-start mb-4">
+        <div className="w-full flex justify-between gap-4 mb-4">
           <Button onClick={() => router.push("/")} variant="outline">
             Return to Home
           </Button>
+          {isPractice && (
+            <Link href="/practice">
+              <Button>Back to Practice</Button>
+            </Link>
+          )}
         </div>
         <Card className="w-full">
           <CardHeader>
@@ -177,54 +182,46 @@ export default function ResultsPage() {
               </TabsContent>
 
               <TabsContent value="correct" className="space-y-4 mt-4">
-                {questions
-                  .filter((q, index) => {
-                    const userAnswerKey = String(index);
-                    return (
-                      userAnswers[userAnswerKey]?.toUpperCase() ===
-                      q.correct_option
-                    );
-                  })
-                  .map((question) => {
-                    const originalIndex = questions.indexOf(question);
-                    const userAnswerKey = String(originalIndex);
-                    return (
-                      <QuestionReview
-                        key={question.id}
-                        question={question}
-                        userAnswer={userAnswers[userAnswerKey]}
-                        isCorrect={true}
-                        questionNumber={originalIndex + 1}
-                        reviewContext="correct"
-                      />
-                    );
-                  })}
+                {questions.map((question, index) => {
+                  const userAnswerKey = String(index);
+                  const isCorrect =
+                    userAnswers[userAnswerKey]?.toUpperCase() ===
+                    question.correct_option;
+                  if (!isCorrect) return null;
+
+                  return (
+                    <QuestionReview
+                      key={question.id}
+                      question={question}
+                      userAnswer={userAnswers[userAnswerKey]}
+                      isCorrect={true}
+                      questionNumber={index + 1}
+                      reviewContext="correct"
+                    />
+                  );
+                })}
               </TabsContent>
 
               <TabsContent value="incorrect" className="space-y-4 mt-4">
-                {questions
-                  .filter((q, index) => {
-                    const userAnswerKey = String(index);
-                    return (
-                      userAnswers[userAnswerKey] !== undefined &&
-                      userAnswers[userAnswerKey]?.toUpperCase() !==
-                        q.correct_option
-                    );
-                  })
-                  .map((question) => {
-                    const originalIndex = questions.indexOf(question);
-                    const userAnswerKey = String(originalIndex);
-                    return (
-                      <QuestionReview
-                        key={question.id}
-                        question={question}
-                        userAnswer={userAnswers[userAnswerKey]}
-                        isCorrect={false}
-                        questionNumber={originalIndex + 1}
-                        reviewContext="incorrect"
-                      />
-                    );
-                  })}
+                {questions.map((question, index) => {
+                  const userAnswerKey = String(index);
+                  const userAnswer = userAnswers[userAnswerKey];
+                  const isCorrect =
+                    userAnswer?.toUpperCase() === question.correct_option;
+
+                  if (userAnswer === undefined || isCorrect) return null;
+
+                  return (
+                    <QuestionReview
+                      key={question.id}
+                      question={question}
+                      userAnswer={userAnswer}
+                      isCorrect={false}
+                      questionNumber={index + 1}
+                      reviewContext="incorrect"
+                    />
+                  );
+                })}
               </TabsContent>
             </Tabs>
           </CardContent>

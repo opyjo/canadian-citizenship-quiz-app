@@ -17,8 +17,7 @@ import { QuestionReview } from "@/components/quiz/QuestionReview";
 
 export default function ResultsPage() {
   const router = useRouter();
-  const params = useParams();
-  const attemptId = params.attemptId as string;
+  const { attemptId } = useParams();
 
   const {
     questions,
@@ -34,7 +33,7 @@ export default function ResultsPage() {
     scorePercentage,
     passed,
     formattedTimeTaken,
-  } = useQuizResults(attemptId);
+  } = useQuizResults(attemptId as string);
 
   if (loading) {
     return (

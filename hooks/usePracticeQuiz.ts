@@ -67,7 +67,7 @@ export function usePracticeQuiz() {
     !shouldRedirect;
 
   // ============================================================================
-  // If limit‐check finishes and they can’t attempt, pop your modal
+  // If limit‐check finishes and they can't attempt, pop your modal
   // ============================================================================
   useEffect(() => {
     if (!isCheckingLimit && !canAttempt) {
@@ -127,6 +127,12 @@ export function usePracticeQuiz() {
       dispatch({ type: "SUBMITTING" });
     } else if (questionsLoading) {
       dispatch({ type: "LOADING", message: "Loading practice questions…" });
+    } else {
+      // If none of the loading conditions are met, show the quiz
+      // This handles cases where data is served from cache and `questionsLoading` is not re-triggered
+      if (uiState === "LOADING") {
+        dispatch({ type: "SHOW_QUIZ" });
+      }
     }
   }, [initialized, isCheckingLimit, questionsLoading, uiState]);
 

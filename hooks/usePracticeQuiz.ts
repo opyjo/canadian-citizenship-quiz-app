@@ -109,7 +109,7 @@ export function usePracticeQuiz() {
     isLoading: questionsLoading,
   } = usePracticeQuestions(
     userId,
-    incorrectOnly ? 20 : count,
+    count,
     incorrectOnly,
     shouldFetchQuestions,
     incorrectOnly ? { staleTime: 0, refetchOnMount: true } : undefined
@@ -123,8 +123,6 @@ export function usePracticeQuiz() {
       dispatch({ type: "LOADING", message: "Checking authentication…" });
     } else if (isCheckingLimit) {
       dispatch({ type: "LOADING", message: "Verifying attempt limits…" });
-    } else if (uiState === "SUBMITTING") {
-      dispatch({ type: "SUBMITTING" });
     } else if (questionsLoading) {
       dispatch({ type: "LOADING", message: "Loading practice questions…" });
     } else {
@@ -261,7 +259,7 @@ export function usePracticeQuiz() {
   // ============================================================================
 
   const finishQuiz = useCallback(() => {
-    dispatch({ type: "SUBMITTING" });
+    dispatch({ type: "LOADING", message: "Submitting results..." });
     const score = calculateScore(questions, selectedAnswers);
     const timeTaken = Math.floor((Date.now() - startTime) / 1000);
     const payload: ResultData = {

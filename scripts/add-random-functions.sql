@@ -10,7 +10,7 @@ RETURNS TABLE (
   option_b TEXT,
   option_c TEXT,
   option_d TEXT,
-  correct_option CHAR(1)
+  correct_option TEXT
 ) AS $$
 BEGIN
   RETURN QUERY
@@ -35,9 +35,16 @@ RETURNS TABLE (
   option_b TEXT,
   option_c TEXT,
   option_d TEXT,
-  correct_option CHAR(1)
+  correct_option TEXT
 ) AS $$
+DECLARE
+  orig_rls_bypass TEXT;
 BEGIN
+  -- Temporarily bypass RLS to read from user_incorrect_questions
+  -- The function is still secure because it explicitly filters by user_id_param
+  SELECT current_setting('app.bypass_rls', true) INTO orig_rls_bypass;
+  PERFORM set_config('app.bypass_rls', 'on', true);
+
   IF incorrect_only AND user_id_param IS NOT NULL THEN
     -- Return only questions the user has gotten wrong before
     RETURN QUERY
@@ -57,6 +64,9 @@ BEGIN
     ORDER BY RANDOM()
     LIMIT question_limit;
   END IF;
+
+  -- Restore the original RLS setting
+  PERFORM set_config('app.bypass_rls', orig_rls_bypass, true);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

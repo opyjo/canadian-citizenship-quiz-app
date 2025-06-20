@@ -21,7 +21,9 @@ export function useAttemptLimit(mode: QuizMode) {
   useEffect(() => {
     if (!initialized) return;
 
+    let ignore = false;
     setIsChecking(true);
+
     const doCheck = async () => {
       let result: AttemptCheckResult;
       try {
@@ -32,22 +34,27 @@ export function useAttemptLimit(mode: QuizMode) {
         }
       } catch (err) {
         console.error("Limit‐check failed:", err);
-        result = { canAttempt: true };
+        result = { canAttempt: true }; // Default to allow on error
       }
 
-      setCanAttempt(result.canAttempt);
-      if (result.canAttempt) {
-        setMessage("");
-        setIsLoggedIn(!!user);
-      } else {
-        setMessage(result.message);
-        setIsLoggedIn(result.isLoggedIn);
+      if (!ignore) {
+        setCanAttempt(result.canAttempt);
+        if (result.canAttempt) {
+          setMessage("");
+          setIsLoggedIn(!!user);
+        } else {
+          setMessage(result.message);
+          setIsLoggedIn(result.isLoggedIn);
+        }
+        setIsChecking(false);
       }
-
-      setIsChecking(false);
     };
 
     doCheck();
+
+    return () => {
+      ignore = true;
+    };
   }, [initialized, user, mode, supabase]);
 
   return { isChecking, canAttempt, message, isLoggedIn };

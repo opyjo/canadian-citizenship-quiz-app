@@ -1,20 +1,16 @@
 import { useState, useEffect, useCallback, useRef, useReducer } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import supabaseClient from "@/lib/supabase-client";
 import { incrementLocalAttemptCount } from "@/lib/quizlimits/getCountFromLocalStorage";
 import { usePracticeQuestions } from "./useQuestions";
 import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
 import { useAuth } from "@/context/AuthContext";
-import { prepareApiPayload, calculateScore } from "../app/utils/helpers";
 import { usePracticeParams } from "./usePracticeParams";
 import { uiReducer, initialUIState } from "../app/utils/reducers/uiReducer";
-import {
-  Question,
-  ResultData,
-  UnauthenticatedResults,
-} from "../app/utils/types";
+import { Question, UnauthenticatedResults } from "../app/utils/types";
 import { useAttemptLimit } from "./useAttemptLimit";
+import { submitQuizAttempt } from "@/app/actions/submit-quiz-attempt";
 
 export function usePracticeQuiz() {
   // Navigation and context
@@ -46,6 +42,7 @@ export function usePracticeQuiz() {
   >({});
   const [startTime, setStartTime] = useState<number>(0);
   const [isQuizStarted, setIsQuizStarted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // single reducer for all UI‐related state
   const [ui, dispatch] = useReducer(uiReducer, initialUIState);
@@ -125,6 +122,8 @@ export function usePracticeQuiz() {
       dispatch({ type: "LOADING", message: "Verifying attempt limits…" });
     } else if (questionsLoading) {
       dispatch({ type: "LOADING", message: "Loading practice questions…" });
+    } else if (isSubmitting) {
+      dispatch({ type: "LOADING", message: "Submitting results..." });
     } else {
       // If none of the loading conditions are met, show the quiz
       // This handles cases where data is served from cache and `questionsLoading` is not re-triggered
@@ -132,7 +131,7 @@ export function usePracticeQuiz() {
         dispatch({ type: "SHOW_QUIZ" });
       }
     }
-  }, [initialized, isCheckingLimit, questionsLoading, uiState]);
+  }, [initialized, isCheckingLimit, questionsLoading, uiState, isSubmitting]);
 
   // ============================================================================
   // When questions arrive or error occurs
@@ -161,70 +160,6 @@ export function usePracticeQuiz() {
       }
     }
   }, [questionsLoading, questionsError, questionsData, incorrectOnly, userId]);
-
-  // ============================================================================
-  // Create the mutation for submitting the quiz
-  // ============================================================================
-
-  const { mutate: submitQuiz } = useMutation<
-    { attemptId?: string },
-    Error,
-    ResultData
-  >({
-    mutationFn: async (resultData: ResultData) => {
-      const payload = prepareApiPayload(questions, resultData, practiceType);
-      const response = await fetch("/api/quiz-attempt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const resultFromApi = await response.json();
-      if (!response.ok) {
-        throw new Error(
-          resultFromApi.error ?? "Failed to save practice quiz attempt"
-        );
-      }
-      return resultFromApi;
-    },
-    onSuccess: (data, variables) => {
-      // Invalidate the list of past attempts
-      invalidateQuizAttempts(queryClient, userId);
-
-      if (data.attemptId) {
-        // Authenticated → redirect to the results page
-        router.push(`/results/${data.attemptId}`);
-      } else {
-        // Guest → stash the score & total from the *variables*
-        setUnauthenticatedResults({
-          score: variables.score,
-          totalQuestions: variables.totalQuestions,
-          quizType: practiceType as "incorrect" | "random",
-        });
-        // Flip the UI into the guest‐results view
-        dispatch({ type: "UNAUTHENTICATED_RESULTS" });
-      }
-    },
-    onError: (err: Error) => {
-      dispatch({ type: "SHOW_FEEDBACK", message: err.message });
-    },
-    onSettled: (
-      _data: { attemptId?: string } | undefined,
-      _error: unknown,
-      variables?: ResultData
-    ) => {
-      if (userId && variables?.questions) {
-        updateIncorrectQuestions(
-          variables.questions,
-          userId,
-          practiceType,
-          supabase,
-          queryClient,
-          incorrectOnly,
-          count
-        );
-      }
-    },
-  });
 
   // ============================================================================
   // Quiz Control Functions
@@ -258,27 +193,80 @@ export function usePracticeQuiz() {
   // Contruct the result(payload) and create finishQuiz function
   // ============================================================================
 
-  const finishQuiz = useCallback(() => {
-    dispatch({ type: "LOADING", message: "Submitting results..." });
-    const score = calculateScore(questions, selectedAnswers);
+  const finishQuiz = useCallback(async () => {
+    setIsSubmitting(true);
+
     const timeTaken = Math.floor((Date.now() - startTime) / 1000);
-    const payload: ResultData = {
-      score,
-      totalQuestions: questions.length,
+    const questionIds = questions.map((q) => q.id);
+
+    const payload = {
+      userAnswers: selectedAnswers,
+      questionIds,
       timeTaken,
-      questions: questions.map((q, i) => ({
-        ...q,
-        selected_option: selectedAnswers[i],
-        is_correct:
-          selectedAnswers[i]?.trim().toLowerCase() ===
-          q.correct_option?.trim().toLowerCase(),
-      })),
+      isPractice: true,
+      isTimed: false,
       practiceType,
+      quizMode: "practice" as const,
     };
 
-    // 3) Fire the mutation
-    submitQuiz(payload);
-  }, [questions, selectedAnswers, startTime, practiceType, submitQuiz]);
+    try {
+      const result = await submitQuizAttempt(payload);
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      // Invalidate the list of past attempts
+      invalidateQuizAttempts(queryClient, userId);
+
+      if (result.attemptId) {
+        // Authenticated → redirect to the results page
+        router.push(`/results/${result.attemptId}`);
+      } else {
+        // Guest → stash the score & total from the *result*
+        setUnauthenticatedResults({
+          score: result.score ?? null,
+          totalQuestions: result.totalQuestions ?? null,
+          quizType: practiceType as "incorrect" | "random",
+        });
+        // Flip the UI into the guest‐results view
+        dispatch({ type: "UNAUTHENTICATED_RESULTS" });
+      }
+      if (userId) {
+        const questionsWithAnswers = questions.map((q, i) => ({
+          ...q,
+          selected_option: selectedAnswers[i],
+          is_correct:
+            selectedAnswers[i]?.trim().toLowerCase() ===
+            q.correct_option?.trim().toLowerCase(),
+        }));
+        updateIncorrectQuestions(
+          questionsWithAnswers,
+          userId,
+          practiceType,
+          supabase,
+          queryClient,
+          incorrectOnly,
+          count
+        );
+      }
+    } catch (err: any) {
+      dispatch({ type: "SHOW_FEEDBACK", message: err.message });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    questions,
+    selectedAnswers,
+    startTime,
+    practiceType,
+    queryClient,
+    userId,
+    router,
+    supabase,
+    incorrectOnly,
+    count,
+  ]);
 
   // ============================================================================
   // Return Values
@@ -309,6 +297,9 @@ export function usePracticeQuiz() {
       handleNext,
       handlePrevious,
       finishQuiz,
+    },
+    uiFlags: {
+      isSubmitting, // ← new
     },
     unauthenticatedResults,
   };

@@ -1,3 +1,6 @@
+"use client";
+
+import React from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,7 +11,6 @@ import {
 } from "@/components/ui/card";
 import { QuizHeader } from "./QuizHeader";
 
-// Define the shape of the objects we expect as props
 interface Question {
   id: number;
   question_text: string;
@@ -16,7 +18,7 @@ interface Question {
   option_b: string;
   option_c: string;
   option_d: string;
-  [key: string]: any; // Allow for other properties
+  [key: string]: any;
 }
 
 interface QuizData {
@@ -32,14 +34,20 @@ interface QuizHandlers {
   handleAnswerSelect: (option: string) => void;
   handlePrevious: () => void;
   handleNext: () => void;
+  finishQuiz: () => void;
 }
 
 interface PracticeQuizViewProps {
   quiz: QuizData;
   handlers: QuizHandlers;
+  isSubmitting: boolean;
 }
 
-export function PracticeQuizView({ quiz, handlers }: PracticeQuizViewProps) {
+export function PracticeQuizView({
+  quiz,
+  handlers,
+  isSubmitting,
+}: PracticeQuizViewProps) {
   const {
     currentQuestion,
     selectedAnswers,
@@ -48,7 +56,16 @@ export function PracticeQuizView({ quiz, handlers }: PracticeQuizViewProps) {
     practiceType,
     questions,
   } = quiz;
-  const { handleAnswerSelect, handlePrevious, handleNext } = handlers;
+  const { handleAnswerSelect, handlePrevious, handleNext, finishQuiz } =
+    handlers;
+
+  const isLast = currentQuestionIndex === questions.length - 1;
+  const actionText = isLast
+    ? isSubmitting
+      ? "Submitting…"
+      : "Finish Practice"
+    : "Next Question";
+  const actionHandler = isLast ? finishQuiz : handleNext;
 
   return (
     <div className="max-w-3xl w-full space-y-6">
@@ -95,17 +112,15 @@ export function PracticeQuizView({ quiz, handlers }: PracticeQuizViewProps) {
           <Button
             variant="outline"
             onClick={handlePrevious}
-            disabled={currentQuestionIndex === 0}
+            disabled={currentQuestionIndex === 0 || isSubmitting}
           >
             Previous
           </Button>
           <Button
-            onClick={handleNext}
-            disabled={!selectedAnswers[currentQuestionIndex]}
+            onClick={actionHandler}
+            disabled={!selectedAnswers[currentQuestionIndex] || isSubmitting}
           >
-            {currentQuestionIndex === questions.length - 1
-              ? "Finish Practice"
-              : "Next Question"}
+            {actionText}
           </Button>
         </CardFooter>
       </Card>

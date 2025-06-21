@@ -8,13 +8,7 @@ import { UnauthenticatedResultsView } from "@/components/quiz/UnauthenticatedRes
 import ConfirmationModal from "@/components/confirmation-modal";
 
 export function PracticeQuizContent() {
-  const {
-    state,
-    quiz,
-    handlers,
-    uiFlags: { isSubmitting }, // ← new
-    unauthenticatedResults,
-  } = usePracticeQuiz();
+  const { state, quiz, handlers, unauthenticatedResults } = usePracticeQuiz();
 
   switch (state.uiState) {
     case "LOADING":
@@ -25,6 +19,8 @@ export function PracticeQuizContent() {
 
     case "SHOWING_FEEDBACK":
       return <QuizErrorDisplay message={state.feedbackMessage!} />;
+    case "SUBMITTING":
+      return <QuizLoadingIndicator message="Submitting your results..." />;
 
     case "UNAUTHENTICATED_RESULTS":
       return (
@@ -35,13 +31,7 @@ export function PracticeQuizContent() {
       );
 
     case "SHOWING_QUIZ":
-      return (
-        <PracticeQuizView
-          quiz={quiz}
-          handlers={handlers}
-          isSubmitting={isSubmitting} // ← new
-        />
-      );
+      return <PracticeQuizView quiz={quiz} handlers={handlers} />;
 
     default:
       return null;

@@ -40,14 +40,9 @@ interface QuizHandlers {
 interface PracticeQuizViewProps {
   quiz: QuizData;
   handlers: QuizHandlers;
-  isSubmitting: boolean;
 }
 
-export function PracticeQuizView({
-  quiz,
-  handlers,
-  isSubmitting,
-}: PracticeQuizViewProps) {
+export function PracticeQuizView({ quiz, handlers }: PracticeQuizViewProps) {
   const {
     currentQuestion,
     selectedAnswers,
@@ -60,11 +55,7 @@ export function PracticeQuizView({
     handlers;
 
   const isLast = currentQuestionIndex === questions.length - 1;
-  const actionText = isLast
-    ? isSubmitting
-      ? "Submitting…"
-      : "Finish Practice"
-    : "Next Question";
+  const actionText = isLast ? "Finish Practice" : "Next Question";
   const actionHandler = isLast ? finishQuiz : handleNext;
 
   return (
@@ -112,13 +103,13 @@ export function PracticeQuizView({
           <Button
             variant="outline"
             onClick={handlePrevious}
-            disabled={currentQuestionIndex === 0 || isSubmitting}
+            disabled={currentQuestionIndex === 0}
           >
             Previous
           </Button>
           <Button
             onClick={actionHandler}
-            disabled={!selectedAnswers[currentQuestionIndex] || isSubmitting}
+            disabled={!selectedAnswers[currentQuestionIndex]}
           >
             {actionText}
           </Button>

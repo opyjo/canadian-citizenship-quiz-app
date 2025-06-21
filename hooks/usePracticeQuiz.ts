@@ -42,7 +42,6 @@ export function usePracticeQuiz() {
   >({});
   const [startTime, setStartTime] = useState<number>(0);
   const [isQuizStarted, setIsQuizStarted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // single reducer for all UI‐related state
   const [ui, dispatch] = useReducer(uiReducer, initialUIState);
@@ -122,8 +121,6 @@ export function usePracticeQuiz() {
       dispatch({ type: "LOADING", message: "Verifying attempt limits…" });
     } else if (questionsLoading) {
       dispatch({ type: "LOADING", message: "Loading practice questions…" });
-    } else if (isSubmitting) {
-      dispatch({ type: "LOADING", message: "Submitting results..." });
     } else {
       // If none of the loading conditions are met, show the quiz
       // This handles cases where data is served from cache and `questionsLoading` is not re-triggered
@@ -131,7 +128,7 @@ export function usePracticeQuiz() {
         dispatch({ type: "SHOW_QUIZ" });
       }
     }
-  }, [initialized, isCheckingLimit, questionsLoading, uiState, isSubmitting]);
+  }, [initialized, isCheckingLimit, questionsLoading, uiState]);
 
   // ============================================================================
   // When questions arrive or error occurs
@@ -194,7 +191,7 @@ export function usePracticeQuiz() {
   // ============================================================================
 
   const finishQuiz = useCallback(async () => {
-    setIsSubmitting(true);
+    dispatch({ type: "SUBMITTING" });
 
     const timeTaken = Math.floor((Date.now() - startTime) / 1000);
     const questionIds = questions.map((q) => q.id);
@@ -252,8 +249,6 @@ export function usePracticeQuiz() {
       }
     } catch (err: any) {
       dispatch({ type: "SHOW_FEEDBACK", message: err.message });
-    } finally {
-      setIsSubmitting(false);
     }
   }, [
     questions,
@@ -297,9 +292,6 @@ export function usePracticeQuiz() {
       handleNext,
       handlePrevious,
       finishQuiz,
-    },
-    uiFlags: {
-      isSubmitting, // ← new
     },
     unauthenticatedResults,
   };

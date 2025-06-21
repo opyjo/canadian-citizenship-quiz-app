@@ -1,27 +1,16 @@
 // src/hooks/useStandardQuiz.ts
 import { useReducer, useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useRandomQuestions } from "./useQuestions";
 import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
-import { calculateScore } from "@/app/utils/helpers";
 import { uiReducer, initialUIState } from "@/app/utils/reducers/uiReducer";
 import type { Question } from "@/app/utils/types";
 import { useAttemptLimit } from "@/hooks/useAttemptLimit";
 import { UnauthenticatedResults } from "@/app/utils/types";
 import { incrementLocalAttemptCount } from "@/lib/quizlimits/getCountFromLocalStorage";
-
-export interface ResultData {
-  score: number;
-  totalQuestions: number;
-  timeTaken: number;
-  questions: Array<{
-    index: number;
-    selected_option?: string;
-    is_correct: boolean;
-  }>;
-}
+import { submitQuizAttempt } from "@/app/actions/submit-quiz-attempt";
 
 export function useStandardQuiz() {
   const router = useRouter();
@@ -41,6 +30,7 @@ export function useStandardQuiz() {
     Record<number, string>
   >({});
   const [startTime, setStartTime] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [unauthenticatedResults, setUnauthenticatedResults] =
     useState<UnauthenticatedResults>({
       score: null,
@@ -118,55 +108,6 @@ export function useStandardQuiz() {
   }, [questionsLoading, questionsError, questionsData, userId]);
 
   // ============================================================================
-  // Create the mutation for submitting the quiz
-  // ============================================================================
-  const { mutate: submitQuiz, isPending: isSubmitting } = useMutation<
-    { attemptId?: string },
-    Error,
-    ResultData
-  >({
-    mutationFn: async (resultData) => {
-      const questionIds = questions.map((q) => q.id);
-      const userAnswers: Record<string, string> = {};
-      resultData.questions.forEach((q) => {
-        if (q.selected_option) userAnswers[String(q.index)] = q.selected_option;
-      });
-
-      const payload = {
-        userAnswers,
-        questionIds,
-        isTimed: false,
-        timeTaken: resultData.timeTaken,
-        isPractice: false,
-        practiceType: null,
-      };
-
-      const res = await fetch("/api/quiz-attempt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Failed to save attempt");
-      return json;
-    },
-    onSuccess: (data, variables) => {
-      invalidateQuizAttempts(queryClient, userId);
-      if (data.attemptId) {
-        router.push(`/results/${data.attemptId}`);
-      } else {
-        setUnauthenticatedResults({
-          score: variables.score,
-          totalQuestions: variables.totalQuestions,
-          quizType: "standard",
-        });
-        dispatch({ type: "UNAUTHENTICATED_RESULTS" });
-      }
-    },
-    onError: (err) => dispatch({ type: "SHOW_FEEDBACK", message: err.message }),
-  });
-
-  // ============================================================================
   // Loading and Submitting Effects
   // ============================================================================
   useEffect(() => {
@@ -175,9 +116,13 @@ export function useStandardQuiz() {
     } else if (isCheckingLimit) {
       dispatch({ type: "LOADING", message: "Verifying access…" });
     } else if (isSubmitting) {
-      dispatch({ type: "SUBMITTING" });
+      dispatch({ type: "LOADING", message: "Submitting results..." });
     } else if (questionsLoading) {
       dispatch({ type: "LOADING", message: "Loading questions…" });
+    } else {
+      if (uiState === "LOADING") {
+        dispatch({ type: "SHOW_QUIZ" });
+      }
     }
   }, [initialized, isCheckingLimit, questionsLoading, uiState, isSubmitting]);
   // ============================================================================
@@ -191,22 +136,53 @@ export function useStandardQuiz() {
     [currentQuestionIndex]
   );
 
-  const finishQuiz = useCallback(() => {
-    dispatch({ type: "SUBMITTING" });
+  const finishQuiz = useCallback(async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     const timeTaken = Math.floor((Date.now() - startTime) / 1000);
-    const payload: ResultData = {
-      score: calculateScore(questions, selectedAnswers),
-      totalQuestions: questions.length,
+    const questionIds = questions.map((q) => q.id);
+
+    const payload = {
+      userAnswers: selectedAnswers,
+      questionIds,
       timeTaken,
-      questions: questions.map((q, i) => ({
-        index: i,
-        selected_option: selectedAnswers[i],
-        is_correct:
-          selectedAnswers[i]?.toLowerCase() === q.correct_option.toLowerCase(),
-      })),
+      quizMode: "standard" as const,
     };
-    submitQuiz(payload);
-  }, [questions, selectedAnswers, startTime, submitQuiz]);
+
+    try {
+      const result = await submitQuizAttempt(payload);
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      invalidateQuizAttempts(queryClient, userId);
+
+      if (result.attemptId) {
+        router.push(`/results/${result.attemptId}`);
+      } else {
+        setUnauthenticatedResults({
+          score: result.score ?? null,
+          totalQuestions: result.totalQuestions ?? null,
+          quizType: "standard",
+        });
+        dispatch({ type: "UNAUTHENTICATED_RESULTS" });
+      }
+    } catch (err: any) {
+      dispatch({ type: "SHOW_FEEDBACK", message: err.message });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    questions,
+    selectedAnswers,
+    startTime,
+    isSubmitting,
+    queryClient,
+    userId,
+    router,
+  ]);
 
   const handleNext = useCallback(() => {
     if (currentQuestionIndex < questions.length - 1)
@@ -240,6 +216,9 @@ export function useStandardQuiz() {
       handleNext,
       handlePrevious,
       finishQuiz,
+    },
+    uiFlags: {
+      isSubmitting,
     },
     unauthenticatedResults,
   };

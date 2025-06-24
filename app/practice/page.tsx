@@ -19,11 +19,14 @@ import { QuizMode } from "@/lib/quizlimits/constants";
 import ConfirmationModal from "@/components/confirmation-modal";
 import { useAuth } from "@/context/AuthContext";
 import { useIncorrectQuestionsCount } from "@/hooks/useIncorrectQuestionsCount";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-client";
 
 export default function PracticePage() {
   const { user, initialized } = useAuth();
   const router = useRouter();
   const supabase = supabaseClient;
+  const queryClient = useQueryClient();
 
   const {
     count: incorrectQuestionsCount,
@@ -57,6 +60,10 @@ export default function PracticePage() {
   };
 
   const startQuickPractice = (count: number) => {
+    // Invalidate before starting the flow to ensure fresh questions
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.practice(user?.id ?? null, count, false),
+    });
     handleStartQuizFlow(
       "practice",
       `/quiz/practice?mode=random&count=${count}`
@@ -64,6 +71,10 @@ export default function PracticePage() {
   };
 
   const startPracticeIncorrect = () => {
+    // Invalidate before starting the flow to ensure fresh questions
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.practice(user?.id ?? null, 0, true), // Count is irrelevant here but needed for key structure
+    });
     handleStartQuizFlow("practice", "/quiz/practice?incorrect=true");
   };
 

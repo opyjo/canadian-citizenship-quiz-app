@@ -163,8 +163,7 @@ export default function ResultsPage() {
 
               <TabsContent value="all" className="space-y-4 mt-4">
                 {questions.map((question, index) => {
-                  const userAnswerKey = String(index);
-                  const userAnswer = userAnswers[userAnswerKey];
+                  const userAnswer = userAnswers[question.id];
                   const isCorrect =
                     userAnswer?.toUpperCase() === question.correct_option;
                   return (
@@ -182,17 +181,16 @@ export default function ResultsPage() {
 
               <TabsContent value="correct" className="space-y-4 mt-4">
                 {questions.map((question, index) => {
-                  const userAnswerKey = String(index);
+                  const userAnswer = userAnswers[question.id];
                   const isCorrect =
-                    userAnswers[userAnswerKey]?.toUpperCase() ===
-                    question.correct_option;
+                    userAnswer?.toUpperCase() === question.correct_option;
                   if (!isCorrect) return null;
 
                   return (
                     <QuestionReview
                       key={question.id}
                       question={question}
-                      userAnswer={userAnswers[userAnswerKey]}
+                      userAnswer={userAnswer}
                       isCorrect={true}
                       questionNumber={index + 1}
                       reviewContext="correct"
@@ -203,8 +201,7 @@ export default function ResultsPage() {
 
               <TabsContent value="incorrect" className="space-y-4 mt-4">
                 {questions.map((question, index) => {
-                  const userAnswerKey = String(index);
-                  const userAnswer = userAnswers[userAnswerKey];
+                  const userAnswer = userAnswers[question.id];
                   const isCorrect =
                     userAnswer?.toUpperCase() === question.correct_option;
 

@@ -216,6 +216,11 @@ export function usePracticeQuiz() {
       // Invalidate the list of past attempts
       invalidateQuizAttempts(queryClient, userId);
 
+      // ALSO invalidate the incorrect questions count, as it may have changed.
+      queryClient.invalidateQueries({
+        queryKey: ["incorrectQuestionsCount", userId],
+      });
+
       if (result.attemptId) {
         // Authenticated → redirect to the results page
         router.push(`/results/${result.attemptId}`);

@@ -63,7 +63,7 @@ export function useTimedQuiz() {
   } = useRandomQuestions(shouldFetch, 20);
 
   // ============================================================================
-  // If limit‐check finishes and they can’t attempt, pop your modal
+  // If limit‐check finishes and they can't attempt, pop your modal
   // ============================================================================
   useEffect(() => {
     if (!isCheckingLimit && !canAttempt) {
@@ -163,6 +163,11 @@ export function useTimedQuiz() {
       }
 
       invalidateQuizAttempts(queryClient, userId);
+
+      // ALSO invalidate the incorrect questions count, as it may have changed.
+      queryClient.invalidateQueries({
+        queryKey: ["incorrectQuestionsCount", userId],
+      });
 
       if (result.attemptId) {
         router.push(`/results/${result.attemptId}`);

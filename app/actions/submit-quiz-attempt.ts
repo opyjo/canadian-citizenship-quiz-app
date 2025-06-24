@@ -119,11 +119,21 @@ export async function submitQuizAttempt(payload: Payload) {
   }
 
   // ============================================================================
-  // 5) If authenticated, insert the attempt and increment freemium counters
+  // 5) Create a correctly keyed answer map for reliable storage
+  // ============================================================================
+  const answersById = questionIds.reduce((acc, qid, index) => {
+    if (userAnswers[index]) {
+      acc[qid] = userAnswers[index];
+    }
+    return acc;
+  }, {} as Record<string, string>);
+
+  // ============================================================================
+  // 6) If authenticated, insert the attempt and increment freemium counters
   // ============================================================================
   if (userId) {
     const attemptData = {
-      user_answers: userAnswers,
+      user_answers: answersById,
       question_ids: questionIds,
       is_timed: isTimed,
       time_taken_seconds: timeTaken,
@@ -173,7 +183,7 @@ export async function submitQuizAttempt(payload: Payload) {
       }
 
       // ==========================================================================
-      // 6) Invalidate Next.js cache for result pages
+      // 7) Invalidate Next.js cache for result pages
       // ==========================================================================
       revalidatePath("/results");
       revalidatePath(`/results/${insertData.id}`);

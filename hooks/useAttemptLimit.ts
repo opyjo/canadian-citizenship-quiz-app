@@ -19,7 +19,10 @@ export function useAttemptLimit(mode: QuizMode) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    if (!initialized) return;
+    // If we're not initialized, we can't do anything yet.
+    if (!initialized) {
+      return;
+    }
 
     let ignore = false;
     setIsChecking(true);

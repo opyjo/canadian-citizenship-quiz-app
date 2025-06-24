@@ -38,11 +38,19 @@ interface TimedQuizViewProps {
     readonly handleEndQuiz: () => void;
     readonly finishQuiz: () => void;
   };
+  readonly uiFlags: {
+    readonly isSubmitting: boolean;
+  };
 }
 
 const TIME_LIMIT = 15 * 60; // 15 minutes in seconds
 
-export function TimedQuizView({ state, quiz, handlers }: TimedQuizViewProps) {
+export function TimedQuizView({
+  state,
+  quiz,
+  handlers,
+  uiFlags,
+}: TimedQuizViewProps) {
   const {
     currentQuestion,
     selectedAnswers,
@@ -57,6 +65,9 @@ export function TimedQuizView({ state, quiz, handlers }: TimedQuizViewProps) {
     handleEndQuiz,
     finishQuiz,
   } = handlers;
+  const { isSubmitting } = uiFlags;
+
+  const isLastQuestion = currentQuestionIndex === questions.length - 1;
 
   if (!currentQuestion) {
     return null;
@@ -92,6 +103,7 @@ export function TimedQuizView({ state, quiz, handlers }: TimedQuizViewProps) {
               }`}
               onClick={() => handleAnswerSelect(option)}
               aria-pressed={selectedAnswers[currentQuestionIndex] === option}
+              disabled={isSubmitting}
             >
               <div className="flex items-start gap-3">
                 <div
@@ -115,6 +127,7 @@ export function TimedQuizView({ state, quiz, handlers }: TimedQuizViewProps) {
             variant="destructive"
             onClick={handleEndQuiz}
             className="mr-auto"
+            disabled={isSubmitting}
           >
             End Quiz
           </Button>
@@ -122,15 +135,17 @@ export function TimedQuizView({ state, quiz, handlers }: TimedQuizViewProps) {
             <Button
               variant="outline"
               onClick={handlePrevious}
-              disabled={currentQuestionIndex === 0}
+              disabled={currentQuestionIndex === 0 || isSubmitting}
             >
               Previous
             </Button>
             <Button
-              onClick={handleNext}
-              disabled={!selectedAnswers[currentQuestionIndex]}
+              onClick={isLastQuestion ? finishQuiz : handleNext}
+              disabled={!selectedAnswers[currentQuestionIndex] || isSubmitting}
             >
-              {currentQuestionIndex === questions.length - 1
+              {isSubmitting
+                ? "Submitting..."
+                : isLastQuestion
                 ? "Finish Quiz"
                 : "Next Question"}
             </Button>

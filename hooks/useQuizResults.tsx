@@ -72,8 +72,7 @@ export function useQuizResults(attemptId: string) {
   // Calculate results (memoized for performance)
   const calculatedValues = useMemo(() => {
     const correctAnswersCount = questions.filter(
-      (q, index) =>
-        userAnswers[String(index)]?.toUpperCase() === q.correct_option
+      (q) => userAnswers[q.id]?.toUpperCase() === q.correct_option
     ).length;
 
     const totalQuestions = questions.length;

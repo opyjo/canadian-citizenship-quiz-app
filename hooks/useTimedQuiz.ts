@@ -1,28 +1,17 @@
 // src/hooks/useTimedQuiz.ts
 import { useReducer, useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useRandomQuestions } from "./useQuestions";
 import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
-import { calculateScore } from "@/app/utils/helpers";
 import { uiReducer, initialUIState } from "@/app/utils/reducers/uiReducer";
 import type { Question, UnauthenticatedResults } from "@/app/utils/types";
 import { useAttemptLimit } from "@/hooks/useAttemptLimit";
 import { incrementLocalAttemptCount } from "@/lib/quizlimits/getCountFromLocalStorage";
+import { submitQuizAttempt } from "@/app/actions/submit-quiz-attempt";
 
 const TIME_LIMIT = 15 * 60; // in seconds
-
-export interface ResultData {
-  score: number;
-  totalQuestions: number;
-  timeTaken: number;
-  questions: Array<{
-    index: number;
-    selected_option?: string;
-    is_correct: boolean;
-  }>;
-}
 
 export function useTimedQuiz() {
   const router = useRouter();
@@ -44,11 +33,12 @@ export function useTimedQuiz() {
   const [startTime, setStartTime] = useState(0);
   const [quizActive, setQuizActive] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(TIME_LIMIT);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [unauthenticatedResults, setUnauthenticatedResults] =
     useState<UnauthenticatedResults>({
       score: null,
       totalQuestions: null,
-      quizType: "standard",
+      quizType: "timed",
     });
 
   // 1) Attempt‐limit check
@@ -73,7 +63,7 @@ export function useTimedQuiz() {
   } = useRandomQuestions(shouldFetch, 20);
 
   // ============================================================================
-  // If limit‐check finishes and they can’t attempt, pop your modal
+  // If limit‐check finishes and they can't attempt, pop your modal
   // ============================================================================
   useEffect(() => {
     if (!isCheckingLimit && !canAttempt) {
@@ -96,54 +86,6 @@ export function useTimedQuiz() {
   }, [isCheckingLimit, canAttempt, limitMessage, limitIsLoggedIn, router]);
 
   // ============================================================================
-  // Create the mutation for submitting the quiz
-  // ============================================================================
-  const { mutate: submitQuiz, isPending: isSubmitting } = useMutation<
-    { attemptId?: string },
-    Error,
-    ResultData
-  >({
-    mutationFn: async (resultData) => {
-      setQuizActive(false);
-      const questionIds = questions.map((q) => q.id);
-      const userAnswers: Record<string, string> = {};
-      resultData.questions.forEach((q) => {
-        if (q.selected_option) userAnswers[String(q.index)] = q.selected_option;
-      });
-      const payload = {
-        userAnswers,
-        questionIds,
-        isTimed: true,
-        timeTaken: resultData.timeTaken,
-        isPractice: false,
-        practiceType: null,
-      };
-      const res = await fetch("/api/quiz-attempt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Failed to submit");
-      return json;
-    },
-    onSuccess: (data, variables) => {
-      invalidateQuizAttempts(queryClient, userId);
-      if (data.attemptId) {
-        router.push(`/results/${data.attemptId}`);
-      } else {
-        setUnauthenticatedResults({
-          score: variables.score,
-          totalQuestions: variables.totalQuestions,
-          quizType: "timed",
-        });
-        dispatch({ type: "UNAUTHENTICATED_RESULTS" });
-      }
-    },
-    onError: (err) => dispatch({ type: "SHOW_FEEDBACK", message: err.message }),
-  });
-
-  // ============================================================================
   // Loading and Submitting Effects
   // ============================================================================
 
@@ -153,9 +95,13 @@ export function useTimedQuiz() {
     } else if (isCheckingLimit) {
       dispatch({ type: "LOADING", message: "Verifying access…" });
     } else if (isSubmitting) {
-      dispatch({ type: "SUBMITTING" });
+      dispatch({ type: "LOADING", message: "Submitting results..." });
     } else if (questionsLoading) {
       dispatch({ type: "LOADING", message: "Loading questions…" });
+    } else {
+      if (uiState === "LOADING") {
+        dispatch({ type: "SHOW_QUIZ" });
+      }
     }
   }, [initialized, isCheckingLimit, isSubmitting, questionsLoading, uiState]);
 
@@ -194,23 +140,59 @@ export function useTimedQuiz() {
       setSelectedAnswers((p) => ({ ...p, [currentQuestionIndex]: opt })),
     [currentQuestionIndex]
   );
-  const finishQuiz = useCallback(() => {
-    dispatch({ type: "SUBMITTING" });
+  const finishQuiz = useCallback(async () => {
     if (isSubmitting) return;
+    setIsSubmitting(true);
+    setQuizActive(false);
+
     const timeTaken = TIME_LIMIT - timeRemaining;
-    const payload: ResultData = {
-      score: calculateScore(questions, selectedAnswers),
-      totalQuestions: questions.length,
+    const questionIds = questions.map((q) => q.id);
+
+    const payload = {
+      userAnswers: selectedAnswers,
+      questionIds,
       timeTaken,
-      questions: questions.map((q, i) => ({
-        index: i,
-        selected_option: selectedAnswers[i],
-        is_correct:
-          selectedAnswers[i]?.toLowerCase() === q.correct_option.toLowerCase(),
-      })),
+      quizMode: "timed" as const,
     };
-    submitQuiz(payload);
-  }, [questions, selectedAnswers, timeRemaining, submitQuiz, isSubmitting]);
+
+    try {
+      const result = await submitQuizAttempt(payload);
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      invalidateQuizAttempts(queryClient, userId);
+
+      // ALSO invalidate the incorrect questions count, as it may have changed.
+      queryClient.invalidateQueries({
+        queryKey: ["incorrectQuestionsCount", userId],
+      });
+
+      if (result.attemptId) {
+        router.push(`/results/${result.attemptId}`);
+      } else {
+        setUnauthenticatedResults({
+          score: result.score ?? null,
+          totalQuestions: result.totalQuestions ?? null,
+          quizType: "timed",
+        });
+        dispatch({ type: "UNAUTHENTICATED_RESULTS" });
+      }
+    } catch (err: any) {
+      dispatch({ type: "SHOW_FEEDBACK", message: err.message });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    questions,
+    selectedAnswers,
+    timeRemaining,
+    isSubmitting,
+    queryClient,
+    userId,
+    router,
+  ]);
 
   const handleNext = useCallback(() => {
     if (currentQuestionIndex < questions.length - 1)
@@ -264,6 +246,9 @@ export function useTimedQuiz() {
       handleNext,
       handlePrevious,
       finishQuiz,
+    },
+    uiFlags: {
+      isSubmitting,
     },
     unauthenticatedResults,
   };

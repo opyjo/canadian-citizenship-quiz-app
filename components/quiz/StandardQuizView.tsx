@@ -32,10 +32,18 @@ interface StandardQuizViewProps {
     readonly handleNext: () => void;
     readonly handlePrevious: () => void;
     readonly handleEndQuiz: () => void;
+    readonly finishQuiz: () => void;
+  };
+  readonly uiFlags: {
+    readonly isSubmitting: boolean;
   };
 }
 
-export function StandardQuizView({ quiz, handlers }: StandardQuizViewProps) {
+export function StandardQuizView({
+  quiz,
+  handlers,
+  uiFlags,
+}: StandardQuizViewProps) {
   const {
     currentQuestion,
     selectedAnswers,
@@ -43,8 +51,16 @@ export function StandardQuizView({ quiz, handlers }: StandardQuizViewProps) {
     progress,
     questions,
   } = quiz;
-  const { handleAnswerSelect, handleNext, handlePrevious, handleEndQuiz } =
-    handlers;
+  const {
+    handleAnswerSelect,
+    handleNext,
+    handlePrevious,
+    handleEndQuiz,
+    finishQuiz,
+  } = handlers;
+  const { isSubmitting } = uiFlags;
+
+  const isLastQuestion = currentQuestionIndex === questions.length - 1;
 
   if (!currentQuestion) {
     // This can happen briefly while the quiz is being set up.
@@ -79,11 +95,14 @@ export function StandardQuizView({ quiz, handlers }: StandardQuizViewProps) {
                   ? "border-red-600 bg-red-50"
                   : "hover:bg-gray-50"
               }`}
-              onClick={() => handleAnswerSelect(option)}
-              onKeyDown={(e) => e.key === "Enter" && handleAnswerSelect(option)}
+              onClick={() => !isSubmitting && handleAnswerSelect(option)}
+              onKeyDown={(e) =>
+                !isSubmitting && e.key === "Enter" && handleAnswerSelect(option)
+              }
               role="button"
-              tabIndex={0}
+              tabIndex={isSubmitting ? -1 : 0}
               aria-pressed={selectedAnswers[currentQuestionIndex] === option}
+              aria-disabled={isSubmitting}
             >
               <div className="flex items-start gap-3">
                 <div
@@ -107,6 +126,7 @@ export function StandardQuizView({ quiz, handlers }: StandardQuizViewProps) {
             variant="destructive"
             onClick={handleEndQuiz}
             className="mr-auto"
+            disabled={isSubmitting}
           >
             End Quiz
           </Button>
@@ -114,15 +134,17 @@ export function StandardQuizView({ quiz, handlers }: StandardQuizViewProps) {
             <Button
               variant="outline"
               onClick={handlePrevious}
-              disabled={currentQuestionIndex === 0}
+              disabled={currentQuestionIndex === 0 || isSubmitting}
             >
               Previous
             </Button>
             <Button
-              onClick={handleNext}
-              disabled={!selectedAnswers[currentQuestionIndex]}
+              onClick={isLastQuestion ? finishQuiz : handleNext}
+              disabled={!selectedAnswers[currentQuestionIndex] || isSubmitting}
             >
-              {currentQuestionIndex === questions.length - 1
+              {isSubmitting
+                ? "Submitting..."
+                : isLastQuestion
                 ? "Finish Quiz"
                 : "Next Question"}
             </Button>

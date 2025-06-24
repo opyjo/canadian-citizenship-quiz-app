@@ -19,6 +19,8 @@ export function PracticeQuizContent() {
 
     case "SHOWING_FEEDBACK":
       return <QuizErrorDisplay message={state.feedbackMessage!} />;
+    case "SUBMITTING":
+      return <QuizLoadingIndicator message="Submitting your results..." />;
 
     case "UNAUTHENTICATED_RESULTS":
       return (

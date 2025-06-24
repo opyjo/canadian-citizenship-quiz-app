@@ -1,3 +1,6 @@
+"use client";
+
+import React from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,7 +11,6 @@ import {
 } from "@/components/ui/card";
 import { QuizHeader } from "./QuizHeader";
 
-// Define the shape of the objects we expect as props
 interface Question {
   id: number;
   question_text: string;
@@ -16,7 +18,7 @@ interface Question {
   option_b: string;
   option_c: string;
   option_d: string;
-  [key: string]: any; // Allow for other properties
+  [key: string]: any;
 }
 
 interface QuizData {
@@ -32,6 +34,7 @@ interface QuizHandlers {
   handleAnswerSelect: (option: string) => void;
   handlePrevious: () => void;
   handleNext: () => void;
+  finishQuiz: () => void;
 }
 
 interface PracticeQuizViewProps {
@@ -48,7 +51,12 @@ export function PracticeQuizView({ quiz, handlers }: PracticeQuizViewProps) {
     practiceType,
     questions,
   } = quiz;
-  const { handleAnswerSelect, handlePrevious, handleNext } = handlers;
+  const { handleAnswerSelect, handlePrevious, handleNext, finishQuiz } =
+    handlers;
+
+  const isLast = currentQuestionIndex === questions.length - 1;
+  const actionText = isLast ? "Finish Practice" : "Next Question";
+  const actionHandler = isLast ? finishQuiz : handleNext;
 
   return (
     <div className="max-w-3xl w-full space-y-6">
@@ -100,12 +108,10 @@ export function PracticeQuizView({ quiz, handlers }: PracticeQuizViewProps) {
             Previous
           </Button>
           <Button
-            onClick={handleNext}
+            onClick={actionHandler}
             disabled={!selectedAnswers[currentQuestionIndex]}
           >
-            {currentQuestionIndex === questions.length - 1
-              ? "Finish Practice"
-              : "Next Question"}
+            {actionText}
           </Button>
         </CardFooter>
       </Card>

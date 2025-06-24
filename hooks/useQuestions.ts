@@ -13,7 +13,11 @@ interface Question {
 }
 
 // For practice quizzes - can use cached questions
-export function useRandomQuestions(enabled: boolean, count: number = 20) {
+export function useRandomQuestions(
+  count: number,
+  enabled: boolean,
+  options?: { staleTime?: number; refetchOnMount?: boolean }
+) {
   return useQuery({
     queryKey: ["questions", "random", count],
     queryFn: async (): Promise<Question[]> => {
@@ -28,29 +32,64 @@ export function useRandomQuestions(enabled: boolean, count: number = 20) {
 
       return data ?? [];
     },
-    enabled, // Only fetch when access is checked
-    staleTime: Infinity, // Never refetch
-    gcTime: 0, // Don't keep in cache
+    enabled: enabled && count > 0,
+    staleTime: options?.staleTime ?? 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: options?.refetchOnMount ?? false,
   });
 }
 
-// Hook for practice questions with optional incorrect filter
-export function usePracticeQuestions(
+// Hook for fetching only a user's incorrect questions
+export function useIncorrectPracticeQuestions(
   userId: string | null,
-  count: number,
-  incorrectOnly: boolean = false,
   enabled: boolean = true,
   options?: { staleTime?: number; refetchOnMount?: boolean }
 ) {
   return useQuery({
-    queryKey: queryKeys.practice(userId, count, incorrectOnly),
+    queryKey: queryKeys.practice(userId, 0, true),
+    queryFn: async (): Promise<Question[]> => {
+      if (!userId) return [];
+      const { data, error } = await supabase.rpc(
+        "get_incorrect_questions" as any,
+        {
+          user_id_param: userId,
+        }
+      );
+
+      if (error) {
+        console.error("Error fetching incorrect questions:", error);
+        throw new Error(error.message);
+      }
+
+      if (!data) return [];
+
+      return data;
+    },
+    staleTime: Infinity, // Keep data fresh indefinitely until explicitly invalidated
+    gcTime: 5 * 60 * 1000, // Cache for 5 minutes
+    enabled: enabled && !!userId,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: 0, // Don't retry on failure
+  });
+}
+
+// Hook for fetching random practice questions
+export function useRandomPracticeQuestions(
+  userId: string | null,
+  count: number,
+  enabled: boolean = true,
+  options?: { staleTime?: number; refetchOnMount?: boolean }
+) {
+  return useQuery({
+    queryKey: queryKeys.practice(userId, count, false),
     queryFn: async (): Promise<Question[]> => {
       const { data, error } = await supabase.rpc(
         "get_random_practice_questions" as any,
         {
           user_id_param: userId,
           question_limit: count,
-          incorrect_only: incorrectOnly,
+          incorrect_only: false, // Explicitly set to false
         }
       );
 
@@ -60,8 +99,8 @@ export function usePracticeQuestions(
 
       return data ?? [];
     },
-    staleTime: options?.staleTime ?? 5 * 60 * 1000, // 5 minutes for practice questions by default
-    enabled: enabled && count > 0, // Only run if count is valid and hook is enabled
+    staleTime: options?.staleTime ?? 5 * 60 * 1000, // 5 minutes
+    enabled: enabled && count > 0,
     refetchOnMount: options?.refetchOnMount ?? false,
   });
 }

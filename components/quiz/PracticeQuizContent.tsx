@@ -8,17 +8,25 @@ import { UnauthenticatedResultsView } from "@/components/quiz/UnauthenticatedRes
 import ConfirmationModal from "@/components/confirmation-modal";
 
 export function PracticeQuizContent() {
-  const { state, quiz, handlers, unauthenticatedResults } = usePracticeQuiz();
+  const {
+    uiState,
+    loadingMessage,
+    feedbackMessage,
+    modalState,
+    quizData,
+    quizHandlers,
+    unauthenticatedResults,
+  } = usePracticeQuiz();
 
-  switch (state.uiState) {
+  switch (uiState) {
     case "LOADING":
-      return <QuizLoadingIndicator message={state.loadingMessage} />;
+      return <QuizLoadingIndicator message={loadingMessage} />;
 
     case "SHOWING_MODAL":
-      return <ConfirmationModal {...state.modalState} />;
+      return <ConfirmationModal {...modalState} />;
 
     case "SHOWING_FEEDBACK":
-      return <QuizErrorDisplay message={state.feedbackMessage!} />;
+      return <QuizErrorDisplay message={feedbackMessage!} />;
     case "SUBMITTING":
       return <QuizLoadingIndicator message="Submitting your results..." />;
 
@@ -31,7 +39,12 @@ export function PracticeQuizContent() {
       );
 
     case "SHOWING_QUIZ":
-      return <PracticeQuizView quiz={quiz} handlers={handlers} />;
+      if (!quizData.currentQuestion) {
+        // This can happen for a brief moment before the first question is ready.
+        // Or if there are no questions.
+        return <QuizLoadingIndicator message="Loading questions..." />;
+      }
+      return <PracticeQuizView quiz={quizData} handlers={quizHandlers} />;
 
     default:
       return null;

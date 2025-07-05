@@ -1,64 +1,50 @@
 // src/hooks/useAttemptLimit.ts
 import { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
-import supabaseClient from "@/lib/supabase-client";
-import {
-  checkAuthenticatedUserLimits,
-  checkUnauthenticatedUserLimits,
-} from "@/lib/quizlimits/helpers";
-import type { QuizMode } from "@/lib/quizlimits/constants";
-import type { AttemptCheckResult } from "@/lib/quizlimits/types";
+import { useAuthStore } from "@/stores";
+import { getLocalAttemptCount } from "@/lib/quizlimits/getCountFromLocalStorage";
+import { checkAttemptLimits } from "@/lib/quizlimits/checkAttemptLimits";
+import { FREE_TIER_LIMITS, QuizMode } from "@/lib/quizlimits/constants";
+import { createClient } from "@supabase/supabase-js";
 
-export function useAttemptLimit(mode: QuizMode) {
-  const { user, initialized } = useAuth();
-  const supabase = supabaseClient;
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-  const [isChecking, setIsChecking] = useState(true);
+export function useAttemptLimit(mode: QuizMode = "practice") {
   const [canAttempt, setCanAttempt] = useState(false);
-  const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [message, setMessage] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  const user = useAuthStore((state) => state.user);
+  const authLoading = useAuthStore((state) => state.isLoading);
+
   useEffect(() => {
-    // If we're not initialized, we can't do anything yet.
-    if (!initialized) {
-      return;
-    }
+    if (authLoading) return;
 
-    let ignore = false;
-    setIsChecking(true);
-
-    const doCheck = async () => {
-      let result: AttemptCheckResult;
-      try {
-        if (user) {
-          result = await checkAuthenticatedUserLimits(user, mode, supabase);
-        } else {
-          result = await checkUnauthenticatedUserLimits(mode);
-        }
-      } catch (err) {
-        console.error("Limit‐check failed:", err);
-        result = { canAttempt: true }; // Default to allow on error
+    const checkLimits = async () => {
+      const result = await checkAttemptLimits(user, mode, supabase);
+      setCanAttempt(result.canAttempt);
+      if (!result.canAttempt) {
+        setMessage(result.message);
+        setIsLoggedIn(result.isLoggedIn);
+      } else {
+        setMessage(null);
+        setIsLoggedIn(!!user);
       }
-
-      if (!ignore) {
-        setCanAttempt(result.canAttempt);
-        if (result.canAttempt) {
-          setMessage("");
-          setIsLoggedIn(!!user);
-        } else {
-          setMessage(result.message);
-          setIsLoggedIn(result.isLoggedIn);
-        }
-        setIsChecking(false);
-      }
+      setIsLoading(false);
     };
 
-    doCheck();
+    checkLimits();
+  }, [user, authLoading, mode]);
 
-    return () => {
-      ignore = true;
-    };
-  }, [initialized, user, mode, supabase]);
-
-  return { isChecking, canAttempt, message, isLoggedIn };
+  return {
+    canAttempt,
+    isLoading,
+    message,
+    isLoggedIn,
+    attemptsRemaining:
+      FREE_TIER_LIMITS[mode] - (getLocalAttemptCount(mode) || 0),
+  };
 }

@@ -34,13 +34,14 @@ import {
   stats,
   testimonials,
 } from "@/app/config/homePageConfig";
-import { useAuth } from "@/context/AuthContext";
+import { useAuthStore } from "@/stores/auth/authStore";
 import { QuizMode } from "@/lib/quizlimits/constants";
 
 export default function HomePage() {
   const router = useRouter();
   const supabase = supabaseClient;
-  const { user } = useAuth();
+  const user = useAuthStore((state) => state.user);
+  const isLoading = useAuthStore((state) => state.isLoading);
 
   const [modalState, setModalState] = useState<{
     isOpen: boolean;

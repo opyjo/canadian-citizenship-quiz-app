@@ -18,19 +18,18 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuthStore } from "@/stores/auth/authStore";
 
-// Define a type for subscription details
 interface SubscriptionDetails {
-  status: string; // e.g., 'active', 'canceled', 'past_due', 'none'
-  current_period_end: string | null; // ISO string date
+  status: string;
+  current_period_end: string | null;
   cancel_at_period_end: boolean;
   active_stripe_subscription_id: string | null;
 }
 
 export default function SettingsPage() {
   // Auth state
-  const { user, initialized } = useAuth();
+  const user = useAuthStore((state) => state.user);
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -51,7 +50,6 @@ export default function SettingsPage() {
   const supabase = supabaseClient;
 
   useEffect(() => {
-    if (!initialized) return;
     if (!user) {
       router.push("/auth");
       return;
@@ -99,7 +97,7 @@ export default function SettingsPage() {
     }
 
     fetchProfile();
-  }, [initialized, user, router, supabase]);
+  }, [user, router, supabase]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();

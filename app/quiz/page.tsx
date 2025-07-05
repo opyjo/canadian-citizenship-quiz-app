@@ -9,13 +9,29 @@ import { UnauthenticatedResultsView } from "@/components/quiz/UnauthenticatedRes
 import ConfirmationModal from "@/components/confirmation-modal";
 
 function StandardQuizContent() {
-  const { state, quiz, handlers, unauthenticatedResults } = useStandardQuiz();
+  const {
+    isLoading,
+    isSubmitting,
+    isQuizActive,
+    isEndQuizModalOpen,
+    showUnauthResults,
+    loadingMessage,
+    feedbackMessage,
+    quiz,
+    handlers,
+    unauthenticatedResults,
+    handleCloseResults,
+  } = useStandardQuiz();
 
-  if (state.isConfirmEndQuizModalOpen) {
+  if (isLoading) {
+    return <QuizLoadingIndicator message={loadingMessage || "Loading..."} />;
+  }
+
+  if (isEndQuizModalOpen) {
     return (
       <ConfirmationModal
         isOpen={true}
-        onClose={handlers.handleCloseConfirmModal}
+        onClose={handlers.handleCloseEndQuizModal}
         onConfirm={handlers.handleConfirmEndQuiz}
         title="End Quiz?"
         message="Are you sure you want to end the quiz? Your current answers will be submitted, and you will be taken to the results page."
@@ -25,20 +41,38 @@ function StandardQuizContent() {
     );
   }
 
-  switch (state.uiState) {
-    case "LOADING":
-      return <QuizLoadingIndicator message={state.loadingMessage} />;
-    case "SHOWING_MODAL":
-      return <ConfirmationModal {...state.modalState} />;
-    case "SHOWING_FEEDBACK":
-      return <QuizErrorDisplay message={state.feedbackMessage!} />;
-    case "UNAUTHENTICATED_RESULTS":
-      return <UnauthenticatedResultsView {...unauthenticatedResults} />;
-    case "SHOWING_QUIZ":
-      return <StandardQuizView quiz={quiz} handlers={handlers} />;
-    default:
-      return null;
+  if (showUnauthResults) {
+    return (
+      <UnauthenticatedResultsView
+        {...unauthenticatedResults}
+        onClose={handleCloseResults}
+      />
+    );
   }
+
+  if (feedbackMessage) {
+    return <QuizErrorDisplay message={feedbackMessage} />;
+  }
+
+  if (isQuizActive) {
+    return (
+      <StandardQuizView
+        quiz={quiz}
+        handlers={{
+          handleAnswerSelect: handlers.selectAnswer,
+          handleNext: handlers.nextQuestion,
+          handlePrevious: handlers.previousQuestion,
+          handleEndQuiz: handlers.handleEndQuiz,
+          finishQuiz: handlers.finishQuiz,
+        }}
+        uiFlags={{
+          isSubmitting,
+        }}
+      />
+    );
+  }
+
+  return <QuizLoadingIndicator message="Preparing quiz..." />;
 }
 
 function StandardQuizLoading() {

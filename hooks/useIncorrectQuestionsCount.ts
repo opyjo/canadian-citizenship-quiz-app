@@ -8,7 +8,7 @@ export type UseIncorrectQuestionsCountResult = {
 
 export const useIncorrectQuestionsCount = (
   user: { id: string } | null,
-  initialized: boolean,
+  authLoading: boolean,
   supabase: any
 ): UseIncorrectQuestionsCountResult => {
   const {
@@ -26,8 +26,9 @@ export const useIncorrectQuestionsCount = (
       if (incorrectError) throw incorrectError;
       return incorrectData?.length ?? 0;
     },
-    enabled: initialized && !!user,
-    select: (data) => data,
+    enabled: !!user,
+    staleTime: 0, // Data is considered stale immediately
+    refetchOnMount: "always", // Always refetch when component mounts
   });
 
   return {

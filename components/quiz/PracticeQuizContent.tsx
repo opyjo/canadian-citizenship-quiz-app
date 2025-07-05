@@ -6,47 +6,73 @@ import { QuizLoadingIndicator } from "@/components/quiz/QuizLoadingIndicator";
 import { QuizErrorDisplay } from "@/components/quiz/QuizErrorDisplay";
 import { UnauthenticatedResultsView } from "@/components/quiz/UnauthenticatedResultsView";
 import ConfirmationModal from "@/components/confirmation-modal";
+import { useRouter } from "next/navigation";
 
 export function PracticeQuizContent() {
+  const router = useRouter();
+
   const {
-    uiState,
+    isLoading,
+    isQuizActive,
+    showUnauthResults,
+    isAuthenticated,
+    canAttempt,
     loadingMessage,
     feedbackMessage,
-    modalState,
+    limitMessage,
     quizData,
-    quizHandlers,
     unauthenticatedResults,
+    quizHandlers,
+    handleCloseResults,
   } = usePracticeQuiz();
 
-  switch (uiState) {
-    case "LOADING":
-      return <QuizLoadingIndicator message={loadingMessage} />;
-
-    case "SHOWING_MODAL":
-      return <ConfirmationModal {...modalState} />;
-
-    case "SHOWING_FEEDBACK":
-      return <QuizErrorDisplay message={feedbackMessage!} />;
-    case "SUBMITTING":
-      return <QuizLoadingIndicator message="Submitting your results..." />;
-
-    case "UNAUTHENTICATED_RESULTS":
-      return (
-        <UnauthenticatedResultsView
-          {...unauthenticatedResults}
-          quizType="practice"
-        />
-      );
-
-    case "SHOWING_QUIZ":
-      if (!quizData.currentQuestion) {
-        // This can happen for a brief moment before the first question is ready.
-        // Or if there are no questions.
-        return <QuizLoadingIndicator message="Loading questions..." />;
-      }
-      return <PracticeQuizView quiz={quizData} handlers={quizHandlers} />;
-
-    default:
-      return null;
+  if (isLoading) {
+    return <QuizLoadingIndicator message={loadingMessage || "Loading..."} />;
   }
+
+  if (!canAttempt) {
+    return (
+      <ConfirmationModal
+        isOpen={true}
+        title="Access Denied"
+        message={limitMessage || "You cannot attempt this quiz at this time."}
+        confirmText={isAuthenticated ? "Upgrade Plan" : "Sign Up"}
+        cancelText="Go Home"
+        onConfirm={() => router.push(isAuthenticated ? "/pricing" : "/signup")}
+        onClose={() => router.push("/")}
+      />
+    );
+  }
+
+  if (showUnauthResults) {
+    return (
+      <UnauthenticatedResultsView
+        score={unauthenticatedResults.score!}
+        totalQuestions={unauthenticatedResults.totalQuestions!}
+        quizType="practice"
+        onClose={handleCloseResults}
+      />
+    );
+  }
+
+  if (feedbackMessage) {
+    return <QuizErrorDisplay message={feedbackMessage} />;
+  }
+
+  if (isQuizActive) {
+    return (
+      <PracticeQuizView
+        quiz={quizData}
+        handlers={{
+          handleAnswerSelect: quizHandlers.selectAnswer,
+          handlePrevious: quizHandlers.previousQuestion,
+          handleNext: quizHandlers.nextQuestion,
+          finishQuiz: quizHandlers.finishQuiz,
+        }}
+      />
+    );
+  }
+
+  // Fallback for initial render before quiz initializes
+  return <QuizLoadingIndicator message="Preparing your quiz..." />;
 }

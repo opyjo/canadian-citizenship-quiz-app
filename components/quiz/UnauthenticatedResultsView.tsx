@@ -12,12 +12,14 @@ interface UnauthenticatedResultsViewProps {
   readonly score: number | null;
   readonly totalQuestions: number | null;
   readonly quizType?: "standard" | "practice" | "timed";
+  readonly onClose?: () => void;
 }
 
 export function UnauthenticatedResultsView({
   score,
   totalQuestions,
   quizType = "standard",
+  onClose,
 }: UnauthenticatedResultsViewProps) {
   const router = useRouter();
 
@@ -31,6 +33,8 @@ export function UnauthenticatedResultsView({
       window.location.reload();
     }
   };
+
+  const handlePrimaryAction = onClose || buttonAction;
 
   return (
     <Card className="w-full max-w-md text-center">
@@ -50,7 +54,7 @@ export function UnauthenticatedResultsView({
         </p>
       </CardContent>
       <CardFooter className="flex flex-col sm:flex-row gap-2">
-        <Button onClick={buttonAction} className="w-full sm:w-auto">
+        <Button onClick={handlePrimaryAction} className="w-full sm:w-auto">
           {buttonText}
         </Button>
         <Button

@@ -1,239 +1,208 @@
 // src/hooks/useTimedQuiz.ts
-import { useReducer, useEffect, useState, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/context/AuthContext";
-import { useRandomQuestions } from "./useQuestions";
-import { invalidateQuizAttempts } from "@/lib/utils/queryCacheUtils";
-import { uiReducer, initialUIState } from "@/app/utils/reducers/uiReducer";
-import type { Question, UnauthenticatedResults } from "@/app/utils/types";
-import { useAttemptLimit } from "@/hooks/useAttemptLimit";
-import { incrementLocalAttemptCount } from "@/lib/quizlimits/getCountFromLocalStorage";
-import { submitQuizAttempt } from "@/app/actions/submit-quiz-attempt";
+import { useAuthStore, useQuizStore } from "@/stores";
+import { useAttemptLimit } from "./useAttemptLimit";
+import { QuizMode } from "@/stores/quiz/types";
 
-const TIME_LIMIT = 15 * 60; // in seconds
+const TIME_LIMIT = 15 * 60; // 15 minutes in seconds
 
 export function useTimedQuiz() {
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const { user, initialized } = useAuth();
-  const userId = user?.id ?? null;
-  const startIncrementRef = useRef(false);
-
-  // UI reducer
-  const [ui, dispatch] = useReducer(uiReducer, initialUIState);
-  const { uiState, loadingMessage, feedbackMessage, modalState } = ui;
-
-  // Core quiz state
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<
-    Record<number, string>
-  >({});
-  const [startTime, setStartTime] = useState(0);
-  const [quizActive, setQuizActive] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(TIME_LIMIT);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [unauthenticatedResults, setUnauthenticatedResults] =
-    useState<UnauthenticatedResults>({
-      score: null,
-      totalQuestions: null,
-      quizType: "timed",
-    });
-
-  // 1) Attempt‐limit check
   const {
-    isChecking: isCheckingLimit,
     canAttempt,
-    message: limitMessage,
-    isLoggedIn: limitIsLoggedIn,
+    isLoading: isCheckingLimits,
+    message,
   } = useAttemptLimit("timed");
 
-  // 2) Fetch questions once ready
-  const shouldFetch =
-    initialized &&
-    !isCheckingLimit &&
-    canAttempt &&
-    uiState !== "SHOWING_MODAL";
+  // Auth state
+  const user = useAuthStore((state) => state.user);
+  const authLoading = useAuthStore((state) => state.isLoading);
 
+  // Quiz state - destructure all needed values
   const {
-    data: questionsData,
-    error: questionsError,
-    isLoading: questionsLoading,
-  } = useRandomQuestions(shouldFetch, 20);
+    status,
+    error,
+    questions,
+    currentQuestionIndex,
+    selectedAnswers,
+    attempt,
+    timer,
+    initializeQuiz,
+    resetQuiz,
+    submitQuiz,
+    startTimer,
+    stopTimer,
+    selectAnswer: selectAnswerStore,
+    nextQuestion,
+    previousQuestion,
+  } = useQuizStore();
+
+  // Local UI state - only what can't be derived
+  const [isEndQuizModalOpen, setIsEndQuizModalOpen] = useState(false);
+  const [showUnauthResults, setShowUnauthResults] = useState(false);
+  const [unauthenticatedResults, setUnauthenticatedResults] = useState({
+    score: null as number | null,
+    totalQuestions: null as number | null,
+    quizType: "timed" as const,
+  });
 
   // ============================================================================
-  // If limit‐check finishes and they can't attempt, pop your modal
+  // Derived State
   // ============================================================================
-  useEffect(() => {
-    if (!isCheckingLimit && !canAttempt) {
-      dispatch({
-        type: "SHOW_MODAL",
-        payload: {
-          isOpen: true,
-          title: "Access Denied",
-          message: limitMessage,
-          confirmText: limitIsLoggedIn ? "Upgrade Plan" : "Sign Up",
-          cancelText: "Go Home",
-          onConfirm: () =>
-            router.push(limitIsLoggedIn ? "/pricing" : "/signup"),
-          onClose: () => {
-            router.push("/");
-          },
-        },
-      });
+  const isLoading = status === "loading" || authLoading || isCheckingLimits;
+  const isSubmitting = status === "submitting";
+  const isQuizActive = status === "active" && questions.length > 0;
+  const hasError = status === "error";
+  const isCompleted = status === "completed";
+
+  // Calculate time remaining
+  const timeRemaining = useMemo(() => {
+    if (!timer.startTime) return TIME_LIMIT;
+    const elapsed = Math.floor((Date.now() - timer.startTime) / 1000);
+    return Math.max(0, TIME_LIMIT - elapsed);
+  }, [timer.startTime]);
+
+  // Derive loading message
+  const loadingMessage = useMemo(() => {
+    if (authLoading || isCheckingLimits) return "Checking access...";
+    if (status === "loading") return "Loading questions...";
+    if (status === "submitting") return "Submitting results...";
+    return null;
+  }, [authLoading, isCheckingLimits, status]);
+
+  // Derive feedback message
+  const feedbackMessage = useMemo(() => {
+    if (!canAttempt) return message;
+    if (hasError) return error || "An error occurred";
+    if (status === "active" && questions.length === 0) {
+      return "No questions available for this quiz.";
     }
-  }, [isCheckingLimit, canAttempt, limitMessage, limitIsLoggedIn, router]);
+    return null;
+  }, [canAttempt, message, hasError, status, error, questions.length]);
 
   // ============================================================================
-  // Loading and Submitting Effects
-  // ============================================================================
-
-  useEffect(() => {
-    if (!initialized) {
-      dispatch({ type: "LOADING", message: "Checking authentication…" });
-    } else if (isCheckingLimit) {
-      dispatch({ type: "LOADING", message: "Verifying access…" });
-    } else if (isSubmitting) {
-      dispatch({ type: "LOADING", message: "Submitting results..." });
-    } else if (questionsLoading) {
-      dispatch({ type: "LOADING", message: "Loading questions…" });
-    } else {
-      if (uiState === "LOADING") {
-        dispatch({ type: "SHOW_QUIZ" });
-      }
-    }
-  }, [initialized, isCheckingLimit, isSubmitting, questionsLoading, uiState]);
-
-  // ============================================================================
-  // When questions arrive or error occurs
+  // Initialize quiz when component mounts
   // ============================================================================
   useEffect(() => {
-    if (questionsError) {
-      dispatch({ type: "SHOW_FEEDBACK", message: questionsError.message });
+    if (authLoading || isCheckingLimits) return;
+
+    if (!canAttempt) {
+      resetQuiz();
       return;
     }
-    if (!questionsLoading && questionsData) {
-      if (questionsData.length === 0) {
-        dispatch({
-          type: "SHOW_FEEDBACK",
-          message: "No questions available for this quiz.",
-        });
-      } else {
-        setQuestions(questionsData);
-        setStartTime(Date.now());
-        setQuizActive(true);
-        if (!userId && !startIncrementRef.current) {
-          incrementLocalAttemptCount("timed");
-          startIncrementRef.current = true;
-        }
-        dispatch({ type: "SHOW_QUIZ" });
-      }
+
+    // Initialize timed quiz and start timer
+    initializeQuiz("timed" as QuizMode);
+    startTimer();
+
+    // Cleanup on unmount
+    return () => {
+      stopTimer();
+      resetQuiz();
+    };
+  }, [
+    authLoading,
+    isCheckingLimits,
+    canAttempt,
+    initializeQuiz,
+    resetQuiz,
+    startTimer,
+    stopTimer,
+  ]);
+
+  // ============================================================================
+  // Handle Quiz completion
+  // ============================================================================
+  useEffect(() => {
+    if (!isCompleted) return;
+
+    if (attempt.id) {
+      // Authenticated user - redirect to results page
+      router.push(`/results/${attempt.id}`);
+    } else if (attempt.score !== null) {
+      // Unauthenticated user - show results modal
+      setShowUnauthResults(true);
+      setUnauthenticatedResults({
+        quizType: "timed",
+        score: attempt.score,
+        totalQuestions: questions.length,
+      });
     }
-  }, [questionsLoading, questionsError, questionsData, userId]);
+  }, [isCompleted, attempt.id, attempt.score, questions.length, router]);
+
+  // ============================================================================
+  // Auto-submit when time is up
+  // ============================================================================
+  useEffect(() => {
+    if (timeRemaining <= 0 && isQuizActive) {
+      stopTimer();
+      submitQuiz();
+    }
+  }, [timeRemaining, isQuizActive, stopTimer, submitQuiz]);
 
   // ============================================================================
   // Quiz Control Functions
   // ============================================================================
-  const handleAnswerSelect = useCallback(
-    (opt: string) =>
-      setSelectedAnswers((p) => ({ ...p, [currentQuestionIndex]: opt })),
-    [currentQuestionIndex]
+  const selectAnswer = useCallback(
+    (answer: string) => {
+      const currentQuestion = questions[currentQuestionIndex];
+      if (currentQuestion) {
+        selectAnswerStore(currentQuestion.id, answer);
+      }
+    },
+    [currentQuestionIndex, questions, selectAnswerStore]
   );
-  const finishQuiz = useCallback(async () => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    setQuizActive(false);
 
-    const timeTaken = TIME_LIMIT - timeRemaining;
-    const questionIds = questions.map((q) => q.id);
+  const handleEndQuiz = useCallback(() => {
+    setIsEndQuizModalOpen(true);
+  }, []);
 
-    const payload = {
-      userAnswers: selectedAnswers,
-      questionIds,
-      timeTaken,
-      quizMode: "timed" as const,
-    };
+  const handleCloseEndQuizModal = useCallback(() => {
+    setIsEndQuizModalOpen(false);
+  }, []);
 
-    try {
-      const result = await submitQuizAttempt(payload);
+  const handleConfirmEndQuiz = useCallback(async () => {
+    setIsEndQuizModalOpen(false);
+    stopTimer();
+    await submitQuiz();
+  }, [stopTimer, submitQuiz]);
 
-      if (result.error) {
-        throw new Error(result.error);
-      }
+  const handleFinishQuiz = useCallback(async () => {
+    stopTimer();
+    await submitQuiz();
+  }, [stopTimer, submitQuiz]);
 
-      invalidateQuizAttempts(queryClient, userId);
-
-      // ALSO invalidate the incorrect questions count, as it may have changed.
-      queryClient.invalidateQueries({
-        queryKey: ["incorrectQuestionsCount", userId],
-      });
-
-      if (result.attemptId) {
-        router.push(`/results/${result.attemptId}`);
-      } else {
-        setUnauthenticatedResults({
-          score: result.score ?? null,
-          totalQuestions: result.totalQuestions ?? null,
-          quizType: "timed",
-        });
-        dispatch({ type: "UNAUTHENTICATED_RESULTS" });
-      }
-    } catch (err: any) {
-      dispatch({ type: "SHOW_FEEDBACK", message: err.message });
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [
-    questions,
-    selectedAnswers,
-    timeRemaining,
-    isSubmitting,
-    queryClient,
-    userId,
-    router,
-  ]);
-
-  const handleNext = useCallback(() => {
-    if (currentQuestionIndex < questions.length - 1)
-      setCurrentQuestionIndex((i) => i + 1);
-    else finishQuiz();
-  }, [currentQuestionIndex, questions.length, finishQuiz]);
-  const handlePrevious = useCallback(() => {
-    if (currentQuestionIndex > 0) setCurrentQuestionIndex((i) => i - 1);
-  }, [currentQuestionIndex]);
-
-  // ============================================================================
-  // Timer Effect
-  // ============================================================================
-  useEffect(() => {
-    if (!quizActive) return;
-    if (timeRemaining <= 0) {
-      finishQuiz();
-      return;
-    }
-    const id = setInterval(() => {
-      setTimeRemaining((t) => t - 1);
-    }, 1000);
-    return () => clearInterval(id);
-  }, [quizActive, timeRemaining, finishQuiz]);
+  const handleCloseResults = useCallback(() => {
+    setShowUnauthResults(false);
+    resetQuiz();
+    // Redirect to home or quiz selection
+    router.push("/");
+  }, [resetQuiz, router]);
 
   // ============================================================================
   // Return Values
   // ============================================================================
   const currentQuestion = questions[currentQuestionIndex];
-  const progress = questions.length
-    ? ((currentQuestionIndex + 1) / questions.length) * 100
-    : 0;
+  const progress = ((currentQuestionIndex + 1) / (questions.length || 1)) * 100;
 
   return {
-    state: {
-      uiState,
-      loadingMessage,
-      feedbackMessage,
-      modalState,
-      timeRemaining,
-    },
+    // State flags
+    isLoading,
+    isSubmitting,
+    isQuizActive,
+    showUnauthResults,
+    hasError,
+    isEndQuizModalOpen,
+
+    // Messages
+    loadingMessage,
+    feedbackMessage,
+
+    // Timer specific
+    timeRemaining,
+
+    // Quiz data
     quiz: {
       currentQuestion,
       selectedAnswers,
@@ -241,15 +210,26 @@ export function useTimedQuiz() {
       progress,
       questions,
     },
+
+    // Handlers
     handlers: {
-      handleAnswerSelect,
-      handleNext,
-      handlePrevious,
-      finishQuiz,
+      selectAnswer,
+      previousQuestion,
+      nextQuestion,
+      handleEndQuiz,
+      handleCloseEndQuizModal,
+      handleConfirmEndQuiz,
+      finishQuiz: handleFinishQuiz,
     },
-    uiFlags: {
-      isSubmitting,
-    },
+
+    // Results
     unauthenticatedResults,
+    handleCloseResults,
+
+    // Auth/limits
+    isAuthenticated: !!user,
+    canAttempt,
+    limitMessage: message,
+    error,
   };
 }

@@ -10,6 +10,12 @@ Sentry.init({
   // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
   tracesSampleRate: 1,
 
-  // Setting this option to true will print useful information to the console while you're setting up Sentry.
+  // Suppress console errors and debug output
   debug: false,
+
+  // Disable performance monitoring to reduce noise
+  enabled: process.env.NODE_ENV === "production",
+
+  // Adjust sampling to minimum in development
+  sampleRate: process.env.NODE_ENV === "production" ? 1.0 : 0.01,
 });

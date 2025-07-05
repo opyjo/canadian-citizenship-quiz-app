@@ -1,5 +1,5 @@
 import { AttemptCheckResult } from "./types";
-import { getLocalAttemptCount } from "./localStorage";
+import { getLocalAttemptCount } from "./getCountFromLocalStorage";
 import { FREE_TIER_LIMITS, PAID_ACCESS_LEVELS, QuizMode } from "./constants";
 import { SupabaseClient, User } from "@supabase/supabase-js";
 
@@ -16,12 +16,10 @@ export async function checkAttemptLimits(
     if (attempts >= limit) {
       return {
         canAttempt: false,
-        limitReached: {
-          isLoggedIn: false,
-          message: `You've used your ${limit} free ${quizMode} quiz${
-            limit > 1 ? "zes" : ""
-          }. Sign up for more!`,
-        },
+        message: `You've used your ${limit} free ${quizMode} quiz${
+          limit > 1 ? "zes" : ""
+        }. Sign up for more!`,
+        isLoggedIn: false,
       };
     }
 
@@ -57,12 +55,10 @@ export async function checkAttemptLimits(
     if (!data.canAttempt) {
       return {
         canAttempt: false,
-        limitReached: {
-          isLoggedIn: true,
-          message: `You've used your ${data.limit} free ${quizMode} quiz${
-            data.limit > 1 ? "zes" : ""
-          }. Upgrade for unlimited access!`,
-        },
+        message: `You've used your ${data.limit} free ${quizMode} quiz${
+          data.limit > 1 ? "zes" : ""
+        }. Upgrade for unlimited access!`,
+        isLoggedIn: true,
       };
     }
 

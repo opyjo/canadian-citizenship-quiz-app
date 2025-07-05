@@ -71,6 +71,8 @@ export async function submitQuizAttempt(payload: Payload) {
   // ============================================================================
   let calculatedScore = 0;
   const totalQuestions = questionIds.length;
+  const incorrectQuestionIds: number[] = [];
+  const correctlyAnsweredIds: number[] = [];
 
   try {
     const { data: correctQuestionsData, error: questionsError } = await supabase
@@ -106,6 +108,11 @@ export async function submitQuizAttempt(payload: Payload) {
         userAns.toLowerCase() === correctAns.toLowerCase()
       ) {
         calculatedScore++;
+        // If the answer is correct, add the question ID to our list
+        correctlyAnsweredIds.push(qid);
+      } else {
+        // If the answer is incorrect, add the question ID to our list
+        incorrectQuestionIds.push(qid);
       }
     }
   } catch (scoreCalcError: any) {
@@ -166,6 +173,43 @@ export async function submitQuizAttempt(payload: Payload) {
         };
       }
 
+      // After saving the main attempt, save the incorrectly answered questions
+      if (incorrectQuestionIds.length > 0) {
+        const incorrectRecords = incorrectQuestionIds.map((qid) => ({
+          user_id: userId,
+          question_id: qid,
+        }));
+
+        const { error: incorrectInsertError } = await supabase
+          .from("user_incorrect_questions")
+          .upsert(incorrectRecords, { onConflict: "user_id,question_id" });
+
+        if (incorrectInsertError) {
+          // Log this error but don't block the user's quiz result
+          console.error(
+            "Server Action: Failed to save incorrect questions:",
+            incorrectInsertError
+          );
+        }
+      }
+
+      // If this was a practice of incorrect questions, remove the ones they got right
+      if (practiceType === "incorrect" && correctlyAnsweredIds.length > 0) {
+        const { error: deleteError } = await supabase
+          .from("user_incorrect_questions")
+          .delete()
+          .eq("user_id", userId)
+          .in("question_id", correctlyAnsweredIds);
+
+        if (deleteError) {
+          // Log this error but don't block the user
+          console.error(
+            "Server Action: Failed to delete newly correct questions:",
+            deleteError
+          );
+        }
+      }
+
       // Optionally increment the user's freemium attempt count via RPC
       const { error: rpcError } = await supabase.rpc(
         "increment_user_quiz_mode_attempts",
@@ -217,5 +261,6 @@ export async function submitQuizAttempt(payload: Payload) {
     error: null,
     quizType: determinedQuizType,
     totalQuestions,
+    quizMode,
   };
 }

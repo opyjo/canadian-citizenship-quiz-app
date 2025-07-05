@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import type React from "react";
 import { Inter } from "next/font/google";
-import UserNav from "@/components/user-nav";
+import UserNav from "@/components/auth/UserNav";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Bot } from "lucide-react";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { GlobalErrorBoundary } from "@/components/global-error-boundary";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider } from "@/components/providers/auth-provider";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });

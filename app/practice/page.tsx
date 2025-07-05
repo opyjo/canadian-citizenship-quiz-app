@@ -13,26 +13,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, AlertTriangle, Shuffle } from "lucide-react";
+import { AlertTriangle, Shuffle } from "lucide-react";
 import { checkAttemptLimitsWithAuth } from "@/lib/quizlimits/helpers";
 import { QuizMode } from "@/lib/quizlimits/constants";
 import ConfirmationModal from "@/components/confirmation-modal";
-import { useAuth } from "@/context/AuthContext";
+import { useAuthStore } from "@/stores/auth/authStore";
 import { useIncorrectQuestionsCount } from "@/hooks/useIncorrectQuestionsCount";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
 
 export default function PracticePage() {
-  const { user, initialized } = useAuth();
+  const user = useAuthStore((state) => state.user);
+  const authLoading = useAuthStore((state) => state.isLoading);
   const router = useRouter();
   const supabase = supabaseClient;
   const queryClient = useQueryClient();
 
-  const {
-    count: incorrectQuestionsCount,
-    loading: incorrectLoading,
-    error: incorrectError,
-  } = useIncorrectQuestionsCount(user, initialized, supabase);
+  const { count: incorrectQuestionsCount, error: incorrectError } =
+    useIncorrectQuestionsCount(user, authLoading, supabase);
 
   // Simplified modal state - only what we need
   const [limitModal, setLimitModal] = useState<{
@@ -60,7 +58,6 @@ export default function PracticePage() {
   };
 
   const startQuickPractice = (count: number) => {
-    // Invalidate before starting the flow to ensure fresh questions
     queryClient.invalidateQueries({
       queryKey: queryKeys.practice(user?.id ?? null, count, false),
     });
@@ -71,7 +68,6 @@ export default function PracticePage() {
   };
 
   const startPracticeIncorrect = () => {
-    // Invalidate before starting the flow to ensure fresh questions
     queryClient.invalidateQueries({
       queryKey: queryKeys.practice(user?.id ?? null, 0, true), // Count is irrelevant here but needed for key structure
     });
@@ -169,17 +165,6 @@ export default function PracticePage() {
       </Card>
     );
   };
-
-  if (!initialized || incorrectLoading) {
-    return (
-      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)]">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-red-600" />
-          <p className="text-lg">Loading practice options...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="container mx-auto py-8 px-4">

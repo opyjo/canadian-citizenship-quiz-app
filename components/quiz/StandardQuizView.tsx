@@ -7,17 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-
-// Define a more specific type for the question object
-interface Question {
-  id: number;
-  question_text: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-  [key: string]: any; // Keep this for flexibility if other properties exist
-}
+import { Question } from "@/stores/quiz/types";
 
 interface StandardQuizViewProps {
   readonly quiz: {
@@ -68,6 +58,21 @@ export function StandardQuizView({
     return null;
   }
 
+  const getOptionValue = (option: string): string => {
+    switch (option) {
+      case "a":
+        return currentQuestion.option_a;
+      case "b":
+        return currentQuestion.option_b;
+      case "c":
+        return currentQuestion.option_c;
+      case "d":
+        return currentQuestion.option_d;
+      default:
+        return "";
+    }
+  };
+
   return (
     <div className="max-w-3xl w-full space-y-6">
       <div className="flex justify-between items-center mb-6">
@@ -75,7 +80,7 @@ export function StandardQuizView({
           Question {currentQuestionIndex + 1} of {questions.length}
         </h2>
         <span className="text-sm text-muted-foreground">
-          {selectedAnswers[currentQuestionIndex] ? "Answered" : "Not answered"}
+          {selectedAnswers[currentQuestion.id] ? "Answered" : "Not answered"}
         </span>
       </div>
       <Progress value={progress} className="h-2" />
@@ -91,7 +96,7 @@ export function StandardQuizView({
             <div
               key={option}
               className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                selectedAnswers[currentQuestionIndex] === option
+                selectedAnswers[currentQuestion.id] === option
                   ? "border-red-600 bg-red-50"
                   : "hover:bg-gray-50"
               }`}
@@ -101,22 +106,20 @@ export function StandardQuizView({
               }
               role="button"
               tabIndex={isSubmitting ? -1 : 0}
-              aria-pressed={selectedAnswers[currentQuestionIndex] === option}
+              aria-pressed={selectedAnswers[currentQuestion.id] === option}
               aria-disabled={isSubmitting}
             >
               <div className="flex items-start gap-3">
                 <div
                   className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
-                    selectedAnswers[currentQuestionIndex] === option
+                    selectedAnswers[currentQuestion.id] === option
                       ? "border-red-600 bg-red-600 text-white"
                       : "border-gray-300"
                   }`}
                 >
                   <span className="text-sm">{option.toUpperCase()}</span>
                 </div>
-                <span>
-                  {currentQuestion[`option_${option}` as keyof Question]}
-                </span>
+                <span>{getOptionValue(option)}</span>
               </div>
             </div>
           ))}
@@ -140,7 +143,7 @@ export function StandardQuizView({
             </Button>
             <Button
               onClick={isLastQuestion ? finishQuiz : handleNext}
-              disabled={!selectedAnswers[currentQuestionIndex] || isSubmitting}
+              disabled={!selectedAnswers[currentQuestion.id] || isSubmitting}
             >
               {isSubmitting
                 ? "Submitting..."

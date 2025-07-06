@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import supabaseClient from "@/lib/supabase-client";
 import { useQuizAttempts } from "@/hooks/useQuizAttempts";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,24 +15,26 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, BarChart2, Award, BookOpen } from "lucide-react";
 import { useAuthStore } from "@/stores/auth/authStore";
+import { QuizHistoryTable } from "@/components/quiz/QuizHistoryTable";
+import { calculateQuizStats } from "@/app/utils/helpers";
 
 export default function DashboardPage() {
   const user = useAuthStore((state) => state.user);
-  const isLoading = useAuthStore((state) => state.isLoading);
-  const router = useRouter();
-  const supabase = supabaseClient;
+  const authIsLoading = useAuthStore((state) => state.isLoading);
 
-  // Use TanStack Query for quiz attempts
   const {
     data: quizAttempts = [],
-    isLoading: quizLoading,
+    isLoading: attemptsIsLoading,
     error: quizError,
-  } = useQuizAttempts(user?.id ?? "");
+  } = useQuizAttempts(user?.id ?? null);
 
-  const loading = !isLoading || quizLoading;
-  const error = quizError?.message;
+  if (quizError) throw quizError;
 
-  if (loading) {
+  // ============================================================================
+  // Setting up the loading state
+  // ============================================================================
+  const isLoading = authIsLoading || attemptsIsLoading;
+  if (isLoading) {
     return (
       <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">
@@ -45,56 +45,8 @@ export default function DashboardPage() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-4rem)]">
-        <Card className="w-full max-w-3xl">
-          <CardHeader>
-            <CardTitle className="text-red-600">Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>{error}</p>
-          </CardContent>
-          <CardFooter>
-            <Button onClick={() => router.push("/")}>Return Home</Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
-
-  // Calculate statistics with null safety
-  const totalQuizzes = quizAttempts.length;
-  const validAttempts = quizAttempts.filter(
-    (attempt) =>
-      attempt.score !== null && attempt.total_questions_in_attempt !== null
-  );
-
-  const averageScore =
-    validAttempts.length > 0
-      ? Math.round(
-          (validAttempts.reduce(
-            (sum, attempt) =>
-              sum +
-              (attempt.score! / attempt.total_questions_in_attempt!) * 100,
-            0
-          ) /
-            validAttempts.length) *
-            10
-        ) / 10
-      : 0;
-
-  const bestScore =
-    validAttempts.length > 0
-      ? Math.round(
-          Math.max(
-            ...validAttempts.map(
-              (attempt) =>
-                (attempt.score! / attempt.total_questions_in_attempt!) * 100
-            )
-          ) * 10
-        ) / 10
-      : 0;
+  const { totalQuizzes, averageScore, bestScore } =
+    calculateQuizStats(quizAttempts);
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -164,7 +116,7 @@ export default function DashboardPage() {
                   You haven't taken any quizzes yet.
                 </p>
                 <div className="mt-4">
-                  <Link href="/">
+                  <Link href="/practice">
                     <Button>Take Your First Quiz</Button>
                   </Link>
                 </div>
@@ -178,208 +130,32 @@ export default function DashboardPage() {
                   <TabsTrigger value="practice">Practice</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="all" className="space-y-4">
-                  <div className="rounded-md border">
-                    <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b text-xs sm:text-sm">
-                      <div>Date</div>
-                      <div>Type</div>
-                      <div>Score</div>
-                      <div>Time Taken</div>
-                    </div>
-                    <div className="divide-y">
-                      {quizAttempts.map((attempt) => (
-                        <div
-                          key={attempt.id}
-                          className="grid grid-cols-4 gap-4 p-4 text-xs sm:text-sm"
-                        >
-                          <div>
-                            {attempt.created_at
-                              ? new Date(
-                                  attempt.created_at
-                                ).toLocaleDateString()
-                              : "N/A"}
-                          </div>
-                          <div className="capitalize">
-                            {attempt.quiz_type ?? "Unknown"}
-                          </div>
-                          <div>
-                            {attempt.score !== null &&
-                            attempt.total_questions_in_attempt !== null
-                              ? `${attempt.score}/${
-                                  attempt.total_questions_in_attempt
-                                } (${Math.round(
-                                  (attempt.score /
-                                    attempt.total_questions_in_attempt) *
-                                    100
-                                )}%)`
-                              : "N/A"}
-                          </div>
-                          <div>
-                            {attempt.time_taken_seconds
-                              ? `${Math.floor(
-                                  attempt.time_taken_seconds / 60
-                                )}m ${attempt.time_taken_seconds % 60}s`
-                              : "N/A"}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                <TabsContent value="all">
+                  <QuizHistoryTable attempts={quizAttempts} groupByType />
                 </TabsContent>
 
-                <TabsContent value="standard" className="space-y-4">
-                  <div className="rounded-md border">
-                    <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b text-xs sm:text-sm">
-                      <div>Date</div>
-                      <div>Type</div>
-                      <div>Score</div>
-                      <div>Time Taken</div>
-                    </div>
-                    <div className="divide-y">
-                      {quizAttempts
-                        .filter((attempt) => attempt.quiz_type === "standard")
-                        .map((attempt) => (
-                          <div
-                            key={attempt.id}
-                            className="grid grid-cols-4 gap-4 p-4 text-xs sm:text-sm"
-                          >
-                            <div>
-                              {attempt.created_at
-                                ? new Date(
-                                    attempt.created_at
-                                  ).toLocaleDateString()
-                                : "N/A"}
-                            </div>
-                            <div className="capitalize">
-                              {attempt.quiz_type ?? "Unknown"}
-                            </div>
-                            <div>
-                              {attempt.score !== null &&
-                              attempt.total_questions_in_attempt !== null
-                                ? `${attempt.score}/${
-                                    attempt.total_questions_in_attempt
-                                  } (${Math.round(
-                                    (attempt.score /
-                                      attempt.total_questions_in_attempt) *
-                                      100
-                                  )}%)`
-                                : "N/A"}
-                            </div>
-                            <div>
-                              {attempt.time_taken_seconds
-                                ? `${Math.floor(
-                                    attempt.time_taken_seconds / 60
-                                  )}m ${attempt.time_taken_seconds % 60}s`
-                                : "N/A"}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
+                <TabsContent value="standard">
+                  <QuizHistoryTable
+                    attempts={quizAttempts.filter(
+                      (attempt) => attempt.quiz_type === "standard"
+                    )}
+                  />
                 </TabsContent>
 
-                <TabsContent value="timed" className="space-y-4">
-                  <div className="rounded-md border">
-                    <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b text-xs sm:text-sm">
-                      <div>Date</div>
-                      <div>Type</div>
-                      <div>Score</div>
-                      <div>Time Taken</div>
-                    </div>
-                    <div className="divide-y">
-                      {quizAttempts
-                        .filter((attempt) => attempt.quiz_type === "timed")
-                        .map((attempt) => (
-                          <div
-                            key={attempt.id}
-                            className="grid grid-cols-4 gap-4 p-4 text-xs sm:text-sm"
-                          >
-                            <div>
-                              {attempt.created_at
-                                ? new Date(
-                                    attempt.created_at
-                                  ).toLocaleDateString()
-                                : "N/A"}
-                            </div>
-                            <div className="capitalize">
-                              {attempt.quiz_type ?? "Unknown"}
-                            </div>
-                            <div>
-                              {attempt.score !== null &&
-                              attempt.total_questions_in_attempt !== null
-                                ? `${attempt.score}/${
-                                    attempt.total_questions_in_attempt
-                                  } (${Math.round(
-                                    (attempt.score /
-                                      attempt.total_questions_in_attempt) *
-                                      100
-                                  )}%)`
-                                : "N/A"}
-                            </div>
-                            <div>
-                              {attempt.time_taken_seconds
-                                ? `${Math.floor(
-                                    attempt.time_taken_seconds / 60
-                                  )}m ${attempt.time_taken_seconds % 60}s`
-                                : "N/A"}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
+                <TabsContent value="timed">
+                  <QuizHistoryTable
+                    attempts={quizAttempts.filter(
+                      (attempt) => attempt.quiz_type === "timed"
+                    )}
+                  />
                 </TabsContent>
 
-                <TabsContent value="practice" className="space-y-4">
-                  <div className="rounded-md border">
-                    <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b text-xs sm:text-sm">
-                      <div>Date</div>
-                      <div>Type</div>
-                      <div>Score</div>
-                      <div>Time Taken</div>
-                    </div>
-                    <div className="divide-y">
-                      {quizAttempts
-                        .filter((attempt) =>
-                          attempt.quiz_type?.startsWith("practice")
-                        )
-                        .map((attempt) => (
-                          <div
-                            key={attempt.id}
-                            className="grid grid-cols-4 gap-4 p-4 text-xs sm:text-sm"
-                          >
-                            <div>
-                              {attempt.created_at
-                                ? new Date(
-                                    attempt.created_at
-                                  ).toLocaleDateString()
-                                : "N/A"}
-                            </div>
-                            <div className="capitalize">
-                              {attempt.quiz_type ?? "Unknown"}
-                            </div>
-                            <div>
-                              {attempt.score !== null &&
-                              attempt.total_questions_in_attempt !== null
-                                ? `${attempt.score}/${
-                                    attempt.total_questions_in_attempt
-                                  } (${Math.round(
-                                    (attempt.score /
-                                      attempt.total_questions_in_attempt) *
-                                      100
-                                  )}%)`
-                                : "N/A"}
-                            </div>
-                            <div>
-                              {attempt.time_taken_seconds
-                                ? `${Math.floor(
-                                    attempt.time_taken_seconds / 60
-                                  )}m ${attempt.time_taken_seconds % 60}s`
-                                : "N/A"}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
+                <TabsContent value="practice">
+                  <QuizHistoryTable
+                    attempts={quizAttempts.filter(
+                      (attempt) => attempt.is_practice
+                    )}
+                  />
                 </TabsContent>
               </Tabs>
             )}

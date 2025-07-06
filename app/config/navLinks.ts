@@ -7,7 +7,14 @@ import {
   StarIcon,
   SettingsIcon,
   Map,
+  FileQuestion,
 } from "lucide-react";
+
+type SubLink = {
+  label: string;
+  path: string;
+  description: string;
+};
 
 type NavLink = {
   label: string;
@@ -15,6 +22,7 @@ type NavLink = {
   Icon: React.ComponentType<{ className?: string }>;
   requiresAuth?: boolean;
   customClass?: string;
+  subLinks?: SubLink[];
 };
 
 export const navLinks: NavLink[] = [
@@ -24,6 +32,28 @@ export const navLinks: NavLink[] = [
     path: "/dashboard",
     Icon: LayoutDashboard,
     requiresAuth: true,
+  },
+  {
+    label: "Quizzes",
+    path: "#",
+    Icon: FileQuestion,
+    subLinks: [
+      {
+        label: "Standard Quiz",
+        path: "/quiz",
+        description: "Test your knowledge with a standard quiz.",
+      },
+      {
+        label: "Practice Quiz",
+        path: "/practice",
+        description: "Hone your skills with practice questions.",
+      },
+      {
+        label: "Timed Quiz",
+        path: "/quiz/timed",
+        description: "Challenge yourself against the clock.",
+      },
+    ],
   },
   { label: "Study Guide", path: "/study-guide", Icon: BookOpen },
   { label: "Canada Map", path: "/map", Icon: Map },

@@ -1,4 +1,50 @@
 import { Question, ResultData } from "./types";
+import { QuizAttempt } from "@/hooks/useQuizAttempts";
+
+export function calculateQuizStats(attempts: readonly QuizAttempt[]) {
+  if (!attempts || attempts.length === 0) {
+    return {
+      totalQuizzes: 0,
+      averageScore: 0,
+      bestScore: 0,
+    };
+  }
+
+  const validAttempts = attempts.filter(
+    (attempt) =>
+      attempt.score !== null && attempt.total_questions_in_attempt !== null
+  );
+
+  const totalQuizzes = attempts.length;
+
+  const averageScore =
+    validAttempts.length > 0
+      ? Math.round(
+          (validAttempts.reduce(
+            (sum, attempt) =>
+              sum +
+              (attempt.score! / attempt.total_questions_in_attempt!) * 100,
+            0
+          ) /
+            validAttempts.length) *
+            10
+        ) / 10
+      : 0;
+
+  const bestScore =
+    validAttempts.length > 0
+      ? Math.round(
+          Math.max(
+            ...validAttempts.map(
+              (attempt) =>
+                (attempt.score! / attempt.total_questions_in_attempt!) * 100
+            )
+          ) * 10
+        ) / 10
+      : 0;
+
+  return { totalQuizzes, averageScore, bestScore };
+}
 
 export function parseQuizParams(searchParams: URLSearchParams) {
   return {

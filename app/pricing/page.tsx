@@ -12,8 +12,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CheckCircle2 } from "lucide-react";
-import supabaseClient from "@/lib/supabase-client"; // For getting user session
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/stores";
 
 // Ensure your Stripe publishable key is set in environment variables
 const stripePromise = loadStripe(
@@ -65,17 +65,14 @@ export default function PricingPage() {
   const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const supabase = supabaseClient;
+  const user = useAuthStore((state) => state.user);
 
   const handleCheckout = async (priceId: string) => {
     setLoadingPriceId(priceId);
     setError(null);
 
-    // Check if user is logged in
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session) {
+    // Check if user is logged in using the auth store
+    if (!user) {
       router.push("/auth?redirect=/pricing"); // Redirect to login, then back to pricing
       setLoadingPriceId(null);
       return;

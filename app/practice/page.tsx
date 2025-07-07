@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import supabaseClient from "@/lib/supabase-client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,20 +13,22 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { AlertTriangle, Shuffle } from "lucide-react";
-import { checkAttemptLimitsWithAuth } from "@/lib/quizlimits/helpers";
 import { QuizMode } from "@/lib/quizlimits/constants";
 import ConfirmationModal from "@/components/confirmation-modal";
 import { useAuthStore } from "@/stores/auth/authStore";
 import { useIncorrectQuestionsCount } from "@/hooks/useIncorrectQuestionsCount";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
+import { checkQuizAccess } from "@/app/actions/check-quiz-access";
+import { checkUnauthenticatedUserLimits } from "@/lib/quizlimits/helpers";
+import supabaseClient from "@/lib/supabase-client";
 
 export default function PracticePage() {
   const user = useAuthStore((state) => state.user);
   const authLoading = useAuthStore((state) => state.isLoading);
   const router = useRouter();
-  const supabase = supabaseClient;
   const queryClient = useQueryClient();
+  const supabase = supabaseClient;
 
   const { count: incorrectQuestionsCount, error: incorrectError } =
     useIncorrectQuestionsCount(user, authLoading, supabase);
@@ -44,7 +45,9 @@ export default function PracticePage() {
   });
 
   const handleStartQuizFlow = async (quizMode: QuizMode, quizPath: string) => {
-    const result = await checkAttemptLimitsWithAuth(user, quizMode, supabase);
+    const result = user
+      ? await checkQuizAccess(quizMode)
+      : await checkUnauthenticatedUserLimits(quizMode);
 
     if (result.canAttempt) {
       router.push(quizPath);
@@ -52,7 +55,7 @@ export default function PracticePage() {
       setLimitModal({
         isOpen: true,
         message: result.message,
-        isLoggedIn: result.isLoggedIn,
+        isLoggedIn: !!user,
       });
     }
   };

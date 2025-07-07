@@ -5,7 +5,7 @@ export type AttemptCheckResult =
 
 // Internal types for better type safety
 export interface UserProfile {
-  access_level?: string;
+  access_level?: string | null;
 }
 
 export interface ApiAccessCheckResponse {

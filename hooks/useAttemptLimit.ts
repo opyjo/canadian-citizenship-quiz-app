@@ -1,50 +1,47 @@
 // src/hooks/useAttemptLimit.ts
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/stores";
-import { getLocalAttemptCount } from "@/lib/quizlimits/getCountFromLocalStorage";
-import { checkAttemptLimits } from "@/lib/quizlimits/checkAttemptLimits";
-import { FREE_TIER_LIMITS, QuizMode } from "@/lib/quizlimits/constants";
-import { createClient } from "@supabase/supabase-js";
+import { QuizMode } from "@/lib/quizlimits/constants";
+import { checkQuizAccess } from "@/app/actions/check-quiz-access";
+import { checkUnauthenticatedUserLimits } from "@/lib/quizlimits/helpers";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+export function useAttemptLimit(mode: QuizMode) {
+  // Select state slices individually for performance and stability
+  const user = useAuthStore((state) => state.user);
+  const authIsLoading = useAuthStore((state) => state.isLoading);
 
-export function useAttemptLimit(mode: QuizMode = "practice") {
   const [canAttempt, setCanAttempt] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [message, setMessage] = useState<string | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [message, setMessage] = useState("");
 
-  const user = useAuthStore((state) => state.user);
-  const authLoading = useAuthStore((state) => state.isLoading);
+  // Use a stable primitive value for the dependency array
+  const userId = user?.id;
 
   useEffect(() => {
-    if (authLoading) return;
+    // Don't run the check until the auth state is resolved
+    if (authIsLoading) {
+      setIsLoading(true);
+      return;
+    }
 
-    const checkLimits = async () => {
-      const result = await checkAttemptLimits(user, mode, supabase);
-      setCanAttempt(result.canAttempt);
-      if (!result.canAttempt) {
-        setMessage(result.message);
-        setIsLoggedIn(result.isLoggedIn);
+    const performCheck = async () => {
+      setIsLoading(true);
+      const result = user
+        ? await checkQuizAccess(mode)
+        : await checkUnauthenticatedUserLimits(mode);
+
+      if (result.canAttempt) {
+        setCanAttempt(true);
+        setMessage("");
       } else {
-        setMessage(null);
-        setIsLoggedIn(!!user);
+        setCanAttempt(false);
+        setMessage(result.message);
       }
       setIsLoading(false);
     };
 
-    checkLimits();
-  }, [user, authLoading, mode]);
+    performCheck();
+  }, [userId, mode, authIsLoading]); // Use stable userId dependency
 
-  return {
-    canAttempt,
-    isLoading,
-    message,
-    isLoggedIn,
-    attemptsRemaining:
-      FREE_TIER_LIMITS[mode] - (getLocalAttemptCount(mode) || 0),
-  };
+  return { canAttempt, isLoading, message };
 }

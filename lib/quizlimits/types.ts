@@ -1,7 +1,11 @@
 // The shape of the result returned by checkAttemptLimits
 export type AttemptCheckResult =
-  | { canAttempt: true }
-  | { canAttempt: false; message: string; isLoggedIn: boolean };
+  | { canAttempt: true; message?: never }
+  | {
+      canAttempt: false;
+      message: string;
+      isLoggedIn: boolean;
+    };
 
 // Internal types for better type safety
 export interface UserProfile {

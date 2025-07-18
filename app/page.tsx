@@ -25,8 +25,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import supabaseClient from "@/lib/supabase-client";
-import { checkAttemptLimitsWithAuth } from "@/lib/quizlimits/helpers";
+import { checkQuizAccess } from "@/app/actions/check-quiz-access";
 import ConfirmationModal from "@/components/confirmation-modal";
 import {
   chapters,
@@ -36,12 +35,11 @@ import {
 } from "@/app/config/homePageConfig";
 import { useAuthStore } from "@/stores/auth/authStore";
 import { QuizMode } from "@/lib/quizlimits/constants";
+import { checkUnauthenticatedUserLimits } from "@/lib/quizlimits/helpers";
 
 export default function HomePage() {
   const router = useRouter();
-  const supabase = supabaseClient;
   const user = useAuthStore((state) => state.user);
-  const isLoading = useAuthStore((state) => state.isLoading);
 
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
@@ -61,7 +59,10 @@ export default function HomePage() {
   });
 
   const handleStartQuiz = async (quizMode: QuizMode, quizPath: string) => {
-    const result = await checkAttemptLimitsWithAuth(user, quizMode, supabase);
+    const result = user
+      ? await checkQuizAccess(quizMode)
+      : await checkUnauthenticatedUserLimits(quizMode);
+    console.log(result);
 
     if (result.canAttempt) {
       router.push(quizPath);

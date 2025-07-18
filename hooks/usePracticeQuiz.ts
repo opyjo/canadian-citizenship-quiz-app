@@ -3,23 +3,24 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore, useQuizStore } from "@/stores";
 import { usePracticeParams } from "./usePracticeParams";
 import { UnauthenticatedResults } from "../app/utils/types";
-import { useAttemptLimit } from "./useAttemptLimit";
+import { checkQuizAccess } from "@/app/actions/check-quiz-access";
 import { QuizMode } from "@/stores/quiz/types";
+import { checkUnauthenticatedUserLimits } from "@/lib/quizlimits/helpers";
 
 export function usePracticeQuiz() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { practiceType } = usePracticeParams(searchParams);
   const mode = (practiceType || "random") as QuizMode;
-  const {
-    canAttempt,
-    isLoading: isCheckingLimits,
-    message,
-  } = useAttemptLimit("practice");
 
   // Auth state
   const user = useAuthStore((state) => state.user);
   const authLoading = useAuthStore((state) => state.isLoading);
+
+  // Quiz Access State
+  const [canAttempt, setCanAttempt] = useState(false);
+  const [limitMessage, setLimitMessage] = useState("");
+  const [isCheckingLimits, setIsCheckingLimits] = useState(true);
 
   // Quiz state - destructure all needed values
   const {
@@ -77,7 +78,9 @@ export function usePracticeQuiz() {
 
   // Derive feedback message
   const feedbackMessage = useMemo(() => {
-    if (!canAttempt) return message;
+    if (!canAttempt) {
+      return limitMessage;
+    }
     if (hasError) return error || "An error occurred";
     if (status === "active" && questions.length === 0) {
       return mode === "incorrect"
@@ -85,7 +88,43 @@ export function usePracticeQuiz() {
         : "No questions available, please try again later.";
     }
     return null;
-  }, [canAttempt, message, hasError, status, error, questions.length, mode]);
+  }, [
+    canAttempt,
+    limitMessage,
+    hasError,
+    status,
+    error,
+    questions.length,
+    mode,
+  ]);
+
+  // ============================================================================
+  // Quiz Access Check
+  // ============================================================================
+  useEffect(() => {
+    const checkQuizAccessStatus = async () => {
+      setIsCheckingLimits(true);
+      try {
+        const result = user
+          ? await checkQuizAccess("practice")
+          : await checkUnauthenticatedUserLimits("practice");
+
+        setCanAttempt(result.canAttempt);
+        if (!result.canAttempt) {
+          setLimitMessage(result.message);
+        }
+      } catch (error) {
+        setCanAttempt(false);
+        setLimitMessage("An error occurred while checking quiz access");
+      } finally {
+        setIsCheckingLimits(false);
+      }
+    };
+
+    if (!authLoading) {
+      checkQuizAccessStatus();
+    }
+  }, [user, authLoading]);
 
   // ============================================================================
   // Initialize quiz when component mounts
@@ -98,7 +137,9 @@ export function usePracticeQuiz() {
     // Reset and initialize
     resetQuiz();
     const timer = setTimeout(() => {
-      initializeQuiz(mode);
+      initializeQuiz(mode, {
+        questionsPerQuiz: Number(searchParams.get("count")) || 10,
+      });
     }, 50); // Small delay to ensure reset is processed
 
     // Cleanup on unmount
@@ -113,6 +154,7 @@ export function usePracticeQuiz() {
     isCheckingLimits,
     initializeQuiz,
     resetQuiz,
+    searchParams,
   ]);
 
   // ============================================================================
@@ -205,7 +247,7 @@ export function usePracticeQuiz() {
     // Auth/limits
     isAuthenticated: !!user,
     canAttempt,
-    limitMessage: message,
+    limitMessage,
     error,
   };
 }

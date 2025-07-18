@@ -48,7 +48,10 @@ export interface QuizState {
 
 export interface QuizActions {
   // Quiz initialization
-  initializeQuiz: (mode: QuizMode) => Promise<void>;
+  initializeQuiz: (
+    mode: QuizMode,
+    settings?: Partial<QuizState["settings"]>
+  ) => Promise<void>;
   resetQuiz: () => void;
 
   // Question navigation

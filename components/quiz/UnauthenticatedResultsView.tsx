@@ -11,13 +11,17 @@ import { useRouter } from "next/navigation";
 interface UnauthenticatedResultsViewProps {
   readonly score: number | null;
   readonly totalQuestions: number | null;
-  readonly quizType?: "standard" | "practice";
+  readonly quizType?: "standard" | "practice" | "timed";
+  readonly onClose?: () => void;
+  readonly onTryAgain?: () => void;
 }
 
 export function UnauthenticatedResultsView({
   score,
   totalQuestions,
   quizType = "standard",
+  onClose,
+  onTryAgain,
 }: UnauthenticatedResultsViewProps) {
   const router = useRouter();
 
@@ -31,6 +35,8 @@ export function UnauthenticatedResultsView({
       window.location.reload();
     }
   };
+
+  const handlePrimaryAction = onTryAgain || onClose;
 
   return (
     <Card className="w-full max-w-md text-center">
@@ -50,9 +56,11 @@ export function UnauthenticatedResultsView({
         </p>
       </CardContent>
       <CardFooter className="flex flex-col sm:flex-row gap-2">
-        <Button onClick={buttonAction} className="w-full sm:w-auto">
-          {buttonText}
-        </Button>
+        {handlePrimaryAction && (
+          <Button onClick={handlePrimaryAction} className="w-full sm:w-auto">
+            {buttonText}
+          </Button>
+        )}
         <Button
           variant="outline"
           onClick={() => router.push("/")}

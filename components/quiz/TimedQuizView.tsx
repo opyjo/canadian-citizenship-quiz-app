@@ -8,17 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import Timer from "@/components/timer";
-
-// Define a more specific type for the question object
-interface Question {
-  id: number;
-  question_text: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-  [key: string]: any;
-}
+import { Question } from "@/stores/quiz/types";
 
 interface TimedQuizViewProps {
   readonly state: {
@@ -38,11 +28,18 @@ interface TimedQuizViewProps {
     readonly handleEndQuiz: () => void;
     readonly finishQuiz: () => void;
   };
+  readonly uiFlags: {
+    readonly isSubmitting: boolean;
+  };
 }
 
-const TIME_LIMIT = 15 * 60; // 15 minutes in seconds
-
-export function TimedQuizView({ state, quiz, handlers }: TimedQuizViewProps) {
+export function TimedQuizView({
+  state,
+  quiz,
+  handlers,
+  uiFlags,
+}: TimedQuizViewProps) {
+  const { timeRemaining } = state;
   const {
     currentQuestion,
     selectedAnswers,
@@ -57,22 +54,40 @@ export function TimedQuizView({ state, quiz, handlers }: TimedQuizViewProps) {
     handleEndQuiz,
     finishQuiz,
   } = handlers;
+  const { isSubmitting } = uiFlags;
+
+  const isLastQuestion = currentQuestionIndex === questions.length - 1;
 
   if (!currentQuestion) {
+    // This can happen briefly while the quiz is being set up.
+    // A more specific loading indicator could be used here if needed.
     return null;
   }
 
+  const getOptionValue = (option: string): string => {
+    switch (option) {
+      case "a":
+        return currentQuestion.option_a;
+      case "b":
+        return currentQuestion.option_b;
+      case "c":
+        return currentQuestion.option_c;
+      case "d":
+        return currentQuestion.option_d;
+      default:
+        return "";
+    }
+  };
+
   return (
     <div className="max-w-3xl w-full space-y-6">
-      <div className="flex flex-col space-y-2">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-medium">
-            Question {currentQuestionIndex + 1} of {questions.length}
-          </h2>
-          <Timer initialTime={TIME_LIMIT} onTimeUp={finishQuiz} />
-        </div>
-        <Progress value={progress} className="h-2" />
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-medium">
+          Question {currentQuestionIndex + 1} of {questions.length}
+        </h2>
+        <Timer timeRemaining={timeRemaining} onTimeUp={finishQuiz} />
       </div>
+      <Progress value={progress} className="h-2" />
 
       <Card className="w-full">
         <CardHeader>
@@ -86,26 +101,25 @@ export function TimedQuizView({ state, quiz, handlers }: TimedQuizViewProps) {
               key={option}
               type="button"
               className={`w-full p-4 border rounded-lg text-left transition-colors ${
-                selectedAnswers[currentQuestionIndex] === option
+                selectedAnswers[currentQuestion.id] === option
                   ? "border-red-600 bg-red-50"
                   : "hover:bg-gray-50"
               }`}
               onClick={() => handleAnswerSelect(option)}
-              aria-pressed={selectedAnswers[currentQuestionIndex] === option}
+              aria-pressed={selectedAnswers[currentQuestion.id] === option}
+              disabled={isSubmitting}
             >
               <div className="flex items-start gap-3">
                 <div
                   className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
-                    selectedAnswers[currentQuestionIndex] === option
+                    selectedAnswers[currentQuestion.id] === option
                       ? "border-red-600 bg-red-600 text-white"
                       : "border-gray-300"
                   }`}
                 >
                   <span className="text-sm">{option.toUpperCase()}</span>
                 </div>
-                <span>
-                  {currentQuestion[`option_${option}` as keyof Question]}
-                </span>
+                <span>{getOptionValue(option)}</span>
               </div>
             </button>
           ))}
@@ -115,6 +129,7 @@ export function TimedQuizView({ state, quiz, handlers }: TimedQuizViewProps) {
             variant="destructive"
             onClick={handleEndQuiz}
             className="mr-auto"
+            disabled={isSubmitting}
           >
             End Quiz
           </Button>
@@ -122,15 +137,17 @@ export function TimedQuizView({ state, quiz, handlers }: TimedQuizViewProps) {
             <Button
               variant="outline"
               onClick={handlePrevious}
-              disabled={currentQuestionIndex === 0}
+              disabled={currentQuestionIndex === 0 || isSubmitting}
             >
               Previous
             </Button>
             <Button
-              onClick={handleNext}
-              disabled={!selectedAnswers[currentQuestionIndex]}
+              onClick={isLastQuestion ? finishQuiz : handleNext}
+              disabled={!selectedAnswers[currentQuestion.id] || isSubmitting}
             >
-              {currentQuestionIndex === questions.length - 1
+              {isSubmitting
+                ? "Submitting..."
+                : isLastQuestion
                 ? "Finish Quiz"
                 : "Next Question"}
             </Button>

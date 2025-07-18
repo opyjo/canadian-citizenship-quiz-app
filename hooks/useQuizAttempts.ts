@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
 import supabase from "@/lib/supabase-client";
 
-interface QuizAttempt {
+export interface QuizAttempt {
   id: number;
   user_id: string | null;
   score: number | null;

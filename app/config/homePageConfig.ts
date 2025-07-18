@@ -12,7 +12,6 @@ import {
   Award,
   TrendingUp,
 } from "lucide-react";
-import { type QuizMode } from "@/lib/quizLimits";
 
 export const chapters = [
   {
@@ -76,7 +75,7 @@ export const quizTypes = [
     description:
       "Take your time to answer questions at your own pace. Perfect for learning and reviewing concepts.",
     icon: FileText,
-    mode: "standard" as QuizMode,
+    mode: "standard",
     path: "/quiz",
     features: [
       "No time limit",
@@ -92,7 +91,7 @@ export const quizTypes = [
     description:
       "Simulate the real citizenship test with 20 questions in 30 minutes. Test your readiness!",
     icon: Timer,
-    mode: "timed" as QuizMode,
+    mode: "timed",
     path: "/quiz/timed",
     features: [
       "30-minute time limit",

@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -9,6 +10,20 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-}
+};
 
-export default nextConfig
+// Only use Sentry in production
+const config =
+  process.env.NODE_ENV === "production"
+    ? withSentryConfig(nextConfig, {
+        org: "opyjo-consulting-rp",
+        project: "javascript-nextjs",
+        silent: true,
+        widenClientFileUpload: true,
+        tunnelRoute: "/monitoring",
+        disableLogger: true,
+        automaticVercelMonitors: true,
+      })
+    : nextConfig;
+
+export default config;

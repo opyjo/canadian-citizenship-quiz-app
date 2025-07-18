@@ -25,8 +25,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import supabaseClient from "@/lib/supabase-client";
-import { checkAttemptLimits, type QuizMode } from "@/lib/quizLimits";
+import { checkQuizAccess } from "@/app/actions/check-quiz-access";
 import ConfirmationModal from "@/components/confirmation-modal";
 import {
   chapters,
@@ -34,10 +33,13 @@ import {
   stats,
   testimonials,
 } from "@/app/config/homePageConfig";
+import { useAuthStore } from "@/stores/auth/authStore";
+import { QuizMode } from "@/lib/quizlimits/constants";
+import { checkUnauthenticatedUserLimits } from "@/lib/quizlimits/helpers";
 
 export default function HomePage() {
   const router = useRouter();
-  const supabase = supabaseClient;
+  const user = useAuthStore((state) => state.user);
 
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
@@ -57,34 +59,22 @@ export default function HomePage() {
   });
 
   const handleStartQuiz = async (quizMode: QuizMode, quizPath: string) => {
-    const result = await checkAttemptLimits(quizMode, supabase);
+    const result = user
+      ? await checkQuizAccess(quizMode)
+      : await checkUnauthenticatedUserLimits(quizMode);
+    console.log(result);
 
     if (result.canAttempt) {
       router.push(quizPath);
     } else {
-      let confirmText = "OK";
-      let cancelText = "Cancel";
-      let onConfirmAction = () =>
-        setModalState((prev) => ({ ...prev, isOpen: false }));
-
-      if (!result.isLoggedIn) {
-        confirmText = "Sign Up";
-        onConfirmAction = () => router.push("/signup");
-        cancelText = "Later";
-      } else if (!result.isPaidUser) {
-        confirmText = "Upgrade Plan";
-        onConfirmAction = () => router.push("/pricing");
-        cancelText = "OK";
-      }
-
       setModalState({
         isOpen: true,
         title: "Quiz Limit Reached",
         message: result.message,
-        confirmText,
-        cancelText,
+        confirmText: result.isLoggedIn ? "Upgrade Plan" : "Sign Up",
+        cancelText: result.isLoggedIn ? "OK" : "Later",
         onConfirm: () => {
-          onConfirmAction();
+          router.push(result.isLoggedIn ? "/pricing" : "/signup");
           setModalState((prev) => ({ ...prev, isOpen: false }));
         },
         onClose: () => setModalState((prev) => ({ ...prev, isOpen: false })),

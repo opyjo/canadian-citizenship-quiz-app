@@ -37,7 +37,7 @@ const initialState: QuizState = {
     submittedAt: null, // Timestamp when quiz was submitted
   },
   settings: {
-    questionsPerQuiz: 10, // Number of questions per quiz
+    questionsPerQuiz: 20, // Number of questions per quiz
     timeLimit: 900, // Time limit in seconds (15 minutes)
   },
 };
@@ -56,12 +56,17 @@ export const useQuizStore = create<QuizStore>()(
       // Quiz Initialization
       // ============================================================================
 
-      initializeQuiz: async (mode: StoreQuizMode) => {
+      initializeQuiz: async (
+        mode: StoreQuizMode,
+        settings?: Partial<QuizState["settings"]>
+      ) => {
+        const state = get();
         try {
           // Set status to loading and update the mode
           set({ status: "loading", mode });
           const user = useAuthStore.getState().user;
-          const questionsPerQuiz = get().settings.questionsPerQuiz;
+          const newSettings = { ...state.settings, ...settings };
+          set({ settings: newSettings });
 
           let questions;
           let error;
@@ -78,7 +83,7 @@ export const useQuizStore = create<QuizStore>()(
             // For practice mode, use get_random_practice_questions
             const result = await supabase.rpc("get_random_practice_questions", {
               user_id_param: user?.id || null,
-              question_limit: questionsPerQuiz,
+              question_limit: newSettings.questionsPerQuiz,
               incorrect_only: false,
             });
             questions = result.data;
@@ -86,7 +91,7 @@ export const useQuizStore = create<QuizStore>()(
           } else {
             // For standard/timed mode, use get_random_questions
             const result = await supabase.rpc("get_random_questions", {
-              question_limit: questionsPerQuiz,
+              question_limit: newSettings.questionsPerQuiz,
             });
             questions = result.data;
             error = result.error;

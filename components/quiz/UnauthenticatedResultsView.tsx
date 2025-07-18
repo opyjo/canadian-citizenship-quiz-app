@@ -13,6 +13,7 @@ interface UnauthenticatedResultsViewProps {
   readonly totalQuestions: number | null;
   readonly quizType?: "standard" | "practice" | "timed";
   readonly onClose?: () => void;
+  readonly onTryAgain?: () => void;
 }
 
 export function UnauthenticatedResultsView({
@@ -20,6 +21,7 @@ export function UnauthenticatedResultsView({
   totalQuestions,
   quizType = "standard",
   onClose,
+  onTryAgain,
 }: UnauthenticatedResultsViewProps) {
   const router = useRouter();
 
@@ -34,7 +36,7 @@ export function UnauthenticatedResultsView({
     }
   };
 
-  const handlePrimaryAction = onClose || buttonAction;
+  const handlePrimaryAction = onTryAgain || onClose;
 
   return (
     <Card className="w-full max-w-md text-center">
@@ -54,9 +56,11 @@ export function UnauthenticatedResultsView({
         </p>
       </CardContent>
       <CardFooter className="flex flex-col sm:flex-row gap-2">
-        <Button onClick={handlePrimaryAction} className="w-full sm:w-auto">
-          {buttonText}
-        </Button>
+        {handlePrimaryAction && (
+          <Button onClick={handlePrimaryAction} className="w-full sm:w-auto">
+            {buttonText}
+          </Button>
+        )}
         <Button
           variant="outline"
           onClick={() => router.push("/")}

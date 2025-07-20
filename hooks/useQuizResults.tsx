@@ -15,13 +15,31 @@ interface QuizAttempt {
   practice_type: string | null;
   category?: string | null;
   created_at: string;
+  score?: number;
+  total_questions_in_attempt?: number;
 }
 
-// Simple: Just fetch the attempt metadata
+// Fast query: Just get the score data to fix race condition
+const fetchQuizScore = async (attemptId: string) => {
+  const { data, error } = await supabaseClient
+    .from("quiz_attempts")
+    .select("score, total_questions_in_attempt")
+    .eq("id", parseInt(attemptId, 10))
+    .single();
+
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Quiz attempt not found.");
+
+  return data;
+};
+
+// Full query: Get all attempt metadata
 const fetchQuizAttempt = async (attemptId: string): Promise<QuizAttempt> => {
   const { data, error } = await supabaseClient
     .from("quiz_attempts")
-    .select("*")
+    .select(
+      "id, user_answers, question_ids, is_timed, time_taken_seconds, is_practice, practice_type, created_at, score, total_questions_in_attempt"
+    )
     .eq("id", parseInt(attemptId, 10))
     .single();
 
@@ -32,7 +50,19 @@ const fetchQuizAttempt = async (attemptId: string): Promise<QuizAttempt> => {
 };
 
 export function useQuizResults(attemptId: string) {
-  // Step 1: Get attempt metadata
+  // Step 1: Fast query - Get just the score to fix race condition
+  const {
+    data: scoreData,
+    isLoading: isScoreLoading,
+    error: scoreError,
+  } = useQuery({
+    queryKey: ["quiz-score", attemptId],
+    queryFn: () => fetchQuizScore(attemptId),
+    enabled: !!attemptId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Step 2: Full query - Get all attempt metadata
   const {
     data: attempt,
     isLoading: isAttemptLoading,
@@ -44,7 +74,7 @@ export function useQuizResults(attemptId: string) {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Step 2: Get questions using our reusable hook
+  // Step 3: Get questions using our reusable hook
   const {
     data: questions = [],
     isLoading: isQuestionsLoading,
@@ -55,10 +85,11 @@ export function useQuizResults(attemptId: string) {
   );
 
   // Unified loading and error handling
-  const loading = isAttemptLoading ?? isQuestionsLoading;
+  // Score loading is prioritized to fix race condition
+  const loading = isScoreLoading || isAttemptLoading || isQuestionsLoading;
   const error =
-    attemptError || questionsError
-      ? String(attemptError ?? questionsError)
+    scoreError || attemptError || questionsError
+      ? String(scoreError ?? attemptError ?? questionsError)
       : null;
 
   // Extract data with defaults
@@ -71,28 +102,53 @@ export function useQuizResults(attemptId: string) {
 
   // Calculate results (memoized for performance)
   const calculatedValues = useMemo(() => {
-    const correctAnswersCount = questions.filter(
-      (q) => userAnswers[q.id]?.toUpperCase() === q.correct_option
-    ).length;
+    // Use the fast query score data first to avoid race conditions
+    const correctAnswersCount = scoreData?.score ?? attempt?.score ?? 0;
+    const totalQuestions =
+      scoreData?.total_questions_in_attempt ??
+      attempt?.total_questions_in_attempt ??
+      questions.length;
 
-    const totalQuestions = questions.length;
+    // Only recalculate if we don't have the stored values and questions are loaded
+    const shouldRecalculate =
+      !scoreData?.score && !attempt?.score && questions.length > 0;
+    const recalculatedCorrectAnswers = shouldRecalculate
+      ? questions.filter(
+          (q) => userAnswers[q.id]?.toUpperCase() === q.correct_option
+        ).length
+      : correctAnswersCount;
+
+    const finalCorrectAnswers = shouldRecalculate
+      ? recalculatedCorrectAnswers
+      : correctAnswersCount;
+    const finalTotalQuestions = totalQuestions || questions.length;
+
     const scorePercentage =
-      totalQuestions > 0
-        ? Math.round((correctAnswersCount / totalQuestions) * 100)
+      finalTotalQuestions > 0
+        ? Math.round((finalCorrectAnswers / finalTotalQuestions) * 100)
         : 0;
-    const passed = !isPractice && correctAnswersCount >= 15;
+    const passed = !isPractice && finalCorrectAnswers >= 15;
     const formattedTimeTaken = timeTaken
       ? `${Math.floor(timeTaken / 60)}m ${timeTaken % 60}s`
       : "Not recorded";
 
     return {
-      correctAnswersCount,
-      totalQuestions,
+      correctAnswersCount: finalCorrectAnswers,
+      totalQuestions: finalTotalQuestions,
       scorePercentage,
       passed,
       formattedTimeTaken,
     };
-  }, [questions, userAnswers, isPractice, timeTaken]);
+  }, [
+    scoreData?.score,
+    scoreData?.total_questions_in_attempt,
+    attempt?.score,
+    attempt?.total_questions_in_attempt,
+    questions,
+    userAnswers,
+    isPractice,
+    timeTaken,
+  ]);
 
   return {
     questions,

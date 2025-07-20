@@ -11,6 +11,7 @@ import {
   Target,
   Award,
   TrendingUp,
+  Sparkles,
 } from "lucide-react";
 
 export const chapters = [
@@ -130,6 +131,7 @@ export const stats = [
   { number: "95%", label: "Pass Rate", icon: TrendingUp },
   { number: "1,000+", label: "Practice Questions", icon: Target },
   { number: "7", label: "Study Chapters", icon: BookOpen },
+  { number: "24/7", label: "AI Assistance", icon: Sparkles },
 ];
 
 export const testimonials = [

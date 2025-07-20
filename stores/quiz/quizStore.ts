@@ -96,8 +96,6 @@ export const useQuizStore = create<QuizStore>()(
             questions = result.data;
             error = result.error;
           }
-
-          console.log("questions", questions);
           if (error) throw error;
 
           // Update the store with fetched questions and initialize quiz state

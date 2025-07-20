@@ -96,7 +96,7 @@ export default function UserNav() {
         ref={mobileRef}
         onKeyDown={handleKeyDown}
         className={clsx(
-          "lg:hidden absolute top-full right-0 w-80 bg-white border rounded-lg shadow-xl p-6 space-y-1 transform transition-all duration-200",
+          "lg:hidden absolute top-full right-0 w-80 bg-white border rounded-lg shadow-xl p-6 space-y-1 transform transition-all duration-200 z-[9999]",
           mobileOpen
             ? "opacity-100 translate-y-2 visible"
             : "opacity-0 -translate-y-4 invisible"

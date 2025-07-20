@@ -402,39 +402,6 @@ export default function HomePage() {
                 </div>
               </Card>
             </div>
-
-            {/* Quick Access Bar */}
-            <div className="mt-16 text-center">
-              <div className="inline-flex items-center gap-6 bg-white/80 backdrop-blur-md rounded-full px-8 py-4 border border-gray-200 shadow-lg">
-                <span className="text-gray-700 font-semibold">
-                  Quick Start:
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-all"
-                  asChild
-                >
-                  <Link href="/study-guide">Study Guide</Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-green-50 border-green-200 text-green-600 hover:bg-green-100 hover:text-green-700 transition-all"
-                  onClick={() => handleStartQuiz("practice", "/practice")}
-                >
-                  Practice
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:text-red-700 transition-all"
-                  onClick={() => handleStartQuiz("standard", "/quiz")}
-                >
-                  Quiz
-                </Button>
-              </div>
-            </div>
           </div>
         </div>
       </section>

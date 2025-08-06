@@ -81,20 +81,36 @@ export function TimedQuizView({
 
   return (
     <div className="max-w-3xl w-full space-y-6">
+      {/* Header for both Desktop and Mobile */}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-medium">
           Question {currentQuestionIndex + 1} of {questions.length}
         </h2>
+
+        {/* Timer, visible on both desktop and mobile */}
         <Timer timeRemaining={timeRemaining} onTimeUp={finishQuiz} />
       </div>
+
       <Progress value={progress} className="h-2" />
 
       <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="text-xl">
+        {/* Card Header with Question Title and End Quiz for Mobile */}
+        <CardHeader className="flex flex-row justify-between items-start">
+          <CardTitle className="text-xl md:text-2xl lg:text-3xl flex-1">
             {currentQuestion.question_text}
           </CardTitle>
+          {/* Show "End Quiz" button in header on screens smaller than md */}
+          <Button
+            variant="destructive"
+            onClick={handleEndQuiz}
+            className="md:hidden ml-4" // Hidden on medium screens and up
+            disabled={isSubmitting}
+            size="sm"
+          >
+            End Quiz
+          </Button>
         </CardHeader>
+
         <CardContent className="space-y-4">
           {["a", "b", "c", "d"].map((option) => (
             <button
@@ -124,26 +140,33 @@ export function TimedQuizView({
             </button>
           ))}
         </CardContent>
-        <CardFooter className="flex justify-between items-center">
+
+        {/* Card Footer with Desktop "End Quiz" and Navigation */}
+        <CardFooter className="flex flex-col md:flex-row md:justify-between items-center gap-4">
+          {/* Show "End Quiz" button in footer on md screens and up */}
           <Button
             variant="destructive"
             onClick={handleEndQuiz}
-            className="mr-auto"
+            className="hidden md:inline-flex mr-auto" // Hidden on small screens
             disabled={isSubmitting}
           >
             End Quiz
           </Button>
-          <div className="flex gap-2">
+
+          {/* Navigation buttons */}
+          <div className="flex w-full md:w-auto gap-2">
             <Button
               variant="outline"
               onClick={handlePrevious}
               disabled={currentQuestionIndex === 0 || isSubmitting}
+              className="flex-1 md:flex-none"
             >
               Previous
             </Button>
             <Button
               onClick={isLastQuestion ? finishQuiz : handleNext}
               disabled={!selectedAnswers[currentQuestion.id] || isSubmitting}
+              className="flex-1 md:flex-none"
             >
               {isSubmitting
                 ? "Submitting..."

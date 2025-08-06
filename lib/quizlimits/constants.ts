@@ -23,3 +23,7 @@ export const LOCAL_STORAGE_KEY = "quizAttemptCounts";
 
 // Which access levels are considered "paid" (unlimited attempts)
 export const PAID_ACCESS_LEVELS = ["lifetime", "subscribed_monthly"];
+
+export const DEFAULT_QUESTIONS_PER_QUIZ = 5;
+
+export const TIMED_QUIZ_DURATION = 30 * 60; // 15 minutes in seconds

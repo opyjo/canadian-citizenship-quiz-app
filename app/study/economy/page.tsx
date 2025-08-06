@@ -1,21 +1,31 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, DollarSign, TrendingUp, Globe, Factory } from "lucide-react"
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ArrowLeft,
+  DollarSign,
+  TrendingUp,
+  Globe,
+  Factory,
+} from "lucide-react";
 
 export default function EconomyPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-white">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
-          <Link href="/">
+          <Link href="/study-guide">
             <Button variant="outline" className="mb-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Study Guide
             </Button>
           </Link>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Canada's Economy</h1>
-          <p className="text-xl text-gray-600">A trading nation with diverse industries</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Canada's Economy
+          </h1>
+          <p className="text-xl text-gray-600">
+            A trading nation with diverse industries
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -28,25 +38,34 @@ export default function EconomyPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p>
-                  Canada has always been a trading nation and commerce remains the engine of economic growth. As
-                  Canadians, we could not maintain our standard of living without engaging in trade with other nations.
+                  Canada has always been a trading nation and commerce remains
+                  the engine of economic growth. As Canadians, we could not
+                  maintain our standard of living without engaging in trade with
+                  other nations.
                 </p>
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h4 className="font-semibold mb-2">Key Trade Facts:</h4>
                   <ul className="space-y-1">
                     <li>• Free trade with United States (1988)</li>
-                    <li>• NAFTA with Mexico (1994) - over 444 million people</li>
+                    <li>
+                      • NAFTA with Mexico (1994) - over 444 million people
+                    </li>
                     <li>• Over $1 trillion in merchandise trade (2008)</li>
                     <li>• One of the ten largest economies in the world</li>
-                    <li>• Part of G8 group of leading industrialized countries</li>
+                    <li>
+                      • Part of G8 group of leading industrialized countries
+                    </li>
                   </ul>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg">
-                  <h4 className="font-semibold mb-2">Relationship with United States:</h4>
+                  <h4 className="font-semibold mb-2">
+                    Relationship with United States:
+                  </h4>
                   <p className="text-sm">
-                    Each country is the other's largest trading partner. Over three-quarters of Canadian exports go to
-                    the USA. We have the biggest bilateral trading relationship in the world with integrated supply
-                    chains.
+                    Each country is the other's largest trading partner. Over
+                    three-quarters of Canadian exports go to the USA. We have
+                    the biggest bilateral trading relationship in the world with
+                    integrated supply chains.
                   </p>
                 </div>
               </CardContent>
@@ -63,7 +82,9 @@ export default function EconomyPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-yellow-50 p-4 rounded-lg">
                     <h4 className="font-semibold">Service Industries</h4>
-                    <p className="text-sm mb-2">More than 75% of working Canadians</p>
+                    <p className="text-sm mb-2">
+                      More than 75% of working Canadians
+                    </p>
                     <ul className="text-xs space-y-1">
                       <li>• Transportation</li>
                       <li>• Education</li>
@@ -78,7 +99,9 @@ export default function EconomyPage() {
                   </div>
                   <div className="bg-orange-50 p-4 rounded-lg">
                     <h4 className="font-semibold">Manufacturing Industries</h4>
-                    <p className="text-sm mb-2">Make products to sell in Canada and worldwide</p>
+                    <p className="text-sm mb-2">
+                      Make products to sell in Canada and worldwide
+                    </p>
                     <ul className="text-xs space-y-1">
                       <li>• Paper</li>
                       <li>• High technology equipment</li>
@@ -92,7 +115,9 @@ export default function EconomyPage() {
                   </div>
                   <div className="bg-red-50 p-4 rounded-lg">
                     <h4 className="font-semibold">Natural Resources</h4>
-                    <p className="text-sm mb-2">Important part of history and development</p>
+                    <p className="text-sm mb-2">
+                      Important part of history and development
+                    </p>
                     <ul className="text-xs space-y-1">
                       <li>• Forestry</li>
                       <li>• Fishing</li>
@@ -115,35 +140,45 @@ export default function EconomyPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p>
-                  Postwar Canada enjoyed record prosperity. The discovery of oil in Alberta in 1947 began Canada's
-                  modern energy industry. In 1951, for the first time, a majority of Canadians could afford adequate
-                  food, shelter and clothing.
+                  Postwar Canada enjoyed record prosperity. The discovery of oil
+                  in Alberta in 1947 began Canada's modern energy industry. In
+                  1951, for the first time, a majority of Canadians could afford
+                  adequate food, shelter and clothing.
                 </p>
                 <div className="bg-purple-50 p-4 rounded-lg">
                   <h4 className="font-semibold mb-2">Social Safety Net:</h4>
                   <ul className="space-y-1 text-sm">
                     <li>
-                      • <strong>Canada Health Act</strong> - ensures common elements and basic standard of coverage
+                      • <strong>Canada Health Act</strong> - ensures common
+                      elements and basic standard of coverage
                     </li>
                     <li>
-                      • <strong>Employment Insurance</strong> - introduced 1940 (formerly unemployment insurance)
+                      • <strong>Employment Insurance</strong> - introduced 1940
+                      (formerly unemployment insurance)
                     </li>
                     <li>
-                      • <strong>Old Age Security</strong> - devised as early as 1927
+                      • <strong>Old Age Security</strong> - devised as early as
+                      1927
                     </li>
                     <li>
-                      • <strong>Canada and Quebec Pension Plans</strong> - established 1965
+                      • <strong>Canada and Quebec Pension Plans</strong> -
+                      established 1965
                     </li>
                     <li>
-                      • <strong>Publicly funded education</strong> - provided by provinces and territories
+                      • <strong>Publicly funded education</strong> - provided by
+                      provinces and territories
                     </li>
                   </ul>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg">
-                  <h4 className="font-semibold mb-2">Financial Institutions:</h4>
+                  <h4 className="font-semibold mb-2">
+                    Financial Institutions:
+                  </h4>
                   <p className="text-sm">
-                    First financial institutions opened in late 18th and early 19th centuries. Montreal Stock Exchange
-                    opened in 1832. Bank of Canada created in 1934 to manage money supply and bring financial stability.
+                    First financial institutions opened in late 18th and early
+                    19th centuries. Montreal Stock Exchange opened in 1832. Bank
+                    of Canada created in 1934 to manage money supply and bring
+                    financial stability.
                   </p>
                 </div>
               </CardContent>
@@ -205,12 +240,15 @@ export default function EconomyPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p>
-                  Canadian advances in science and technology are world renowned. Since 1989, the Canadian Space Agency
-                  and Canadian astronauts have participated in space exploration, often using the Canadian-designed
-                  Canadarm.
+                  Canadian advances in science and technology are world
+                  renowned. Since 1989, the Canadian Space Agency and Canadian
+                  astronauts have participated in space exploration, often using
+                  the Canadian-designed Canadarm.
                 </p>
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-semibold mb-2">Famous Canadian Inventions:</h4>
+                  <h4 className="font-semibold mb-2">
+                    Famous Canadian Inventions:
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                     <div>• Telephone (Alexander Graham Bell)</div>
                     <div>• Snowmobile (Joseph-Armand Bombardier)</div>
@@ -320,12 +358,14 @@ export default function EconomyPage() {
                 </Button>
               </Link>
               <Link href="/study/symbols" className="flex-1">
-                <Button className="w-full bg-orange-600 hover:bg-orange-700">Next: Symbols</Button>
+                <Button className="w-full bg-orange-600 hover:bg-orange-700">
+                  Next: Symbols
+                </Button>
               </Link>
             </div>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

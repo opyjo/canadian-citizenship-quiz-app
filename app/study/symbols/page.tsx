@@ -8,7 +8,7 @@ export default function SymbolsPage() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
-          <Link href="/">
+          <Link href="/study-guide">
             <Button variant="outline" className="mb-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Study Guide

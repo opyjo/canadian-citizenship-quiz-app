@@ -9,23 +9,37 @@ interface TimerProps {
 }
 
 export default function Timer({ timeRemaining, onTimeUp }: TimerProps) {
+  const [timeLeft, setTimeLeft] = useState(timeRemaining);
   const [isWarning, setIsWarning] = useState(false);
 
   useEffect(() => {
-    if (timeRemaining <= 0) {
+    setTimeLeft(timeRemaining);
+  }, [timeRemaining]);
+
+  useEffect(() => {
+    if (timeLeft <= 0) {
       onTimeUp();
       return;
     }
 
-    // Set warning when less than 1 minute remains
-    if (timeRemaining <= 60 && !isWarning) {
+    const intervalId = setInterval(() => {
+      setTimeLeft((prevTime) => prevTime - 1);
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [timeLeft, onTimeUp]);
+
+  useEffect(() => {
+    if (timeLeft <= 60 && !isWarning) {
       setIsWarning(true);
+    } else if (timeLeft > 60 && isWarning) {
+      setIsWarning(false);
     }
-  }, [timeRemaining, onTimeUp, isWarning]);
+  }, [timeLeft, isWarning]);
 
   // Format time as MM:SS
-  const minutes = Math.floor(timeRemaining / 60);
-  const seconds = timeRemaining % 60;
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
   const formattedTime = `${minutes.toString().padStart(2, "0")}:${seconds
     .toString()
     .padStart(2, "0")}`;

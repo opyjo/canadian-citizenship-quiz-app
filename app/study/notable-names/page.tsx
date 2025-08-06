@@ -1,24 +1,36 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Users, Crown, Lightbulb, Palette, Trophy, Sword } from "lucide-react"
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ArrowLeft,
+  Users,
+  Crown,
+  Lightbulb,
+  Palette,
+  Trophy,
+  Sword,
+} from "lucide-react";
 
 export default function NotableNamesPage() {
   const historicalFigures = [
     {
       name: "John Cabot",
-      description: "Italian immigrant to England, first to map Canada's Atlantic shore (1497)",
-      significance: "Set foot on Newfoundland, claimed New Founde Land for England",
+      description:
+        "Italian immigrant to England, first to map Canada's Atlantic shore (1497)",
+      significance:
+        "Set foot on Newfoundland, claimed New Founde Land for England",
     },
     {
       name: "Jacques Cartier",
       description: "French explorer who made three voyages (1534-1542)",
-      significance: "First European to explore St. Lawrence River, heard word 'kanata'",
+      significance:
+        "First European to explore St. Lawrence River, heard word 'kanata'",
     },
     {
       name: "Samuel de Champlain",
       description: "French explorer and founder of Quebec City (1608)",
-      significance: "Built fortress at Quebec City, allied with Algonquin and Huron",
+      significance:
+        "Built fortress at Quebec City, allied with Algonquin and Huron",
     },
     {
       name: "Count Frontenac",
@@ -33,29 +45,35 @@ export default function NotableNamesPage() {
     {
       name: "Chief Tecumseh",
       description: "Shawnee leader who supported British in War of 1812",
-      significance: "Led First Nations in Canada's defence against American invasion",
+      significance:
+        "Led First Nations in Canada's defence against American invasion",
     },
     {
       name: "Laura Secord",
-      description: "Pioneer wife and mother who warned of American attack (1813)",
-      significance: "Made dangerous 19-mile journey to warn Lieutenant FitzGibbon",
+      description:
+        "Pioneer wife and mother who warned of American attack (1813)",
+      significance:
+        "Made dangerous 19-mile journey to warn Lieutenant FitzGibbon",
     },
     {
       name: "Louis Riel",
       description: "Métis leader who led armed uprisings (1869, 1885)",
-      significance: "Defender of Métis rights, father of Manitoba, executed for treason",
+      significance:
+        "Defender of Métis rights, father of Manitoba, executed for treason",
     },
     {
       name: "Sir John A. Macdonald",
       description: "Canada's first Prime Minister (1867-1873, 1878-1891)",
-      significance: "Father of Confederation, portrait on $10 bill, January 11 is his day",
+      significance:
+        "Father of Confederation, portrait on $10 bill, January 11 is his day",
     },
     {
       name: "Sir George-Étienne Cartier",
       description: "Key architect of Confederation from Quebec",
-      significance: "Led Quebec into Confederation, helped negotiate western expansion",
+      significance:
+        "Led Quebec into Confederation, helped negotiate western expansion",
     },
-  ]
+  ];
 
   const politicalLeaders = [
     {
@@ -66,7 +84,8 @@ export default function NotableNamesPage() {
     {
       name: "Robert Baldwin",
       description: "Reformer who worked toward responsible government",
-      significance: "Worked with La Fontaine to establish responsible government",
+      significance:
+        "Worked with La Fontaine to establish responsible government",
     },
     {
       name: "Joseph Howe",
@@ -88,7 +107,7 @@ export default function NotableNamesPage() {
       description: "Prime Minister during WWI",
       significance: "Gave women the right to vote in federal elections (1917)",
     },
-  ]
+  ];
 
   const militaryHeroes = [
     {
@@ -126,7 +145,7 @@ export default function NotableNamesPage() {
       description: "Captain from Quebec",
       significance: "Earned Victoria Cross at Casa Berardi, Italy (1943)",
     },
-  ]
+  ];
 
   const inventorsScientists = [
     {
@@ -174,7 +193,7 @@ export default function NotableNamesPage() {
       description: "Co-founders of Research in Motion (RIM)",
       significance: "Invented the BlackBerry wireless device",
     },
-  ]
+  ];
 
   const artistsCultural = [
     {
@@ -227,7 +246,7 @@ export default function NotableNamesPage() {
       description: "Novelist",
       significance: "Significant Canadian literary figure",
     },
-  ]
+  ];
 
   const athletes = [
     {
@@ -238,7 +257,8 @@ export default function NotableNamesPage() {
     {
       name: "Rick Hansen",
       description: "British Columbian wheelchair athlete",
-      significance: "Circled globe in wheelchair (1985) for spinal cord research",
+      significance:
+        "Circled globe in wheelchair (1985) for spinal cord research",
     },
     {
       name: "Wayne Gretzky",
@@ -248,12 +268,14 @@ export default function NotableNamesPage() {
     {
       name: "Donovan Bailey",
       description: "Sprinter",
-      significance: "World record sprinter, double Olympic gold medallist (1996)",
+      significance:
+        "World record sprinter, double Olympic gold medallist (1996)",
     },
     {
       name: "Chantal Petitclerc",
       description: "Wheelchair racer",
-      significance: "World champion wheelchair racer, Paralympic gold medallist",
+      significance:
+        "World champion wheelchair racer, Paralympic gold medallist",
     },
     {
       name: "Mark Tewksbury",
@@ -280,7 +302,7 @@ export default function NotableNamesPage() {
       description: "Canadian physical educator",
       significance: "Invented basketball in 1891",
     },
-  ]
+  ];
 
   const governorsGeneral = [
     {
@@ -308,20 +330,24 @@ export default function NotableNamesPage() {
       description: "28th Governor General",
       significance: "Governor General since Confederation",
     },
-  ]
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
-          <Link href="/">
+          <Link href="/study-guide">
             <Button variant="outline" className="mb-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Study Guide
             </Button>
           </Link>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Notable Names</h1>
-          <p className="text-xl text-gray-600">Important Canadians you should know for the citizenship test</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Notable Names
+          </h1>
+          <p className="text-xl text-gray-600">
+            Important Canadians you should know for the citizenship test
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -338,8 +364,12 @@ export default function NotableNamesPage() {
                   {historicalFigures.map((person, index) => (
                     <div key={index} className="bg-blue-50 p-4 rounded-lg">
                       <h4 className="font-semibold text-lg">{person.name}</h4>
-                      <p className="text-sm text-gray-700 mb-1">{person.description}</p>
-                      <p className="text-xs text-blue-700 font-medium">{person.significance}</p>
+                      <p className="text-sm text-gray-700 mb-1">
+                        {person.description}
+                      </p>
+                      <p className="text-xs text-blue-700 font-medium">
+                        {person.significance}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -358,8 +388,12 @@ export default function NotableNamesPage() {
                   {politicalLeaders.map((person, index) => (
                     <div key={index} className="bg-purple-50 p-4 rounded-lg">
                       <h4 className="font-semibold text-lg">{person.name}</h4>
-                      <p className="text-sm text-gray-700 mb-1">{person.description}</p>
-                      <p className="text-xs text-purple-700 font-medium">{person.significance}</p>
+                      <p className="text-sm text-gray-700 mb-1">
+                        {person.description}
+                      </p>
+                      <p className="text-xs text-purple-700 font-medium">
+                        {person.significance}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -378,8 +412,12 @@ export default function NotableNamesPage() {
                   {militaryHeroes.map((person, index) => (
                     <div key={index} className="bg-red-50 p-4 rounded-lg">
                       <h4 className="font-semibold text-lg">{person.name}</h4>
-                      <p className="text-sm text-gray-700 mb-1">{person.description}</p>
-                      <p className="text-xs text-red-700 font-medium">{person.significance}</p>
+                      <p className="text-sm text-gray-700 mb-1">
+                        {person.description}
+                      </p>
+                      <p className="text-xs text-red-700 font-medium">
+                        {person.significance}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -398,8 +436,12 @@ export default function NotableNamesPage() {
                   {inventorsScientists.map((person, index) => (
                     <div key={index} className="bg-green-50 p-4 rounded-lg">
                       <h4 className="font-semibold text-lg">{person.name}</h4>
-                      <p className="text-sm text-gray-700 mb-1">{person.description}</p>
-                      <p className="text-xs text-green-700 font-medium">{person.significance}</p>
+                      <p className="text-sm text-gray-700 mb-1">
+                        {person.description}
+                      </p>
+                      <p className="text-xs text-green-700 font-medium">
+                        {person.significance}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -418,8 +460,12 @@ export default function NotableNamesPage() {
                   {artistsCultural.map((person, index) => (
                     <div key={index} className="bg-orange-50 p-4 rounded-lg">
                       <h4 className="font-semibold text-lg">{person.name}</h4>
-                      <p className="text-sm text-gray-700 mb-1">{person.description}</p>
-                      <p className="text-xs text-orange-700 font-medium">{person.significance}</p>
+                      <p className="text-sm text-gray-700 mb-1">
+                        {person.description}
+                      </p>
+                      <p className="text-xs text-orange-700 font-medium">
+                        {person.significance}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -438,8 +484,12 @@ export default function NotableNamesPage() {
                   {athletes.map((person, index) => (
                     <div key={index} className="bg-yellow-50 p-4 rounded-lg">
                       <h4 className="font-semibold text-lg">{person.name}</h4>
-                      <p className="text-sm text-gray-700 mb-1">{person.description}</p>
-                      <p className="text-xs text-yellow-700 font-medium">{person.significance}</p>
+                      <p className="text-sm text-gray-700 mb-1">
+                        {person.description}
+                      </p>
+                      <p className="text-xs text-yellow-700 font-medium">
+                        {person.significance}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -455,8 +505,12 @@ export default function NotableNamesPage() {
                   {governorsGeneral.map((person, index) => (
                     <div key={index} className="bg-gray-50 p-4 rounded-lg">
                       <h4 className="font-semibold text-lg">{person.name}</h4>
-                      <p className="text-sm text-gray-700 mb-1">{person.description}</p>
-                      <p className="text-xs text-gray-700 font-medium">{person.significance}</p>
+                      <p className="text-sm text-gray-700 mb-1">
+                        {person.description}
+                      </p>
+                      <p className="text-xs text-gray-700 font-medium">
+                        {person.significance}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -472,17 +526,20 @@ export default function NotableNamesPage() {
               <CardContent>
                 <div className="space-y-3 text-sm">
                   <div className="bg-blue-50 p-3 rounded">
-                    <strong>Focus on Key Facts:</strong> Remember what each person is famous for and when they lived.
+                    <strong>Focus on Key Facts:</strong> Remember what each
+                    person is famous for and when they lived.
                   </div>
                   <div className="bg-green-50 p-3 rounded">
-                    <strong>Group by Category:</strong> Study similar figures together (explorers, Prime Ministers,
-                    etc.).
+                    <strong>Group by Category:</strong> Study similar figures
+                    together (explorers, Prime Ministers, etc.).
                   </div>
                   <div className="bg-yellow-50 p-3 rounded">
-                    <strong>Connect to Events:</strong> Link people to major historical events and dates.
+                    <strong>Connect to Events:</strong> Link people to major
+                    historical events and dates.
                   </div>
                   <div className="bg-purple-50 p-3 rounded">
-                    <strong>Remember Firsts:</strong> Many are notable for being "first" to do something.
+                    <strong>Remember Firsts:</strong> Many are notable for being
+                    "first" to do something.
                   </div>
                 </div>
               </CardContent>
@@ -498,7 +555,8 @@ export default function NotableNamesPage() {
                     <strong>First PM:</strong> Sir John A. Macdonald
                   </div>
                   <div>
-                    <strong>First French-Canadian PM:</strong> Sir Wilfrid Laurier
+                    <strong>First French-Canadian PM:</strong> Sir Wilfrid
+                    Laurier
                   </div>
                   <div>
                     <strong>First to map Atlantic:</strong> John Cabot
@@ -551,12 +609,14 @@ export default function NotableNamesPage() {
                 </Button>
               </Link>
               <Link href="/" className="flex-1">
-                <Button className="w-full bg-indigo-600 hover:bg-indigo-700">Back to Home</Button>
+                <Button className="w-full bg-indigo-600 hover:bg-indigo-700">
+                  Back to Home
+                </Button>
               </Link>
             </div>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

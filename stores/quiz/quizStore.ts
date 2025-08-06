@@ -4,7 +4,11 @@ import { createClient } from "@supabase/supabase-js";
 import { QuizStore, QuizState, QuizMode as StoreQuizMode } from "./types";
 import { useAuthStore } from "../auth/authStore";
 import { submitQuizAttempt } from "@/app/actions/submit-quiz-attempt";
-import { QuizMode as ServerQuizMode } from "@/lib/quizlimits/constants";
+import {
+  QuizMode as ServerQuizMode,
+  DEFAULT_QUESTIONS_PER_QUIZ,
+  TIMED_QUIZ_DURATION,
+} from "@/lib/quizlimits/constants";
 
 // ============================================================================
 // Supabase Client Initialization
@@ -37,8 +41,8 @@ const initialState: QuizState = {
     submittedAt: null, // Timestamp when quiz was submitted
   },
   settings: {
-    questionsPerQuiz: 20, // Number of questions per quiz
-    timeLimit: 900, // Time limit in seconds (15 minutes)
+    questionsPerQuiz: DEFAULT_QUESTIONS_PER_QUIZ, // Number of questions per quiz
+    timeLimit: TIMED_QUIZ_DURATION, // Time limit in seconds (15 minutes)
   },
 };
 

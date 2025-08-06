@@ -179,7 +179,7 @@ export default function HomePage() {
 
             {/* Stats */}
             <section
-              className="grid grid-cols-2 lg:grid-cols-3 gap-6"
+              className="grid grid-cols-2 lg:grid-cols-4 gap-6"
               aria-labelledby="stats-heading"
             >
               <h2 id="stats-heading" className="sr-only">

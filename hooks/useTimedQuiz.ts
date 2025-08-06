@@ -2,14 +2,21 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore, useQuizStore } from "@/stores";
-import { QuizMode } from "@/lib/quizlimits/constants";
+import { QuizMode, TIMED_QUIZ_DURATION } from "@/lib/quizlimits/constants";
+import { checkQuizAccess } from "@/app/actions/check-quiz-access";
+import { checkUnauthenticatedUserLimits } from "@/lib/quizlimits/helpers";
 
-const TIME_LIMIT = 15 * 60; // 15 minutes in seconds
+const TIME_LIMIT = TIMED_QUIZ_DURATION; // 15 minutes in seconds
 
 export function useTimedQuiz() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const authLoading = useAuthStore((state) => state.isLoading);
+
+  // Quiz Access State
+  const [canAttempt, setCanAttempt] = useState(false);
+  const [limitMessage, setLimitMessage] = useState("");
+  const [isCheckingLimits, setIsCheckingLimits] = useState(true);
 
   // Quiz state - destructure all needed values
   const {
@@ -46,7 +53,16 @@ export function useTimedQuiz() {
   const isQuizActive = status === "active" && questions.length > 0;
   const hasError = status === "error";
   const isCompleted = status === "completed";
-  const isLoading = authLoading || status === "loading";
+  const isLoading = useMemo(() => {
+    return (
+      status === "loading" ||
+      status === "submitting" ||
+      (status === "completed" && !showUnauthResults) || // Prevents flicker
+      authLoading ||
+      isCheckingLimits ||
+      status === "idle"
+    );
+  }, [status, showUnauthResults, authLoading, isCheckingLimits]);
 
   // Calculate time remaining
   const timeRemaining = useMemo(() => {
@@ -57,37 +73,83 @@ export function useTimedQuiz() {
 
   // Derive loading message
   const loadingMessage = useMemo(() => {
-    if (authLoading) return "Authenticating...";
+    if (authLoading || isCheckingLimits) return "Checking access...";
+    if (status === "idle") return "Preparing your quiz...";
     if (status === "loading") return "Loading questions...";
     if (status === "submitting") return "Submitting results...";
+    if (status === "completed" && !showUnauthResults)
+      return "Finalizing results...";
     return null;
-  }, [authLoading, status]);
+  }, [authLoading, isCheckingLimits, status, showUnauthResults]);
 
   // Derive feedback message
   const feedbackMessage = useMemo(() => {
+    if (!canAttempt) {
+      return limitMessage;
+    }
     if (hasError) return error || "An error occurred";
     if (status === "active" && questions.length === 0) {
       return "No questions available for this quiz.";
     }
     return null;
-  }, [hasError, status, error, questions.length]);
+  }, [canAttempt, limitMessage, hasError, status, error, questions.length]);
+
+  // ============================================================================
+  // Quiz Access Check
+  // ============================================================================
+  useEffect(() => {
+    const checkQuizAccessStatus = async () => {
+      setIsCheckingLimits(true);
+      try {
+        const result = user
+          ? await checkQuizAccess("timed")
+          : await checkUnauthenticatedUserLimits("timed");
+        setCanAttempt(result.canAttempt);
+        if (!result.canAttempt) {
+          setLimitMessage(result.message);
+        }
+      } catch (error) {
+        setCanAttempt(false);
+        setLimitMessage("An error occurred while checking quiz access");
+      } finally {
+        setIsCheckingLimits(false);
+      }
+    };
+
+    if (!authLoading) {
+      checkQuizAccessStatus();
+    }
+  }, [user, authLoading]);
 
   // ============================================================================
   // Initialize quiz when component mounts
   // ============================================================================
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || isCheckingLimits) return;
+    if (!canAttempt) return;
 
     // Initialize timed quiz and start timer
-    initializeQuiz("timed" as QuizMode);
-    startTimer();
+    resetQuiz();
+    const timerId = setTimeout(() => {
+      initializeQuiz("timed" as QuizMode);
+      startTimer();
+    }, 50);
 
     // Cleanup on unmount
     return () => {
+      clearTimeout(timerId);
       stopTimer();
       resetQuiz();
     };
-  }, [authLoading, initializeQuiz, resetQuiz, startTimer, stopTimer]);
+  }, [
+    canAttempt,
+    authLoading,
+    isCheckingLimits,
+    initializeQuiz,
+    resetQuiz,
+    startTimer,
+    stopTimer,
+  ]);
 
   // ============================================================================
   // Handle Quiz completion
@@ -176,6 +238,7 @@ export function useTimedQuiz() {
     isQuizActive,
     showUnauthResults,
     hasError,
+    isCompleted,
 
     // Messages
     loadingMessage,
@@ -207,6 +270,8 @@ export function useTimedQuiz() {
 
     // Auth/limits
     isAuthenticated: !!user,
+    canAttempt,
+    limitMessage,
     error,
   };
 }

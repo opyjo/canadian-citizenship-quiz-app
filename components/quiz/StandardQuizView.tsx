@@ -79,7 +79,16 @@ export function StandardQuizView({
         <h2 className="text-xl font-medium">
           Question {currentQuestionIndex + 1} of {questions.length}
         </h2>
-        <span className="text-sm text-muted-foreground">
+        <Button
+          variant="destructive"
+          onClick={handleEndQuiz}
+          className="md:hidden"
+          disabled={isSubmitting}
+          size="sm"
+        >
+          End Quiz
+        </Button>
+        <span className="hidden md:inline-flex text-sm text-muted-foreground">
           {selectedAnswers[currentQuestion.id] ? "Answered" : "Not answered"}
         </span>
       </div>
@@ -124,26 +133,28 @@ export function StandardQuizView({
             </div>
           ))}
         </CardContent>
-        <CardFooter className="flex justify-between items-center">
+        <CardFooter className="flex flex-col md:flex-row md:justify-between items-center gap-4">
           <Button
             variant="destructive"
             onClick={handleEndQuiz}
-            className="mr-auto"
+            className="hidden md:inline-flex mr-auto" // Hidden on small screens
             disabled={isSubmitting}
           >
             End Quiz
           </Button>
-          <div className="flex gap-2">
+          <div className="flex w-full md:w-auto gap-2">
             <Button
               variant="outline"
               onClick={handlePrevious}
               disabled={currentQuestionIndex === 0 || isSubmitting}
+              className="flex-1 md:flex-none"
             >
               Previous
             </Button>
             <Button
               onClick={isLastQuestion ? finishQuiz : handleNext}
               disabled={!selectedAnswers[currentQuestion.id] || isSubmitting}
+              className="flex-1 md:flex-none"
             >
               {isSubmitting
                 ? "Submitting..."

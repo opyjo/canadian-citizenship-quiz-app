@@ -19,9 +19,8 @@ import { useAuthStore } from "@/stores/auth/authStore";
 import { useIncorrectQuestionsCount } from "@/hooks/useIncorrectQuestionsCount";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
-import { checkQuizAccess } from "@/app/actions/check-quiz-access";
-import { checkUnauthenticatedUserLimits } from "@/lib/quizlimits/helpers";
 import supabaseClient from "@/lib/supabase-client";
+import { handleStartQuiz as handleStartQuizHelper } from "@/app/utils/quiz-navigation";
 
 export default function PracticePage() {
   const user = useAuthStore((state) => state.user);
@@ -45,19 +44,17 @@ export default function PracticePage() {
   });
 
   const handleStartQuizFlow = async (quizMode: QuizMode, quizPath: string) => {
-    const result = user
-      ? await checkQuizAccess(quizMode)
-      : await checkUnauthenticatedUserLimits(quizMode);
-
-    if (result.canAttempt) {
-      router.push(quizPath);
-    } else {
-      setLimitModal({
-        isOpen: true,
-        message: result.message,
-        isLoggedIn: !!user,
-      });
-    }
+    await handleStartQuizHelper(quizMode, quizPath, {
+      router,
+      user,
+      onShowModal: (modalConfig) => {
+        setLimitModal({
+          isOpen: true,
+          message: modalConfig.message,
+          isLoggedIn: !!user,
+        });
+      },
+    });
   };
 
   const startQuickPractice = (count: number) => {

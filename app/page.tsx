@@ -25,7 +25,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { checkQuizAccess } from "@/app/actions/check-quiz-access";
 import ConfirmationModal from "@/components/confirmation-modal";
 import {
   chapters,
@@ -35,7 +34,7 @@ import {
 } from "@/app/config/homePageConfig";
 import { useAuthStore } from "@/stores/auth/authStore";
 import { QuizMode } from "@/lib/quizlimits/constants";
-import { checkUnauthenticatedUserLimits } from "@/lib/quizlimits/helpers";
+import { handleStartQuiz as handleStartQuizHelper } from "@/app/utils/quiz-navigation";
 
 export default function HomePage() {
   const router = useRouter();
@@ -59,27 +58,24 @@ export default function HomePage() {
   });
 
   const handleStartQuiz = async (quizMode: QuizMode, quizPath: string) => {
-    const result = user
-      ? await checkQuizAccess(quizMode)
-      : await checkUnauthenticatedUserLimits(quizMode);
-    console.log(result);
-
-    if (result.canAttempt) {
-      router.push(quizPath);
-    } else {
-      setModalState({
-        isOpen: true,
-        title: "Quiz Limit Reached",
-        message: result.message,
-        confirmText: result.isLoggedIn ? "Upgrade Plan" : "Sign Up",
-        cancelText: result.isLoggedIn ? "OK" : "Later",
-        onConfirm: () => {
-          router.push(result.isLoggedIn ? "/pricing" : "/signup");
-          setModalState((prev) => ({ ...prev, isOpen: false }));
-        },
-        onClose: () => setModalState((prev) => ({ ...prev, isOpen: false })),
-      });
-    }
+    await handleStartQuizHelper(quizMode, quizPath, {
+      router,
+      user,
+      onShowModal: (modalConfig) => {
+        setModalState({
+          isOpen: true,
+          title: modalConfig.title,
+          message: modalConfig.message,
+          confirmText: modalConfig.confirmText,
+          cancelText: modalConfig.cancelText,
+          onConfirm: () => {
+            modalConfig.onConfirm();
+            setModalState((prev) => ({ ...prev, isOpen: false }));
+          },
+          onClose: () => setModalState((prev) => ({ ...prev, isOpen: false })),
+        });
+      },
+    });
   };
 
   return (

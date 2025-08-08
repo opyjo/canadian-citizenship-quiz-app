@@ -223,7 +223,7 @@ export default function RootLayout({
                     <ul className="space-y-2 text-gray-300">
                       <li>
                         <a
-                          href="/quiz/standard"
+                          href="/quiz"
                           className="hover:text-white transition-colors"
                         >
                           Standard Quiz

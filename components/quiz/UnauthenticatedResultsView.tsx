@@ -28,13 +28,6 @@ export function UnauthenticatedResultsView({
   const isPractice = quizType === "practice";
   const title = isPractice ? "Practice Finished!" : "Quiz Finished!";
   const buttonText = isPractice ? "Try Another Practice" : "Try Another Quiz";
-  const buttonAction = () => {
-    if (isPractice) {
-      router.push("/practice");
-    } else {
-      window.location.reload();
-    }
-  };
 
   const handlePrimaryAction = onTryAgain || onClose;
 

@@ -177,11 +177,30 @@ export function useStandardQuiz() {
     router.push("/quiz");
   }, [resetQuiz, router]);
 
-  const handleTryAgain = useCallback(() => {
+  const handleTryAgain = useCallback(async () => {
     setShowUnauthResults(false);
     resetQuiz();
-    // The access check effect will re-trigger and re-initialize
-  }, [resetQuiz]);
+
+    // Check access before attempting to start another quiz
+    try {
+      const result = user
+        ? await checkQuizAccess("standard")
+        : await checkUnauthenticatedUserLimits("standard");
+
+      if (!result.canAttempt) {
+        // User has exhausted limits, redirect to home page where proper modal will be shown
+        router.push("/");
+        return;
+      }
+
+      // User can attempt another quiz, the access check effect will handle initialization
+      setCanAttempt(true);
+      setLimitMessage("");
+    } catch (error) {
+      // On error, redirect to home page where user can try again
+      router.push("/");
+    }
+  }, [resetQuiz, user, router]);
 
   // ============================================================================
   // Return Values
